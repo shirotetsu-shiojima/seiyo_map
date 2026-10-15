@@ -185,19 +185,103 @@
   const toScreen = (x, z) => [(x - view.cx) * view.scale + innerWidth / 2, (z - view.cz) * view.scale + innerHeight / 2];
   const toWorld = (sx, sy) => [(sx - innerWidth / 2) / view.scale + view.cx, (sy - innerHeight / 2) / view.scale + view.cz];
 
+  // ---- 道路の線形(Mod の RoadRoute と同じ計算。書き出しの JSON には中心線を入れず、ここで計算する) ----
+  // 向きの番号 0〜7(0 = +Z、2 = -X、4 = -Z、6 = +X。45度刻み)
+  const DIR_DX = [0, -1, -1, -1, 0, 1, 1, 1];
+  const DIR_DZ = [1, 1, 0, -1, -1, -1, 0, 1];
+  const ROUTE_SPACING = 0.25;          // 中心線の点の間隔(ブロック)
+  const QUARTER_TURN = Math.PI / 2;
+  const ROUTE_EPS = 1e-9;
+
+  const dirUnitX = (d) => DIR_DX[d] / Math.hypot(DIR_DX[d], DIR_DZ[d]);
+  const dirUnitZ = (d) => DIR_DZ[d] / Math.hypot(DIR_DX[d], DIR_DZ[d]);
+  // 向き (vx, vz) を角度 a(ラジアン)だけ回す
+  const rotVec = (vx, vz, a) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    return [vx * c - vz * s, vx * s + vz * c];
+  };
+  // 向き a から向き b へ回すときの角度(-π〜π)
+  const turnAngle = (ax, az, bx, bz) => Math.atan2(ax * bz - az * bx, ax * bx + az * bz);
+
+  // 向き (ux, uz) へ長さ length だけ直線を進む。点を out に足し、終点を返す
+  function appendLineRoute(out, qx, qz, ux, uz, length) {
+    if (!(length > ROUTE_EPS)) return [qx, qz];
+    const n = Math.max(1, Math.ceil(length / ROUTE_SPACING));
+    let x = qx, z = qz;
+    for (let i = 1; i <= n; i++) {
+      const t = length * i / n;
+      x = qx + t * ux;
+      z = qz + t * uz;
+      out.push([x, z]);
+    }
+    return [x, z];
+  }
+
+  // 半径 radius の円弧を、(qx, qz) から向き (ux, uz) で出発して、phi 回転させる。点を out に足し、終点を返す
+  function appendArcRoute(out, qx, qz, ux, uz, phi, radius) {
+    const n = Math.max(2, Math.ceil(radius * Math.abs(phi) / ROUTE_SPACING));
+    const left = rotVec(ux, uz, QUARTER_TURN);
+    // 左へ曲がるとき(角度が正)は中心が左側、右へ曲がるとき(角度が負)は中心が右側になる
+    const side = phi < 0 ? -1 : 1;
+    let x = qx, z = qz;
+    for (let i = 0; i <= n; i++) {
+      const tau = phi * i / n;
+      const heading = rotVec(ux, uz, tau);
+      const headingLeft = rotVec(heading[0], heading[1], QUARTER_TURN);
+      x = qx + side * radius * (left[0] - headingLeft[0]);
+      z = qz + side * radius * (left[1] - headingLeft[1]);
+      out.push([x, z]);
+    }
+    return [x, z];
+  }
+
+  // 直線 → 円弧1 → 直線 → 円弧2 → 直線 の中心線(始点は (x0, z0))
+  function curvedRoutePts(x0, z0, sh) {
+    const lead = Number(sh.lead) || 0, r1 = Number(sh.r1) || 0;
+    const bridge = Number(sh.bridge) || 0, r2 = Number(sh.r2) || 0, tail = Number(sh.tail) || 0;
+    const ux = dirUnitX(sh.start_dir), uz = dirUnitZ(sh.start_dir);
+    const mx = Math.cos(sh.mid_angle), mz = Math.sin(sh.mid_angle);
+    const ex = dirUnitX(sh.end_dir), ez = dirUnitZ(sh.end_dir);
+    const phi1 = turnAngle(ux, uz, mx, mz);
+    const phi2 = turnAngle(mx, mz, ex, ez);
+
+    const out = [[x0, z0]];
+    let p = appendLineRoute(out, x0, z0, ux, uz, lead);
+    if (Math.abs(phi1) >= ROUTE_EPS) p = appendArcRoute(out, p[0], p[1], ux, uz, phi1, r1);
+    p = appendLineRoute(out, p[0], p[1], mx, mz, bridge);
+    if (Math.abs(phi2) >= ROUTE_EPS) p = appendArcRoute(out, p[0], p[1], mx, mz, phi2, r2);
+    appendLineRoute(out, p[0], p[1], ex, ez, tail);
+    return out;
+  }
+
+  // 道路の中心線の点(x, z の配列)。古い書き出し(centerline あり)はそのまま使う
+  function centerlineOf(raw) {
+    if (Array.isArray(raw.centerline)) return raw.centerline.map((p) => [p.x, p.z]);
+    // ブロックの中心は、整数の座標に 0.5 を足したところ
+    const x0 = raw.from.x + 0.5, z0 = raw.from.z + 0.5;
+    if (!raw.shape || !raw.shape.curved) return [[x0, z0], [raw.to.x + 0.5, raw.to.z + 0.5]];
+    return curvedRoutePts(x0, z0, raw.shape);
+  }
+
   function normalize(raw) {
-    const levels = Array.isArray(raw.level_y_by_step) ? raw.level_y_by_step : [];
     let yMin = null, yMax = null;
-    for (const y of levels) {
-      if (yMin === null || y < yMin) yMin = y;
-      if (yMax === null || y > yMax) yMax = y;
+    if (raw.height) {
+      yMin = raw.height.min;
+      yMax = raw.height.max;
+    } else {
+      // 古い書き出し(段ごとの高さ)
+      const levels = Array.isArray(raw.level_y_by_step) ? raw.level_y_by_step : [];
+      for (const y of levels) {
+        if (yMin === null || y < yMin) yMin = y;
+        if (yMax === null || y > yMax) yMax = y;
+      }
     }
     return {
       id: raw.id, type: raw.type, highway: raw.type === 'highway', lanes: raw.lanes, mode: raw.mode,
       built: !!raw.built, length: raw.length, sidewalk: raw.sidewalk_width,
       from: raw.from, to: raw.to, dimension: raw.dimension, surface: raw.lane_surface,
       yMin, yMax,
-      pts: raw.centerline.map((p) => [p.x, p.z]),
+      pts: centerlineOf(raw),
     };
   }
 
@@ -213,7 +297,7 @@
     }
     showError('');
     roads = data.roads
-      .filter((r) => Array.isArray(r.centerline) && r.centerline.length >= 2)
+      .filter((r) => r && r.from && r.to)
       .map(normalize);
     fileName = name;
     selected = null;
