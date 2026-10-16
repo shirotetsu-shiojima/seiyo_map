@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>道路マップビューア</title>
+<title>星陽マップ</title>
 <style>
   :root {
     --bg: #eef1f4; --panel: #ffffff; --ink: #1f2933; --muted: #7b8794; --line: #d9e0e7;
@@ -50,8 +50,6 @@
   #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
   #drop { position: fixed; inset: 0; background: rgba(28,126,214,.12); border: 3px dashed var(--accent);
     display: none; align-items: center; justify-content: center; font-size: 20px; color: var(--accent); pointer-events: none; }
-  #empty { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-  #empty > div { pointer-events: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px; text-align: center; line-height: 1.8; }
   @media (max-width: 640px) {
     #top { width: auto; right: 12px; }
     #info { top: auto; bottom: 56px; left: 12px; right: 12px; width: auto; }
@@ -62,16 +60,9 @@
 <body>
 <canvas id="map"></canvas>
 <div id="drop">JSONまたは地図画像をドロップして読み込む</div>
-<div id="empty"><div>
-  <div style="font-size:17px;font-weight:600">道路マップビューア</div>
-  <div class="meta">「/carroad export」で書き出したJSONを読み込んでください</div>
-  <div class="meta">背景の地図は、このHTMLと同じフォルダの images の中から自動で読み込みます</div>
-  <div style="margin-top:12px"><label class="btn" for="file">JSONを開く</label></div>
-  <div class="meta" style="margin-top:8px;font-size:12px">ファイルは、このPCの中だけで読み込まれます</div>
-</div></div>
 
 <div id="top" class="panel">
-  <h1>道路マップ</h1>
+  <h1>星陽マップ</h1>
   <div class="row">
     <label class="btn" for="file">JSONを開く</label>
     <span id="fileName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -97,6 +88,23 @@
   <label><input type="checkbox" id="showOther" checked> 一般道路・生活道路</label>
   <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
   <div id="error" class="error"></div>
+
+  <h2>鉄道</h2>
+  <div class="row">
+    <label class="btn" for="railFile">鉄道JSONを開く</label>
+    <span id="railName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  </div>
+  <input id="railFile" type="file" accept=".json,application/json">
+  <div id="railSummary" class="meta" style="margin-top:6px"></div>
+  <label style="margin-top:6px"><input type="checkbox" id="showRail" checked> 鉄道を表示</label>
+  <div class="row" style="margin-top:8px">
+    <label class="btn" for="routeFile">系統JSONを開く</label>
+    <span id="routeName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  </div>
+  <input id="routeFile" type="file" accept=".json,application/json">
+  <div id="routeSummary" class="meta" style="margin-top:6px"></div>
+  <label style="margin-top:6px"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
+  <label style="margin-top:4px"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
 </div>
 
 <div id="legend" class="panel">
@@ -104,6 +112,7 @@
   <div class="row"><span class="swatch" style="height:6px;background:var(--hw)"></span> 高速道路</div>
   <div class="row"><span class="swatch" style="height:6px;background:var(--road)"></span> 一般道路・生活道路</div>
   <div class="row"><span class="swatch" id="tunnelSwatch" style="height:6px"></span> トンネル(グレーを混ぜた色)</div>
+  <div class="row"><span class="swatch" style="height:3px;background:#2f9e44"></span> 鉄道(系統の色。白丸は駅)</div>
   <h2>太さ(車線数)</h2>
   <div id="lanesLegend"></div>
   <div class="meta" style="margin-top:6px;font-size:12px">未建設の道路は半透明で描きます。北は上です。</div>
@@ -291,6 +300,8 @@
     let data;
     try { data = JSON.parse(text); }
     catch (e) { showError('JSONとして読めませんでした。'); return; }
+    if (data && Array.isArray(data.sections)) { loadRailData(data, name); return; }
+    if (Array.isArray(data) && data[0] && Array.isArray(data[0].routes)) { loadRouteData(data[0], name); return; }
     if (!data || data.format !== 'car_input.roads' || !Array.isArray(data.roads)) {
       showError('道路のエクスポートファイルではありません(car_input.roads)。');
       return;
@@ -304,7 +315,6 @@
     showInfo(null);
     updateSummary(data);
     fitView();
-    $('empty').style.display = 'none';
     needsDraw = true;
   }
 
@@ -327,7 +337,8 @@
       minZ = Math.min(minZ, z0); maxZ = Math.max(maxZ, z1);
     };
     for (const r of roads) for (const [x, z] of r.pts) grow(x, z, x, z);
-    if (!roads.length) {
+    if (rail) for (const sec of rail.sections) for (const [x, z] of sec.pts) grow(x, z, x, z);
+    if (!roads.length && !rail) {
       for (const t of tiles.values()) grow(t.origin.x, t.origin.z, t.origin.x + TILE_W, t.origin.z + TILE_H);
     }
     if (!Number.isFinite(minX)) { view.cx = 0; view.cz = 0; view.scale = 4; return; }
@@ -482,7 +493,7 @@
     tiles = found;
     sourceLabel = `${DEFAULT_DIR} フォルダ`;
     $('bgShow').checked = true;
-    if (!roads.length) fitView();
+    if (!roads.length && !rail) fitView();
     updateBgStatus();
     needsDraw = true;
   }
@@ -509,8 +520,7 @@
     }
     sourceLabel = '選んだ画像';
     $('bgShow').checked = true;
-    if (!roads.length) fitView();
-    $('empty').style.display = 'none';
+    if (!roads.length && !rail) fitView();
     updateBgStatus(ignored);
     needsDraw = true;
   }
@@ -611,6 +621,7 @@
     drawMap();
     drawGrid();
     if (roads.length) drawRoads();
+    if (railOn()) drawRail();
   }
 
   function distToSeg(px, py, ax, ay, bx, by) {
@@ -649,7 +660,7 @@
 
   function showInfo(r) {
     const box = $('info');
-    if (!r) { box.style.display = 'none'; return; }
+    if (!r) { selectedRail = null; box.style.display = 'none'; return; }
     $('infoTitle').textContent = `${TYPE_LABEL[r.type] || r.type} #${r.id}`;
     const dl = $('infoBody');
     dl.textContent = '';
@@ -685,8 +696,719 @@
     }
   }
 
+  // ---- 鉄道(駅番号などは、駅を選んだ時の詳細欄にだけ出す) ----
+  const RAIL_COLOR = '#2f9e44';
+  const RAIL_LABEL_SCALE = 0.2;        // これより拡大した時だけ駅名を描く
+  const CLUSTER_SIM = 0.7;             // 通る区間の一致率(Jaccard)がこれ以上の系統は、1本の路線にまとめる
+  let rail = null;                     // { stations: Map, sections: [...], total }
+  let selectedRail = null;             // { type: 'station', st } または { type: 'section', sec }
+  const railOn = () => !!rail && $('showRail').checked;
+  const stationName = (st) => (st ? (st.ja || st.en || '-') : '-');
+
+  // 駅名の形式は「[駅番号][路線など]日本語|English」。[...] の部分を番号として取り出す
+  function parseStationName(raw) {
+    const text = String(raw || '');
+    const codes = [...text.matchAll(/\[([^\]]*)\]/g)].map((m) => m[1]);
+    const [ja = '', en = ''] = text.replace(/\[[^\]]*\]/g, '').split('|');
+    return { codes, ja: ja.trim(), en: en.trim() };
+  }
+
+  function loadRailData(data, name) {
+    const stations = new Map();
+    const sections = [];
+    const seen = new Set();
+    let total = 0;
+    for (const s of data.sections) {
+      if (!s || !Array.isArray(s.points) || s.points.length < 2) continue;
+      // 点は [x, y, z]。地図は平面なので、x と z だけ使う
+      const pts = s.points.map((p) => [p[0], p[2]]);
+      const from = parseStationName(s.from), to = parseStationName(s.to);
+      const ends = [[s.fromStationId, from, pts[0]], [s.toStationId, to, pts[pts.length - 1]]];
+      for (const [id, info, p] of ends) {
+        if (!stations.has(id)) stations.set(id, { id, ...info, x: p[0], z: p[1], neighbors: [], lines: [] });
+      }
+      // 往復で同じ区間が2回入っているので、1回だけ使う
+      const key = [s.fromStationId, s.toStationId].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const distance = Number(s.distanceM) || 0;
+      sections.push({ key, fromId: s.fromStationId, toId: s.toStationId, distance, measured: !!s.measured, pts, routes: [], names: [] });
+      total += distance;
+      stations.get(s.fromStationId).neighbors.push({ id: s.toStationId, distance });
+      stations.get(s.toStationId).neighbors.push({ id: s.fromStationId, distance });
+    }
+    rail = { stations, sections, total, platforms: [] };
+    applyRoutes();
+    selectedRail = null;
+    $('railName').textContent = name;
+    $('railSummary').textContent =
+      `駅 ${stations.size} 駅・区間 ${sections.length} 本・合計 ${Math.round(total)} ブロック`;
+    $('showRail').checked = true;
+    fitView();
+    needsDraw = true;
+  }
+
+  function loadRailText(text, name) {
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { $('railSummary').textContent = '鉄道のJSONとして読めませんでした。'; return; }
+    if (!data || !Array.isArray(data.sections)) {
+      $('railSummary').textContent = '鉄道データではありません(sections がありません)。';
+      return;
+    }
+    loadRailData(data, name);
+  }
+
+  function readRailFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadRailText(String(reader.result), file.name);
+    reader.readAsText(file, 'utf-8');
+  }
+
+  // ---- 系統データ(どの線路を通っているかを、駅の並びから推定する) ----
+  let routeData = null;                // { routes, name }
+  const routeColorOn = () => railOn() && !!routeData && $('showRouteColor').checked;
+  const colorHex = (v) => '#' + (Number(v) & 0xffffff).toString(16).padStart(6, '0');
+  const jaName = (raw) => String(raw || '').split('|')[0].trim() || '-';
+
+  function loadRouteData(data, name) {
+    routeData = { routes: data.routes, stations: data.stations || {}, positions: data.positions || {}, name };
+    $('routeName').textContent = name;
+    if (!rail) {
+      $('routeSummary').textContent = '系統データを読み込みました。先に鉄道JSONを開くと、線路に色を付けます。';
+      return;
+    }
+    applyRoutes();
+  }
+
+  function loadRouteText(text, name) {
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { $('routeSummary').textContent = '系統のJSONとして読めませんでした。'; return; }
+    if (!Array.isArray(data) || !data[0] || !Array.isArray(data[0].routes)) {
+      $('routeSummary').textContent = '系統データではありません(routes がありません)。';
+      return;
+    }
+    loadRouteData(data[0], name);
+  }
+
+  function readRouteFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadRouteText(String(reader.result), file.name);
+    reader.readAsText(file, 'utf-8');
+  }
+
+  // 駅の並びの2駅が区間として存在すれば、そのまま使う。無ければ、区間をつないだ最短経路で推定する
+  function shortestPath(adj, src, dst) {
+    if (!adj.has(src) || !adj.has(dst)) return null;
+    const dist = new Map([[src, 0]]);
+    const prev = new Map();
+    const done = new Set();
+    for (;;) {
+      let u = null, best = Infinity;
+      for (const [node, d] of dist) {
+        if (!done.has(node) && d < best) { best = d; u = node; }
+      }
+      if (u === null) return null;
+      if (u === dst) break;
+      done.add(u);
+      for (const e of adj.get(u) || []) {
+        const nd = best + e.w;
+        if (!dist.has(e.to) || nd < dist.get(e.to)) {
+          dist.set(e.to, nd);
+          prev.set(e.to, { from: u, key: e.key });
+        }
+      }
+    }
+    const keys = [];
+    for (let cur = dst; cur !== src; cur = prev.get(cur).from) keys.push(prev.get(cur).key);
+    return keys;
+  }
+
+  // ---- 線形の近さ(緩行線と急行線のように、ほぼ同じ場所を通る線路を1本にまとめるための判定) ----
+  const GROUP_TOL = 12;                // この距離(ブロック)以内なら、同じ線路上とみなす
+  const GROUP_COVER = 0.7;             // 相手の線形の7割以上がこの距離内にあれば、並行していると判定
+  // 線を一定間隔(ブロック)の点に分ける
+  function sampleLine(pts, step) {
+    const out = [];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+      const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / step));
+      for (let k = 0; k < n; k++) out.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+    }
+    if (pts.length) out.push(pts[pts.length - 1]);
+    return out;
+  }
+  // 点を GROUP_TOL の大きさの升目に振り分け、近くの点を探しやすくする
+  function gridOf(samples) {
+    const cells = new Map();
+    for (const [x, z] of samples) {
+      const key = Math.floor(x / GROUP_TOL) + ',' + Math.floor(z / GROUP_TOL);
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key).push(x, z);
+    }
+    return cells;
+  }
+  // samples の各点のうち、grid の点から GROUP_TOL 以内にあるものの割合
+  function coverFrac(samples, grid) {
+    if (!samples.length) return 0;
+    const t2 = GROUP_TOL * GROUP_TOL;
+    let hit = 0;
+    for (const [x, z] of samples) {
+      const cx = Math.floor(x / GROUP_TOL), cz = Math.floor(z / GROUP_TOL);
+      let ok = false;
+      for (let i = -1; i <= 1 && !ok; i++) {
+        for (let j = -1; j <= 1 && !ok; j++) {
+          const cell = grid.get((cx + i) + ',' + (cz + j));
+          if (!cell) continue;
+          for (let p = 0; p < cell.length; p += 2) {
+            const dx = cell[p] - x, dz = cell[p + 1] - z;
+            if (dx * dx + dz * dz <= t2) { ok = true; break; }
+          }
+        }
+      }
+      if (ok) hit++;
+    }
+    return hit / samples.length;
+  }
+  // 区間の線形を、一度だけ点にして持っておく
+  function secSamp(sec) {
+    if (!sec._samp) {
+      sec._samp = sampleLine(sec.pts, 15);
+      sec._fine = sampleLine(sec.pts, 4);
+      sec._grid = gridOf(sec._fine);
+    }
+    return sec._samp;
+  }
+  function secGrid(sec) { secSamp(sec); return sec._grid; }
+  function secLength(sec) {
+    let len = 0;
+    for (let i = 1; i < sec.pts.length; i++) {
+      len += Math.hypot(sec.pts[i][0] - sec.pts[i - 1][0], sec.pts[i][1] - sec.pts[i - 1][1]);
+    }
+    return len;
+  }
+  // 系統ごとに、通る区間の線形をまとめて持っておく(近さの判定に使う)
+  function entryGeo(e, secByKey) {
+    if (e.samp) return;
+    const samp = [], fine = [];
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const k of e.keys) {
+      const sec = secByKey.get(k);
+      if (!sec) continue;
+      secSamp(sec);
+      for (const p of sec._samp) samp.push(p);
+      for (const p of sec._fine) fine.push(p);
+      for (const [x, z] of sec.pts) {
+        x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z);
+      }
+    }
+    e.samp = samp;
+    e.grid = gridOf(fine);
+    e.box = [x0 - GROUP_TOL, z0 - GROUP_TOL, x1 + GROUP_TOL, z1 + GROUP_TOL];
+  }
+  const boxOverlap = (p, q) => p.box[0] <= q.box[2] && q.box[0] <= p.box[2] && p.box[1] <= q.box[3] && q.box[1] <= p.box[3];
+
+  // ---- 駅の同一視(近い駅は同じ駅とみなす) ----
+  const SNAP_RADIUS = 100;             // この距離(ブロック)以内の駅は、同じ駅とみなす候補
+  // 駅ごとに、停車する系統の数を数える
+  function stopCounts(routes) {
+    const cnt = new Map();
+    for (const route of routes) {
+      const ids = new Set((route.stations || []).map((s) => String(s).split('_')[0]));
+      for (const id of ids) cnt.set(id, (cnt.get(id) || 0) + 1);
+    }
+    return cnt;
+  }
+  // 駅 id を、同じ駅とみなした先の駅 id にする。候補が複数あれば「中心からの距離 ÷ 停車する系統数」が最も小さい駅を選ぶ。
+  // 鉄道の駅どうしは、停車する系統が多い駅へだけ寄せる(寄せ先が増える向きだけなので、循環しない)
+  function buildStationAlias(rail, routeData) {
+    const stops = stopCounts(routeData.routes);
+    const extra = routeData.stations || {};
+    const posOf = (id) => {
+      const st = rail.stations.get(id);
+      if (st) return { x: st.x, z: st.z };
+      const e = extra[id];
+      return e && Number.isFinite(e.x) && Number.isFinite(e.z) ? { x: e.x, z: e.z } : null;
+    };
+    const geoIds = [...rail.stations.keys()];
+    const allIds = new Set([...geoIds, ...stops.keys()]);
+    const alias = new Map();
+    for (const id of allIds) {
+      const p = posOf(id);
+      if (!p) continue;
+      const own = stops.get(id) || 0;
+      const isGeo = rail.stations.has(id);
+      let best = null, bestScore = Infinity;
+      for (const gid of geoIds) {
+        if (gid === id) continue;
+        const g = stops.get(gid) || 0;
+        if (isGeo && g <= own) continue;
+        const q = rail.stations.get(gid);
+        const d = Math.hypot(p.x - q.x, p.z - q.z);
+        if (d > SNAP_RADIUS) continue;
+        const score = d / Math.max(1, g);
+        if (score < bestScore) { bestScore = score; best = gid; }
+      }
+      if (best !== null) alias.set(id, best);
+    }
+    return alias;
+  }
+  function resolveAlias(alias, id) {
+    let cur = id;
+    for (let i = 0; i < 20 && alias.has(cur); i++) cur = alias.get(cur);
+    return cur;
+  }
+
+  // ---- ホーム(系統データの停車位置を、駅ごとに近いものどうしでまとめ、線路の向きに沿った長方形にする) ----
+  const PLATFORM_GAP = 12;             // この距離(ブロック)以内の停車位置は、同じホームとみなす
+  const PLATFORM_LENGTH = 100;         // ホームの長さ(ブロック)。暫定値
+  const PLATFORM_WIDTH = 4;            // ホームの幅(ブロック)
+  const PLATFORM_SCALE = 0.2;          // これより拡大した時だけホームを描く
+  const PLATFORM_FILL = '#ff5b4b';     // ホームの塗りつぶし(モックアップの赤)
+  const PLATFORM_DIR_MAX = 60;         // ホームの中心からこの距離(ブロック)以内に線路が無ければ、vertical の向きを使う
+
+  // ホームの中心に最も近い線路の区間の向き(単位ベクトル)を返す
+  function trackDirectionNear(sections, cx, cz) {
+    let best = null, bestD = Infinity;
+    for (const sec of sections) {
+      const p = sec.pts;
+      for (let i = 1; i < p.length; i++) {
+        const ax = p[i - 1][0], az = p[i - 1][1];
+        const dx = p[i][0] - ax, dz = p[i][1] - az;
+        const L2 = dx * dx + dz * dz;
+        if (L2 === 0) continue;
+        const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cz - az) * dz) / L2));
+        const d = Math.hypot(cx - (ax + dx * t), cz - (az + dz * t));
+        if (d < bestD) { bestD = d; best = [dx / Math.sqrt(L2), dz / Math.sqrt(L2)]; }
+      }
+    }
+    return bestD <= PLATFORM_DIR_MAX ? best : null;
+  }
+
+  // vertical が true の停車位置は線路が Z 方向に走っている(地図上で確認済み)。線路が見つからない時の向きに使う
+  function buildPlatforms(rail, routeData, canon) {
+    const byStation = new Map();
+    for (const [key, v] of Object.entries(routeData.positions || {})) {
+      if (!v || !Number.isFinite(v.x) || !Number.isFinite(v.y)) continue;
+      const sid = canon(key.split('_')[0]);
+      if (!byStation.has(sid)) byStation.set(sid, []);
+      byStation.get(sid).push({ x: v.x, z: v.y, vertical: !!v.vertical });   // 位置の y は、地図の z
+    }
+    const platforms = [];
+    for (const [sid, list] of byStation) {
+      const par = list.map((_, i) => i);
+      const find = (x) => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          if (Math.hypot(list[i].x - list[j].x, list[i].z - list[j].z) <= PLATFORM_GAP) par[find(i)] = find(j);
+        }
+      }
+      const groups = new Map();
+      list.forEach((pt, i) => {
+        const r = find(i);
+        if (!groups.has(r)) groups.set(r, []);
+        groups.get(r).push(pt);
+      });
+      for (const pts of groups.values()) {
+        const xs = pts.map((q) => q.x), zs = pts.map((q) => q.z);
+        const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+        const vertical = pts.filter((q) => q.vertical).length * 2 >= pts.length;
+        const dir = trackDirectionNear(rail.sections, cx, cz) || (vertical ? [0, 1] : [1, 0]);
+        const [ux, uz] = dir;
+        platforms.push({ station: sid, cx, cz, ux, uz, lanes: 1 });
+      }
+    }
+    return platforms;
+  }
+
+  const LANE_GAP_PX = 5;               // 系統を横に並べる間隔(px)。基準の拡大率での値
+  const LINE_WIDTH_PX = 3;             // 系統の線の太さ(px)。基準の拡大率での値
+  const LINE_REF_SCALE = 0.25;         // この拡大率より大きい時だけ、線の太さと間隔が拡大率に比例して太くなる
+  const PLATFORM_LANE_PAD = 8;         // 並んだ系統の束の外側に足す余白(px)
+  const PLATFORM_REF_SCALE = 0.25;     // この拡大率で、並ぶ系統の束がちょうど収まる幅になる。これより拡大すると、幅もその比で大きくなる
+  const PLATFORM_LANE_NEAR = 30;       // ホームからこの距離(ブロック)以内の区間の中で、最も多く並ぶ系統数を使う
+  // 線(点の並び)と点 (x, z) の最短距離
+  function polyDist(pts, x, z) {
+    let best = Infinity;
+    for (let i = 1; i < pts.length; i++) {
+      const ax = pts[i - 1][0], az = pts[i - 1][1];
+      const dx = pts[i][0] - ax, dz = pts[i][1] - az;
+      const L2 = dx * dx + dz * dz;
+      const t = L2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)) : 0;
+      best = Math.min(best, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
+    }
+    return best;
+  }
+  // ホームの近くを通る区間で、最も多くの系統が横に並んで描かれる数
+  function platformLanes(pf, sections) {
+    let n = 1;
+    for (const sec of sections) {
+      if (sec.routes.length <= n) continue;
+      if (polyDist(sec.pts, pf.cx, pf.cz) <= PLATFORM_LANE_NEAR) n = sec.routes.length;
+    }
+    return n;
+  }
+
+  function applyRoutes() {
+    if (!rail || !routeData) return;
+    const secByKey = new Map();
+    const adj = new Map();
+    const alias = buildStationAlias(rail, routeData);
+    const canon = (id) => resolveAlias(alias, id);
+    rail.platforms = buildPlatforms(rail, routeData, canon);
+    const pairSec = new Map();           // 同じ駅どうしの組 → 区間(組ごとに1本を使う)
+    for (const sec of rail.sections) {
+      sec.routes = [];
+      sec.names = [];
+      sec.drawn = false;
+      sec.absorbed = false;
+      secByKey.set(sec.key, sec);
+      const ca = canon(sec.fromId), cb = canon(sec.toId);
+      if (ca === cb) continue;
+      const pk = [ca, cb].sort().join('|');
+      if (!pairSec.has(pk)) pairSec.set(pk, sec);
+      for (const [a, b] of [[ca, cb], [cb, ca]]) {
+        if (!adj.has(a)) adj.set(a, []);
+        adj.get(a).push({ to: b, w: sec.distance || 1, key: sec.key });
+      }
+    }
+    for (const st of rail.stations.values()) st.lines = [];
+    let nDirect = 0, nEstimated = 0, nFailed = 0;
+    let entries = [];
+    for (const route of routeData.routes) {
+      const info = { name: jaName(route.name), color: colorHex(route.color) };
+      const routeKeys = new Set();
+      const ids = (route.stations || []).map((s) => canon(String(s).split('_')[0]));
+      for (let i = 1; i < ids.length; i++) {
+        const a = ids[i - 1], b = ids[i];
+        if (a === b) continue;
+        let keys;
+        const direct = pairSec.get([a, b].sort().join('|'));
+        if (direct) {
+          keys = [direct.key];
+          nDirect++;
+        } else {
+          keys = shortestPath(adj, a, b);
+          if (keys) nEstimated++;
+          else { nFailed++; continue; }
+        }
+        for (const k of keys) routeKeys.add(k);
+      }
+      if (!routeKeys.size) continue;
+      entries.push({ info, keys: routeKeys, ids, stops: ids.length, hidden: false });
+    }
+    // 同じ色で、経由する区間がほぼ同じ系統(種別の違いなど)は、停車駅が一番多い1本だけを残す
+    let nHidden = 0;
+    if ($('hideDup').checked) {
+      const sim = (a, b) => {
+        let inter = 0;
+        for (const k of a) if (b.has(k)) inter++;
+        return inter / (a.size + b.size - inter);
+      };
+      const kept = [];
+      for (const e of [...entries].sort((x, y) => y.stops - x.stops)) {
+        const dup = kept.some((k) => k.info.color === e.info.color && sim(k.keys, e.keys) >= CLUSTER_SIM);
+        if (dup) { e.hidden = true; nHidden++; } else kept.push(e);
+      }
+    }
+    entries = entries.filter((e) => !e.hidden);
+    // 通る区間の大半が同じ系統(緩行・急行など、経由地が近接する並行の線路)は、1本の路線にまとめる
+    const par = entries.map((_, i) => i);
+    const find = (x) => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+    for (const e of entries) entryGeo(e, secByKey);
+    for (let i = 0; i < entries.length; i++) {
+      for (let j = i + 1; j < entries.length; j++) {
+        if (find(i) === find(j)) continue;
+        const a = entries[i], b = entries[j];
+        let inter = 0;
+        for (const k of a.keys) if (b.keys.has(k)) inter++;
+        const union = a.keys.size + b.keys.size - inter;
+        let same = union > 0 && inter / union >= CLUSTER_SIM;
+        // 経由する区間が違っても、線形がほぼ重なっていれば(緩行線と急行線など)同じ路線とみなす
+        if (!same && boxOverlap(a, b)) {
+          same = coverFrac(a.samp, b.grid) >= GROUP_COVER && coverFrac(b.samp, a.grid) >= GROUP_COVER;
+        }
+        if (same) par[find(i)] = find(j);
+      }
+    }
+    const clusters = new Map();
+    entries.forEach((e, i) => {
+      const root = find(i);
+      if (!clusters.has(root)) clusters.set(root, { keys: new Set(), members: [] });
+      const c = clusters.get(root);
+      for (const k of e.keys) c.keys.add(k);
+      c.members.push(e.info);
+    });
+    let nMerged = 0;
+    // 同じ路線と判定された系統は、色や停車駅が違っても1本にまとめず、系統ごとに横に並べて描く
+    let clusterNo = 0;
+    for (const c of clusters.values()) {
+      const uniq = new Map();
+      for (const m of c.members) uniq.set(m.name + '|' + m.color, m);
+      const members = [...uniq.values()].sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : a.name < b.name ? -1 : 1));
+      if (members.length > 1) nMerged++;
+      const no = clusterNo++;
+      const lanes = members.map((m) => ({ ...m, cluster: no }));
+      // 路線の区間のうち、長い区間とほぼ重なるもの(並行する線路)は、長い方の1本にまとめて描く
+      const secs = [...c.keys].map((k) => secByKey.get(k)).filter(Boolean).sort((a, b) => secLength(b) - secLength(a));
+      const shown = [];
+      for (const sec of secs) {
+        if (shown.some((d) => coverFrac(secSamp(sec), secGrid(d)) >= GROUP_COVER)) { sec.absorbed = true; continue; }
+        sec.drawn = true;
+        shown.push(sec);
+      }
+      // 描く区間には、路線の全系統を横並びで載せる(拡大すると、その路線を通る系統がすべて見える)
+      for (const sec of shown) {
+        for (const lane of lanes) {
+          if (!sec.routes.some((r) => r.name === lane.name && r.color === lane.color)) sec.routes.push(lane);
+        }
+      }
+      for (const sec of secs) {
+        for (const m of members) if (!sec.names.includes(m.name)) sec.names.push(m.name);
+      }
+    }
+    // 並行して重なるだけの区間は描かない(長い方の区間に任せる)
+    let nAbsorbed = 0;
+    for (const sec of rail.sections) {
+      sec.skipDraw = !!sec.absorbed && !sec.drawn;
+      if (sec.skipDraw) nAbsorbed++;
+    }
+    for (const pf of rail.platforms) pf.lanes = platformLanes(pf, rail.sections);
+    // 駅に停まる系統は、表示している系統だけを載せる
+    for (const e of entries) {
+      for (const id of e.ids) {
+        const st = rail.stations.get(id);
+        if (st && !st.lines.some((l) => l.name === e.info.name && l.color === e.info.color)) st.lines.push(e.info);
+      }
+    }
+    $('routeSummary').textContent =
+      `系統 ${routeData.routes.length} 本(非表示 ${nHidden} 本)を路線 ${clusters.size} 本にまとめました(うち並行する系統をまとめた路線 ${nMerged} 本、重なって描かない区間 ${nAbsorbed} 本)・ホーム ${rail.platforms.length} か所・同じ駅とみなした駅 ${alias.size} 件・駅の並び ${nDirect} 組は区間に一致 / ${nEstimated} 組は推定 / ${nFailed} 組は対応できず`;
+    needsDraw = true;
+  }
+
+  // 1本の区間を、通る系統の色で描く。複数の系統が通る区間は、色の帯を重ねて見せる
+  function drawSectionColored(sec) {
+    if (!sec.routes.length) { strokeLine(sec.pts, 2, '#9aa3ab', 0.9); return; }
+    // 路線ごと・色ごとに並べ順を固定し、区間が変わっても線の位置がずれないようにする
+    const lanes = sec.routes.slice().sort((a, b) => a.cluster - b.cluster || (a.color < b.color ? -1 : a.color > b.color ? 1 : 0));
+    // 向きは番号の小さい駅からにそろえる(隣の区間と並び順が反転しないように)
+    const pts = sec.fromId <= sec.toId ? sec.pts : sec.pts.slice().reverse();
+    const k = Math.max(1, view.scale / LINE_REF_SCALE);   // 拡大率が基準より大きい時は、太さと間隔を同じ比で大きくする
+    const n = lanes.length, gap = LANE_GAP_PX * k;
+    lanes.forEach((lane, i) => strokeOffset(pts, (i - (n - 1) / 2) * gap, LINE_WIDTH_PX * k, lane.color));
+  }
+
+  // 線を、法線方向に一定のピクセル数だけずらして描く(横並びの複数線用)
+  function strokeOffset(pts, offsetPx, width, color) {
+    const s = pts.map(([x, z]) => toScreen(x, z));
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    s.forEach((p, i) => {
+      const a = s[Math.max(0, i - 1)], b = s[Math.min(s.length - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const x = p[0] - dy / len * offsetPx, y = p[1] + dx / len * offsetPx;
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRail() {
+    const hiSec = selectedRail && selectedRail.type === 'section' ? selectedRail.sec : null;
+    const hiSt = selectedRail && selectedRail.type === 'station' ? selectedRail.st : null;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    if (routeColorOn()) {
+      for (const sec of rail.sections) {
+        if (sec !== hiSec && !sec.skipDraw) drawSectionColored(sec);
+      }
+    } else {
+      ctx.strokeStyle = RAIL_COLOR;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (const sec of rail.sections) {
+        if (sec === hiSec) continue;
+        sec.pts.forEach(([x, z], i) => {
+          const [sx, sy] = toScreen(x, z);
+          if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
+        });
+      }
+      ctx.stroke();
+    }
+    if (hiSec) strokeLine(hiSec.pts, 8, '#1c7ed6', 0.6);
+    drawPlatforms();
+    for (const st of rail.stations.values()) {
+      const [sx, sy] = toScreen(st.x, st.z);
+      ctx.beginPath();
+      ctx.arc(sx, sy, st === hiSt ? 6 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = RAIL_COLOR;
+      ctx.stroke();
+    }
+    if (view.scale >= RAIL_LABEL_SCALE) {
+      ctx.font = '12px system-ui, "Hiragino Sans", sans-serif';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillStyle = '#1f2933';
+      for (const st of rail.stations.values()) {
+        const [sx, sy] = toScreen(st.x, st.z);
+        const label = st.ja || st.en;
+        ctx.strokeText(label, sx + 7, sy + 4);
+        ctx.fillText(label, sx + 7, sy + 4);
+      }
+    }
+    ctx.restore();
+  }
+
+  // ホームを長方形で描く。同じ駅のホームは、駅の中心から点線で結んで1つの駅だとわかるようにする
+  function drawPlatforms() {
+    if (!rail.platforms || !rail.platforms.length || view.scale < PLATFORM_SCALE) return;
+    ctx.save();
+    ctx.strokeStyle = RAIL_COLOR;
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
+    for (const pf of rail.platforms) {
+      const st = rail.stations.get(pf.station);
+      if (!st) continue;
+      const [sx, sy] = toScreen(st.x, st.z);
+      const [cx, cy] = toScreen(pf.cx, pf.cz);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    for (const pf of rail.platforms) {
+      const hi = selectedRail && selectedRail.type === 'station' && pf.station === selectedRail.st.id;
+      ctx.beginPath();
+      platformCorners(pf).forEach(([x, y], i) => { if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+      ctx.closePath();
+      ctx.fillStyle = PLATFORM_FILL;
+      ctx.fill();
+      ctx.lineWidth = hi ? 4 : 2;
+      ctx.strokeStyle = hi ? '#1c7ed6' : '#000000';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ホームの四隅(画面上の座標)。向きは画面上の向きにそろえ、長さは100ブロック、幅は並ぶ系統の束が収まる幅(px)以上
+  function platformCorners(pf) {
+    const [cx, cy] = toScreen(pf.cx, pf.cz);
+    const [ex, ey] = toScreen(pf.cx + pf.ux, pf.cz + pf.uz);
+    let ax = ex - cx, ay = ey - cy;
+    const al = Math.hypot(ax, ay) || 1;
+    ax /= al; ay /= al;
+    const nx = -ay, ny = ax;
+    const hl = PLATFORM_LENGTH / 2 * view.scale;
+    // 半幅(px)。系統の束が収まる幅を基準にし、基準の拡大率より大きい時は拡大率に比例して広げる
+    const bundlePx = ((pf.lanes - 1) / 2) * LANE_GAP_PX + PLATFORM_LANE_PAD;
+    const hw = Math.max(PLATFORM_WIDTH / 2 * view.scale, bundlePx, bundlePx / PLATFORM_REF_SCALE * view.scale);
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [
+      cx + ax * hl * a + nx * hw * b,
+      cy + ay * hl * a + ny * hw * b,
+    ]);
+  }
+
+  // 点が四角形の内側にあるか(四角形の辺の外積の符号がそろっているか)
+  function pointInQuad(q, x, y) {
+    let pos = 0, neg = 0;
+    for (let i = 0; i < 4; i++) {
+      const [ax, ay] = q[i], [bx, by] = q[(i + 1) % 4];
+      const cr = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+      if (cr > 0) pos++; else if (cr < 0) neg++;
+    }
+    return pos === 0 || neg === 0;
+  }
+
+  // ホームの長方形をクリックしたら、そのホームの駅を選ぶ。重なる時は、中心に近いホームを選ぶ
+  function pickPlatform(sx, sy) {
+    if (view.scale < PLATFORM_SCALE) return null;
+    let best = null, bestD = Infinity;
+    for (const pf of rail.platforms) {
+      const q = platformCorners(pf);
+      if (!pointInQuad(q, sx, sy)) continue;
+      const [cx, cy] = toScreen(pf.cx, pf.cz);
+      const d = Math.hypot(cx - sx, cy - sy);
+      if (d < bestD) { bestD = d; best = pf; }
+    }
+    return best;
+  }
+
+  // 駅は点の近くで選ぶ
+  function pickStation(sx, sy) {
+    let best = null, bestD = 10;
+    for (const st of rail.stations.values()) {
+      const [x, y] = toScreen(st.x, st.z);
+      const d = Math.hypot(x - sx, y - sy);
+      if (d <= bestD) { bestD = d; best = st; }
+    }
+    return best;
+  }
+
+  // 区間は線の近くで選ぶ
+  function pickRailSection(sx, sy) {
+    let best = null, bestD = 6;
+    for (const sec of rail.sections) {
+      if (routeColorOn() && sec.skipDraw) continue;
+      for (let i = 1; i < sec.pts.length; i++) {
+        const [ax, ay] = toScreen(sec.pts[i - 1][0], sec.pts[i - 1][1]);
+        const [bx, by] = toScreen(sec.pts[i][0], sec.pts[i][1]);
+        const d = distToSeg(sx, sy, ax, ay, bx, by);
+        if (d <= bestD) { bestD = d; best = sec; }
+      }
+    }
+    return best;
+  }
+
+  function showRailInfo(item) {
+    const box = $('info');
+    const dl = $('infoBody');
+    dl.textContent = '';
+    if (item.type === 'station') {
+      const st = item.st;
+      $('infoTitle').textContent = `${stationName(st)} 駅`;
+      addRow(dl, '英語名', st.en || '-');
+      addRow(dl, '駅番号', st.codes.length ? st.codes.join(' ・ ') : '-');
+      addRow(dl, '座標', `X ${Math.round(st.x)}, Z ${Math.round(st.z)}`);
+      addRow(dl, '接続', `${st.neighbors.length} 方面`);
+      addRow(dl, '系統', st.lines.length ? st.lines.map((l) => l.name).join(' ・ ') : '-');
+      for (const nb of st.neighbors) {
+        addRow(dl, '隣の駅', `${stationName(rail.stations.get(nb.id))}(${Math.round(nb.distance)} ブロック)`);
+      }
+    } else {
+      const sec = item.sec;
+      $('infoTitle').textContent = '鉄道区間';
+      addRow(dl, '区間', `${stationName(rail.stations.get(sec.fromId))} ⇔ ${stationName(rail.stations.get(sec.toId))}`);
+      addRow(dl, '距離', `${Math.round(sec.distance)} ブロック`);
+      addRow(dl, '計測', sec.measured ? '計測済み' : '未計測');
+      const names = sec.names || [];
+      addRow(dl, '通る系統', names.length ? names.join(' ・ ') : '推定なし');
+    }
+    box.style.display = 'block';
+  }
+
   // 入力
   $('file').addEventListener('change', (e) => readFile(e.target.files[0]));
+  $('railFile').addEventListener('change', (e) => readRailFile(e.target.files[0]));
+  $('routeFile').addEventListener('change', (e) => readRouteFile(e.target.files[0]));
+  $('showRouteColor').addEventListener('change', () => { needsDraw = true; });
+  $('hideDup').addEventListener('change', () => applyRoutes());
+  $('showRail').addEventListener('change', () => {
+    if (!railOn() && selectedRail) showInfo(null);
+    needsDraw = true;
+  });
   function readFile(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -746,8 +1468,24 @@
   });
   canvas.addEventListener('pointerup', (e) => {
     if (drag && !drag.moved) {
-      selected = pick(e.clientX, e.clientY);
-      showInfo(selected);
+      // 駅の丸印 → ホームの長方形 → 道路 → 鉄道の区間の順に、近いものを選ぶ
+      let st = railOn() ? pickStation(e.clientX, e.clientY) : null;
+      if (!st && railOn()) {
+        const pf = pickPlatform(e.clientX, e.clientY);
+        if (pf) st = rail.stations.get(pf.station) || null;
+      }
+      if (st) {
+        selected = null;
+        selectedRail = { type: 'station', st };
+        showRailInfo(selectedRail);
+      } else {
+        selected = pick(e.clientX, e.clientY);
+        const sec = !selected && railOn() ? pickRailSection(e.clientX, e.clientY) : null;
+        selectedRail = sec ? { type: 'section', sec } : null;
+        if (selected) showInfo(selected);
+        else if (selectedRail) showRailInfo(selectedRail);
+        else showInfo(null);
+      }
       needsDraw = true;
     }
     drag = null;
