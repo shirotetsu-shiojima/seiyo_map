@@ -731,12 +731,8 @@
 
   // ---- 列車の現在位置(ローカルの API。ワールドに接続しているときだけ、列車が返る) ----
   // オプションをオンにしたときだけ取得する。オフの間は通信しない
-  // 自動で探す候補(上から順に試し、正しい応答を返したものを使う)。ポートは参考アプリの localhost 接続と同じ
-  const TRAIN_CANDIDATES = [
-    'http://localhost:8888/api/trains',
-    'http://localhost:18888/api/trains',
-    'http://localhost:8765/api/trains',
-  ];
+  // 自動で取得する先(ローカルの列車API)。入力欄に URL があれば、そちらを使う
+  const TRAIN_CANDIDATES = ['http://localhost:8765/api/trains'];
   const TRAIN_TIMEOUT_MS = 1500;
   const TRAIN_POLL_MS = 2000;
   const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -790,7 +786,14 @@
       }
       if (!found) {
         trains = [];
-        $('trainStatus').textContent = `列車のAPIが見つかりません。試したURL: ${failures.join(', ')}`;
+        let msg = `列車のAPIに接続できません。試したURL: ${failures.join(', ')}`;
+        // 共有ページ(https)から、ローカルのAPIへつなぐ時の注意
+        if (location.protocol === 'https:') {
+          msg += '。共有ページ(https)から接続する時は、ローカルのAPIが CORS を許可し、' +
+            'Access-Control-Allow-Private-Network: true を返す必要があります。' +
+            'また、ブラウザのサイト設定で「ローカルネットワークへのアクセス」を許可してください。';
+        }
+        $('trainStatus').textContent = msg;
       } else if (found.data.ok === false || !Array.isArray(found.data.trains)) {
         trains = [];
         $('trainStatus').textContent = `接続済み(${found.url}): ${found.data.error || 'ワールドに接続していないため、列車はありません'}`;
