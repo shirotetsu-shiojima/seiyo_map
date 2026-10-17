@@ -140,6 +140,9 @@
     <label><input type="checkbox" id="showHighway" checked> 高速道路</label>
     <label><input type="checkbox" id="showOther" checked> 国道・県道・一般道路・生活道路</label>
     <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
+    <label style="margin-top:6px"><input type="checkbox" id="showTrains"> 列車の位置を表示(ローカルAPI)</label>
+    <div id="trainStatus" class="meta" style="margin-top:4px"></div>
+    <div id="trainList" class="meta" style="font-size:12px"></div>
     <div id="error" class="error"></div>
 
     <h2>鉄道</h2>
@@ -725,6 +728,109 @@
     trimBitmaps();
   }
 
+  // ---- 列車の現在位置(ローカルの API。ワールドに接続しているときだけ、列車が返る) ----
+  // オプションをオンにしたときだけ取得する。オフの間は通信しない
+  const TRAIN_API = 'http://localhost:8765/api/trains';
+  const TRAIN_POLL_MS = 2000;
+  const HEX_RE = /^#[0-9a-f]{6}$/i;
+  let trains = [];
+  let trainTimer = null;
+  let trainBusy = false;
+  const trainOn = () => $('showTrains').checked;
+
+  function renderTrainList() {
+    const box = $('trainList');
+    box.replaceChildren(...trains.slice(0, 30).map((t) => {
+      const div = document.createElement('div');
+      const dest = parseStationName(t.destination).ja || '-';
+      const next = parseStationName(t.nextStation).ja || '-';
+      const delay = t.delaySec > 0 ? `・遅れ ${Math.round(t.delaySec)} 秒` : '';
+      div.textContent = `${t.title || t.formation} ${jaName(t.routeNumber)} → ${dest}(次 ${next}${delay})`;
+      return div;
+    }));
+  }
+
+  async function pollTrains() {
+    if (trainBusy || !trainOn()) return;
+    trainBusy = true;
+    try {
+      const res = await fetch(TRAIN_API, { cache: 'no-store' });
+      const data = await res.json();
+      if (!data || data.ok !== true || !Array.isArray(data.trains)) {
+        trains = [];
+        $('trainStatus').textContent = String((data && data.error) || 'ワールドに接続していないため、列車はありません');
+      } else {
+        trains = data.trains.filter((t) => Number.isFinite(t.x) && Number.isFinite(t.z));
+        $('trainStatus').textContent = `列車 ${trains.length} 本(${new Date().toLocaleTimeString('ja-JP')} 更新)`;
+      }
+    } catch (e) {
+      trains = [];
+      $('trainStatus').textContent = e instanceof TypeError
+        ? `API に接続できません(${TRAIN_API} が起動しているか確認してください)`
+        : `列車の取得に失敗しました: ${e.message}`;
+    } finally {
+      trainBusy = false;
+    }
+    renderTrainList();
+    needsDraw = true;
+  }
+
+  function setTrainMode(on) {
+    clearInterval(trainTimer);
+    trainTimer = null;
+    trains = [];
+    renderTrainList();
+    if (!on) {
+      $('trainStatus').textContent = '';
+      needsDraw = true;
+      return;
+    }
+    $('trainStatus').textContent = '列車を取得しています…';
+    pollTrains();
+    trainTimer = setInterval(pollTrains, TRAIN_POLL_MS);
+  }
+  $('showTrains').addEventListener('change', (e) => setTrainMode(e.target.checked));
+
+  // 列車の印: 路線の色の丸、向き(ヨー角。Minecraft と同じ向き)の線、停車中は外側に輪、名前
+  function drawTrains() {
+    ctx.save();
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (const t of trains) {
+      const [sx, sy] = toScreen(t.x, t.z);
+      if (sx < -60 || sy < -60 || sx > innerWidth + 60 || sy > innerHeight + 60) continue;
+      const fill = HEX_RE.test(t.routeColor || '') ? t.routeColor : '#4a5563';
+      const rad = (Number(t.yaw) || 0) * Math.PI / 180;
+      const dx = -Math.sin(rad), dz = Math.cos(rad);
+      ctx.strokeStyle = T.ink;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + dx * 13, sy + dz * 13);
+      ctx.stroke();
+      if (t.atStop || t.dwelling) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(sx, sy, 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = T.halo;
+      ctx.stroke();
+      const label = String(t.title || t.formation || '');
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = T.halo;
+      ctx.strokeText(label, sx + 10, sy - 10);
+      ctx.fillStyle = T.ink;
+      ctx.fillText(label, sx + 10, sy - 10);
+    }
+    ctx.restore();
+  }
+
   function draw() {
     ctx.fillStyle = T.mapBg;
     ctx.fillRect(0, 0, innerWidth, innerHeight);
@@ -732,6 +838,7 @@
     drawOrigin();
     if (roads.length) drawRoads();
     if (railOn()) drawRail();
+    if (trainOn() && trains.length) drawTrains();
     updateScale();
   }
 
