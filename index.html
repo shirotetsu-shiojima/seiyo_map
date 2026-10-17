@@ -735,7 +735,6 @@
   const TRAIN_CANDIDATES = ['http://localhost:8765/api/trains'];
   const TRAIN_TIMEOUT_MS = 1500;
   const TRAIN_POLL_MS = 2000;
-  const HEX_RE = /^#[0-9a-f]{6}$/i;
   let trains = [];
   let trainTimer = null;
   let trainBusy = false;
@@ -754,7 +753,7 @@
   }
 
   // 1つの URL から JSON を取る(参考アプリと同じ取り方: GET・mode: cors)。
-  // 失敗した時は、同じ URL に no-cors で問い合わせ、サーバーに届くかどうかを調べる
+  // ステータスや中身の形は見ない。JSON として読めれば、そのまま返す
   async function fetchTrainJson(url) {
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -762,15 +761,32 @@
     });
     try {
       const res = await Promise.race([fetch(url, { method: 'GET', mode: 'cors' }), timeout]);
-      if (!res.ok) return { error: `HTTP ${res.status}` };
-      return { data: await res.json() };
+      try {
+        return { status: res.status, body: await res.json() };
+      } catch (e) {
+        return { error: `JSONではありません(HTTP ${res.status})` };
+      }
     } catch (e) {
       if (e.message === 'timeout') return { error: '時間切れ' };
-      if (e instanceof SyntaxError) return { error: 'JSONではありません' };
       return { error: await diagnoseTrainUrl(url) };
     } finally {
       clearTimeout(timer);
     }
+  }
+  // 応答の中の列車の一覧を探す。配列そのもの、または trains などの中の配列を使う。無ければ空
+  function trainsFrom(body) {
+    if (Array.isArray(body)) return body;
+    if (body && typeof body === 'object') {
+      for (const key of ['trains', 'data', 'items', 'list']) {
+        if (Array.isArray(body[key])) return body[key];
+      }
+    }
+    return [];
+  }
+  // 列車の座標などは数値に直すだけ(数値でなければ NaN のまま。描く時に飛ばす)
+  function normalizeTrain(t) {
+    const o = (t && typeof t === 'object') ? t : {};
+    return { ...o, x: Number(o.x), z: Number(o.z), yaw: Number(o.yaw) };
   }
   // 失敗の理由を言葉にする。no-cors で届けば、サーバーは起動している(CORS か、ローカルネットワークの許可の問題)
   async function diagnoseTrainUrl(url) {
@@ -793,26 +809,30 @@
       for (const url of urls) {
         const r = await fetchTrainJson(url);
         if (r.error) { failures.push(`${url}(${r.error})`); continue; }
-        // 列車の一覧がある応答、または「ワールドに接続していない」という応答は、このAPIと判断する
-        if (r.data && (Array.isArray(r.data.trains) || r.data.ok === false)) { found = { url, data: r.data }; break; }
-        failures.push(`${url}(未対応の応答)`);
+        found = { url, status: r.status, body: r.body };
+        break;
       }
       if (!found) {
         trains = [];
         let msg = `列車のAPIに接続できません。試したURL: ${failures.join(', ')}`;
-        // 共有ページ(https)から、ローカルのAPIへつなぐ時の注意
         if (location.protocol === 'https:') {
           msg += '。共有ページ(https)から接続する時は、ローカルのAPIが CORS を許可し、' +
             'Access-Control-Allow-Private-Network: true を返す必要があります。' +
             'また、ブラウザのサイト設定で「ローカルネットワークへのアクセス」を許可してください。';
         }
         $('trainStatus').textContent = msg;
-      } else if (found.data.ok === false || !Array.isArray(found.data.trains)) {
-        trains = [];
-        $('trainStatus').textContent = `接続済み(${found.url}): ${found.data.error || 'ワールドに接続していないため、列車はありません'}`;
       } else {
-        trains = found.data.trains.filter((t) => Number.isFinite(t.x) && Number.isFinite(t.z));
-        $('trainStatus').textContent = `接続済み(${found.url})・列車 ${trains.length} 本(${new Date().toLocaleTimeString('ja-JP')} 更新)`;
+        const body = found.body;
+        trains = trainsFrom(body).map(normalizeTrain);
+        let text = `接続済み(${found.url}・HTTP ${found.status})`;
+        if (trains.length) {
+          text += `・列車 ${trains.length} 本(${new Date().toLocaleTimeString('ja-JP')} 更新)`;
+        } else if (body && typeof body === 'object' && body.error) {
+          text += `・応答: ${body.error}`;
+        } else {
+          text += `・列車の一覧は見つかりませんでした(応答: ${String(JSON.stringify(body)).slice(0, 120)})`;
+        }
+        $('trainStatus').textContent = text;
       }
     } finally {
       trainBusy = false;
@@ -843,9 +863,10 @@
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     for (const t of trains) {
+      if (!Number.isFinite(t.x) || !Number.isFinite(t.z)) continue;
       const [sx, sy] = toScreen(t.x, t.z);
       if (sx < -60 || sy < -60 || sx > innerWidth + 60 || sy > innerHeight + 60) continue;
-      const fill = HEX_RE.test(t.routeColor || '') ? t.routeColor : '#4a5563';
+      const fill = t.routeColor || '#4a5563';
       const rad = (Number(t.yaw) || 0) * Math.PI / 180;
       const dx = -Math.sin(rad), dz = Math.cos(rad);
       ctx.strokeStyle = T.ink;
