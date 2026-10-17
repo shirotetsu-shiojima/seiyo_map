@@ -141,6 +141,7 @@
     <label><input type="checkbox" id="showOther" checked> 国道・県道・一般道路・生活道路</label>
     <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
     <label style="margin-top:6px"><input type="checkbox" id="showTrains"> 列車の位置を表示(ローカルAPI)</label>
+    <input id="trainUrl" type="text" placeholder="APIのURL(空欄なら自動で探す)" style="margin-top:6px;width:100%;box-sizing:border-box">
     <div id="trainStatus" class="meta" style="margin-top:4px"></div>
     <div id="trainList" class="meta" style="font-size:12px"></div>
     <div id="error" class="error"></div>
@@ -730,7 +731,13 @@
 
   // ---- 列車の現在位置(ローカルの API。ワールドに接続しているときだけ、列車が返る) ----
   // オプションをオンにしたときだけ取得する。オフの間は通信しない
-  const TRAIN_API = 'http://localhost:8765/api/trains';
+  // 自動で探す候補(上から順に試し、正しい応答を返したものを使う)。ポートは参考アプリの localhost 接続と同じ
+  const TRAIN_CANDIDATES = [
+    'http://localhost:8888/api/trains',
+    'http://localhost:18888/api/trains',
+    'http://localhost:8765/api/trains',
+  ];
+  const TRAIN_TIMEOUT_MS = 1500;
   const TRAIN_POLL_MS = 2000;
   const HEX_RE = /^#[0-9a-f]{6}$/i;
   let trains = [];
@@ -750,24 +757,47 @@
     }));
   }
 
+  // 1つの URL から JSON を取る。つながらない・時間切れ・JSON でない時は、理由を返す
+  async function fetchTrainJson(url) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TRAIN_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { cache: 'no-store', mode: 'cors', signal: ctl.signal });
+      if (!res.ok) return { error: `HTTP ${res.status}` };
+      return { data: await res.json() };
+    } catch (e) {
+      if (e.name === 'AbortError') return { error: '時間切れ' };
+      return { error: e instanceof SyntaxError ? 'JSONではありません' : 'つながりません' };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function pollTrains() {
     if (trainBusy || !trainOn()) return;
     trainBusy = true;
+    const manual = $('trainUrl').value.trim();
+    const urls = manual ? [manual] : TRAIN_CANDIDATES;
+    const failures = [];
+    let found = null;
     try {
-      const res = await fetch(TRAIN_API, { cache: 'no-store' });
-      const data = await res.json();
-      if (!data || data.ok !== true || !Array.isArray(data.trains)) {
-        trains = [];
-        $('trainStatus').textContent = String((data && data.error) || 'ワールドに接続していないため、列車はありません');
-      } else {
-        trains = data.trains.filter((t) => Number.isFinite(t.x) && Number.isFinite(t.z));
-        $('trainStatus').textContent = `列車 ${trains.length} 本(${new Date().toLocaleTimeString('ja-JP')} 更新)`;
+      for (const url of urls) {
+        const r = await fetchTrainJson(url);
+        if (r.error) { failures.push(`${url}(${r.error})`); continue; }
+        // 列車の一覧がある応答、または「ワールドに接続していない」という応答は、このAPIと判断する
+        if (r.data && (Array.isArray(r.data.trains) || r.data.ok === false)) { found = { url, data: r.data }; break; }
+        failures.push(`${url}(未対応の応答)`);
       }
-    } catch (e) {
-      trains = [];
-      $('trainStatus').textContent = e instanceof TypeError
-        ? `API に接続できません(${TRAIN_API} が起動しているか確認してください)`
-        : `列車の取得に失敗しました: ${e.message}`;
+      if (!found) {
+        trains = [];
+        $('trainStatus').textContent = `列車のAPIが見つかりません。試したURL: ${failures.join(', ')}`;
+      } else if (found.data.ok === false || !Array.isArray(found.data.trains)) {
+        trains = [];
+        $('trainStatus').textContent = `接続済み(${found.url}): ${found.data.error || 'ワールドに接続していないため、列車はありません'}`;
+      } else {
+        trains = found.data.trains.filter((t) => Number.isFinite(t.x) && Number.isFinite(t.z));
+        $('trainStatus').textContent = `接続済み(${found.url})・列車 ${trains.length} 本(${new Date().toLocaleTimeString('ja-JP')} 更新)`;
+      }
     } finally {
       trainBusy = false;
     }
