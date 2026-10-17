@@ -116,6 +116,13 @@
     <input id="file" type="file" accept=".json,application/json">
     <div id="summary" class="meta" style="margin-top:8px"></div>
 
+    <h2>データ(HTMLと同じフォルダの自動読み込み)</h2>
+    <div class="row">
+      <label class="btn" for="dataDir">データフォルダから読む</label>
+    </div>
+    <input id="dataDir" type="file" webkitdirectory multiple>
+    <div id="autoStatus" class="meta" style="margin-top:6px">rail.json・train.json・road.json を読み込んでいます…</div>
+
     <h2>背景の地図(地図画像 9 枚)</h2>
     <div class="row">
       <label class="btn" for="bgDir">地図フォルダ</label>
@@ -1515,10 +1522,88 @@
     box.style.display = 'block';
   }
 
+  // ---- 起動時の自動読み込み(HTML と同じフォルダの rail.json・train.json・road.json) ----
+  // 鉄道 → 系統 → 道路の順に読む(系統は、鉄道を読んだ後に線路へ色を付ける)
+  const DATA_FILES = [
+    { kind: 'rail', name: 'rail.json' },
+    { kind: 'train', name: 'train.json' },
+    { kind: 'road', name: 'road.json' },
+  ];
+  // 種類に合った読み込み関数へ渡す。読めなかった時のエラーは、それぞれの欄に出る
+  function applyData(kind, text, name) {
+    if (kind === 'rail') loadRailText(text, name);
+    else if (kind === 'train') loadRouteText(text, name);
+    else loadText(text, name);
+  }
+  function setAutoStatus(lines, isError = false) {
+    const box = $('autoStatus');
+    box.style.color = isError ? 'var(--danger)' : '';
+    box.replaceChildren(...lines.map((text) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div;
+    }));
+  }
+  // 起動時: HTML と同じフォルダから、Web サーバー経由なら読める。ファイルを直接開いた時は読めない(ブラウザの制限)
+  async function autoLoadData() {
+    const lines = [];
+    let blocked = false;
+    for (const d of DATA_FILES) {
+      let res;
+      try {
+        res = await fetch(d.name, { cache: 'no-store' });
+      } catch (e) {
+        blocked = true;
+        lines.push(`${d.name}: 自動では読めません`);
+        continue;
+      }
+      if (!res.ok) { lines.push(`${d.name}: 見つかりません`); continue; }
+      applyData(d.kind, await res.text(), d.name);
+      lines.push(`${d.name}: 読み込みました`);
+    }
+    if (blocked) {
+      lines.push('このHTMLを直接開いているため、自動では読めません。「データフォルダから読む」で、HTMLと同じフォルダを選んでください。');
+      setAutoStatus(lines, true);
+    } else {
+      setAutoStatus(lines);
+    }
+  }
+  function readText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+  // 選んだフォルダの中から3つのファイルを探す(同じ名前が下の階層にもあれば、一番浅いものを使う)
+  async function loadDataFolder(list) {
+    const found = {};
+    for (const f of list) {
+      const hit = DATA_FILES.find((d) => d.name === f.name);
+      if (!hit) continue;
+      const depth = (f.webkitRelativePath || f.name).split('/').length;
+      if (!found[hit.kind] || depth < found[hit.kind].depth) found[hit.kind] = { file: f, depth };
+    }
+    const lines = [];
+    for (const d of DATA_FILES) {
+      const hit = found[d.kind];
+      if (!hit) { lines.push(`${d.name}: フォルダに見つかりません`); continue; }
+      applyData(d.kind, await readText(hit.file), d.name);
+      lines.push(`${d.name}: 読み込みました`);
+    }
+    setAutoStatus(lines);
+  }
+
   // 入力
   $('file').addEventListener('change', (e) => readFile(e.target.files[0]));
   $('railFile').addEventListener('change', (e) => readRailFile(e.target.files[0]));
   $('routeFile').addEventListener('change', (e) => readRouteFile(e.target.files[0]));
+  $('dataDir').addEventListener('change', (e) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = ''; // 同じフォルダを選び直しても反応するように
+    if (list.length) loadDataFolder(list);
+  });
   $('showRouteColor').addEventListener('change', () => { needsDraw = true; });
   $('hideDup').addEventListener('change', () => applyRoutes());
   $('showRail').addEventListener('change', () => {
@@ -1654,9 +1739,10 @@
   }
   requestAnimationFrame(frame);
   loadDefaultTiles();
+  autoLoadData();
   // テストやデバッグ用に、読み込み関数を公開する
   window.roadMap = {
-    loadText, loadTileFiles, pick, view,
+    loadText, loadTileFiles, pick, view, autoLoadData, loadDataFolder,
     get roads() { return roads; },
     get tiles() {
       return [...tiles.values()].map((t) => ({
