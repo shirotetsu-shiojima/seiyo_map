@@ -6,54 +6,96 @@
 <title>星陽マップ</title>
 <style>
   :root {
-    --bg: #eef1f4; --panel: #ffffff; --ink: #1f2933; --muted: #7b8794; --line: #d9e0e7;
-    --hw: #e8590c; --road: #3e4c59; --accent: #1c7ed6; --danger: #c92a2a;
+    --map-bg: #f2efe9; --panel: rgba(255,255,255,.97); --ink: #202124; --muted: #5f6368;
+    --line: #e0e3e6; --chip: #f1f3f4; --accent: #1a73e8; --danger: #d93025;
+    --halo: #ffffff; --rail-casing: #ffffff;
+    --shadow: 0 1px 2px rgba(60,64,67,.3), 0 2px 8px rgba(60,64,67,.18);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #151a20; --panel: #1f262e; --ink: #e4e9ee; --muted: #8a96a3; --line: #323c47;
-      --road: #9aa8b6; --accent: #74c0fc; --danger: #ff8787;
+      --map-bg: #1b2028; --panel: rgba(32,33,36,.97); --ink: #e8eaed; --muted: #9aa0a6;
+      --line: #3c4043; --chip: #3c4043; --accent: #8ab4f8; --danger: #f28b82;
+      --halo: #1b2028; --rail-casing: #1b2028;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.35);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #151a20; --panel: #1f262e; --ink: #e4e9ee; --muted: #8a96a3; --line: #323c47;
-    --road: #9aa8b6; --accent: #74c0fc; --danger: #ff8787;
+    --map-bg: #1b2028; --panel: rgba(32,33,36,.97); --ink: #e8eaed; --muted: #9aa0a6;
+    --line: #3c4043; --chip: #3c4043; --accent: #8ab4f8; --danger: #f28b82;
+    --halo: #1b2028; --rail-casing: #1b2028;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: var(--map-bg); color: var(--ink);
+    font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", "Meiryo", sans-serif; overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
   canvas.dragging { cursor: grabbing; }
-  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(0,0,0,.10); padding: 12px 14px; font-size: 13px; max-width: calc(100vw - 24px); }
-  #top { top: 12px; left: 12px; width: 300px; max-height: calc(100vh - 24px); overflow-y: auto; }
-  #legend { bottom: 12px; left: 12px; }
-  #info { top: 12px; right: 12px; width: 300px; display: none; }
-  #coord { bottom: 12px; right: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 6px 10px; }
+  .panel { position: fixed; background: var(--panel); border-radius: 12px; box-shadow: var(--shadow);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 14px; font-size: 13px;
+    max-width: calc(100vw - 24px); }
+  #top { top: 12px; left: 12px; width: 312px; max-height: calc(100vh - 24px - var(--legend-h, 0px) - 12px);
+    display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+  #top .head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--line); }
+  #top .logo { flex: 1; font-size: 16px; font-weight: 700; letter-spacing: .02em; }
+  #top .body { padding: 6px 16px 14px; overflow-y: auto; }
+  #top.collapsed .body { display: none; }
+  #top.collapsed { width: auto; }
+  #legend { bottom: 12px; left: 12px; padding: 10px 14px; min-width: 220px; }
+  #info { top: 12px; right: 12px; width: 320px; display: none; padding: 0; overflow: hidden; }
+  #coord { bottom: 12px; right: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 6px 10px; font-size: 12px; }
   #coord:empty { display: none; }
-  h1 { font-size: 15px; margin: 0 0 10px; }
-  h2 { font-size: 12px; color: var(--muted); font-weight: 600; margin: 12px 0 6px; letter-spacing: .04em; }
+  .info-bar { height: 6px; background: var(--accent); }
+  #info .inner { padding: 12px 16px 14px; }
+  h1 { font-size: 16px; margin: 0 0 10px; font-weight: 700; }
+  h2 { font-size: 11px; color: var(--muted); font-weight: 600; margin: 14px 0 6px; letter-spacing: .06em; }
   .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
-  .btn { display: inline-block; border: 1px solid var(--accent); color: var(--accent); background: transparent;
-    border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
-  .btn:hover { background: var(--accent); color: #fff; }
+  .btn { display: inline-block; border: 1px solid var(--line); color: var(--accent); background: var(--panel);
+    border-radius: 18px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500; }
+  .btn:hover { background: var(--chip); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .icon { border: none; background: transparent; color: var(--ink); font-size: 18px; width: 34px; height: 34px;
+    border-radius: 50%; cursor: pointer; line-height: 1; }
+  .icon:hover { background: var(--chip); }
   input[type="file"] { display: none; }
+  input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   .meta { color: var(--muted); line-height: 1.6; }
   .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; }
-  label { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
-  .swatch { display: inline-block; width: 56px; border-radius: 3px; flex: none; }
+  label { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; margin: 3px 0; }
+  .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
+  .sw { display: inline-block; width: 44px; border-radius: 4px; flex: none; }
   .lanes-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
-  .lanes-row span { width: 58px; color: var(--muted); }
-  dl { display: grid; grid-template-columns: 84px 1fr; gap: 4px 10px; margin: 0; }
+  .lanes-row span.lbl { width: 58px; color: var(--muted); }
+  dl { display: grid; grid-template-columns: 84px 1fr; gap: 6px 10px; margin: 0; }
   dt { color: var(--muted); }
   dd { margin: 0; font-variant-numeric: tabular-nums; word-break: break-all; }
-  #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
-  #drop { position: fixed; inset: 0; background: rgba(28,126,214,.12); border: 3px dashed var(--accent);
-    display: none; align-items: center; justify-content: center; font-size: 20px; color: var(--accent); pointer-events: none; }
+  #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 0 0 8px; }
+  #info .close:hover { color: var(--ink); }
+
+  /* 地図の操作ボタン */
+  .controls { position: fixed; right: 12px; bottom: 56px; display: flex; flex-direction: column; border-radius: 10px;
+    overflow: hidden; box-shadow: var(--shadow); background: var(--panel); }
+  .ctl { width: 40px; height: 40px; border: 0; border-bottom: 1px solid var(--line); background: transparent;
+    color: var(--ink); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .ctl:last-child { border-bottom: 0; }
+  .ctl:hover { background: var(--chip); }
+  .compass { width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); line-height: 1.05; }
+  .compass .arrow { color: #ea4335; font-size: 12px; }
+
+  /* 縮尺バー */
+  #scaleBar { bottom: 12px; left: 50%; transform: translateX(-50%); padding: 6px 10px 4px; font-size: 11px;
+    color: var(--ink); text-align: center; font-variant-numeric: tabular-nums; }
+  #scaleLine { height: 6px; border: 2px solid var(--ink); border-top: 0; margin: 0 auto 3px; width: 100px; }
+  #scaleText { white-space: nowrap; }
+
+  #drop { position: fixed; inset: 0; background: rgba(26,115,232,.10); border: 3px dashed var(--accent);
+    display: none; align-items: center; justify-content: center; font-size: 20px; color: var(--accent);
+    pointer-events: none; z-index: 10; }
   @media (max-width: 640px) {
     #top { width: auto; right: 12px; }
     #info { top: auto; bottom: 56px; left: 12px; right: 12px; width: auto; }
     #legend { display: none; }
+    .controls { bottom: 12px; }
   }
 </style>
 </head>
@@ -62,67 +104,87 @@
 <div id="drop">JSONまたは地図画像をドロップして読み込む</div>
 
 <div id="top" class="panel">
-  <h1>星陽マップ</h1>
-  <div class="row">
-    <label class="btn" for="file">JSONを開く</label>
-    <span id="fileName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <div class="head">
+    <span class="logo">星陽マップ</span>
+    <button class="icon" id="toggleTop" type="button" aria-label="メニューを開閉">☰</button>
   </div>
-  <input id="file" type="file" accept=".json,application/json">
-  <div id="summary" class="meta" style="margin-top:8px"></div>
+  <div class="body">
+    <div class="row">
+      <label class="btn primary" for="file">JSONを開く</label>
+      <span id="fileName" class="fname"></span>
+    </div>
+    <input id="file" type="file" accept=".json,application/json">
+    <div id="summary" class="meta" style="margin-top:8px"></div>
 
-  <h2>背景の地図(地図画像 9 枚)</h2>
-  <div class="row">
-    <label class="btn" for="bgDir">地図フォルダを開く</label>
-    <label class="btn" for="bgFiles">画像を選ぶ</label>
-  </div>
-  <input id="bgDir" type="file" webkitdirectory multiple>
-  <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
-  <div id="bgStatus" class="meta" style="margin-top:6px">背景の地図を読み込んでいます…</div>
-  <label style="margin-top:6px"><input type="checkbox" id="bgShow" checked> 背景の地図を表示</label>
-  <div class="row"><span class="meta" style="width:40px">濃さ</span>
-    <input id="bgAlpha" type="range" min="10" max="100" value="85" style="flex:1"></div>
-  <div class="row"><button class="btn" id="bgClear" type="button">背景を消す</button></div>
+    <h2>背景の地図(地図画像 9 枚)</h2>
+    <div class="row">
+      <label class="btn" for="bgDir">地図フォルダ</label>
+      <label class="btn" for="bgFiles">画像を選ぶ</label>
+    </div>
+    <input id="bgDir" type="file" webkitdirectory multiple>
+    <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+    <div id="bgStatus" class="meta" style="margin-top:6px">背景の地図を読み込んでいます…</div>
+    <label style="margin-top:6px"><input type="checkbox" id="bgShow" checked> 背景の地図を表示</label>
+    <div class="row"><span class="meta" style="width:40px">濃さ</span>
+      <input id="bgAlpha" type="range" min="10" max="100" value="60" style="flex:1"></div>
+    <div class="row"><button class="btn" id="bgClear" type="button">背景を消す</button></div>
 
-  <h2>表示</h2>
-  <label><input type="checkbox" id="showHighway" checked> 高速道路</label>
-  <label><input type="checkbox" id="showOther" checked> 一般道路・生活道路</label>
-  <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
-  <div id="error" class="error"></div>
+    <h2>表示</h2>
+    <label><input type="checkbox" id="showHighway" checked> 高速道路</label>
+    <label><input type="checkbox" id="showOther" checked> 国道・県道・一般道路・生活道路</label>
+    <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
+    <div id="error" class="error"></div>
 
-  <h2>鉄道</h2>
-  <div class="row">
-    <label class="btn" for="railFile">鉄道JSONを開く</label>
-    <span id="railName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <h2>鉄道</h2>
+    <div class="row">
+      <label class="btn" for="railFile">鉄道JSON</label>
+      <span id="railName" class="fname"></span>
+    </div>
+    <input id="railFile" type="file" accept=".json,application/json">
+    <div id="railSummary" class="meta" style="margin-top:6px"></div>
+    <label style="margin-top:6px"><input type="checkbox" id="showRail" checked> 鉄道を表示</label>
+    <div class="row" style="margin-top:8px">
+      <label class="btn" for="routeFile">系統JSON</label>
+      <span id="routeName" class="fname"></span>
+    </div>
+    <input id="routeFile" type="file" accept=".json,application/json">
+    <div id="routeSummary" class="meta" style="margin-top:6px"></div>
+    <label style="margin-top:6px"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
+    <label style="margin-top:4px"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
   </div>
-  <input id="railFile" type="file" accept=".json,application/json">
-  <div id="railSummary" class="meta" style="margin-top:6px"></div>
-  <label style="margin-top:6px"><input type="checkbox" id="showRail" checked> 鉄道を表示</label>
-  <div class="row" style="margin-top:8px">
-    <label class="btn" for="routeFile">系統JSONを開く</label>
-    <span id="routeName" class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-  </div>
-  <input id="routeFile" type="file" accept=".json,application/json">
-  <div id="routeSummary" class="meta" style="margin-top:6px"></div>
-  <label style="margin-top:6px"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
-  <label style="margin-top:4px"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
 </div>
 
 <div id="legend" class="panel">
-  <h2 style="margin-top:0">見た目</h2>
-  <div class="row"><span class="swatch" style="height:6px;background:var(--hw)"></span> 高速道路</div>
-  <div class="row"><span class="swatch" style="height:6px;background:var(--road)"></span> 一般道路・生活道路</div>
-  <div class="row"><span class="swatch" id="tunnelSwatch" style="height:6px"></span> トンネル(グレーを混ぜた色)</div>
-  <div class="row"><span class="swatch" style="height:3px;background:#2f9e44"></span> 鉄道(系統の色。白丸は駅)</div>
+  <h2 style="margin-top:0">凡例</h2>
+  <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span> 高速道路</div>
+  <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span> 国道</div>
+  <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span> 県道(都道府県道)</div>
+  <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span> 市町村道・私道・一般道路・生活道路</div>
+  <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span> トンネル(グレーを混ぜた色・縁は破線)</div>
+  <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span> 鉄道(系統の色。白丸は駅)</div>
   <h2>太さ(車線数)</h2>
   <div id="lanesLegend"></div>
   <div class="meta" style="margin-top:6px;font-size:12px">未建設の道路は半透明で描きます。北は上です。</div>
 </div>
 
 <div id="info" class="panel">
-  <button class="close" id="closeInfo" aria-label="閉じる">×</button>
-  <h1 id="infoTitle"></h1>
-  <dl id="infoBody"></dl>
+  <div class="info-bar" id="infoBar"></div>
+  <div class="inner">
+    <button class="close" id="closeInfo" aria-label="閉じる">×</button>
+    <h1 id="infoTitle"></h1>
+    <dl id="infoBody"></dl>
+  </div>
 </div>
+
+<div id="controls" class="controls">
+  <div class="compass" title="北は上"><span class="arrow">▲</span>N</div>
+  <button class="ctl" id="zoomIn" type="button" aria-label="拡大" title="拡大">+</button>
+  <button class="ctl" id="zoomOut" type="button" aria-label="縮小" title="縮小">−</button>
+  <button class="ctl" id="fitBtn" type="button" aria-label="全体を表示" title="全体を表示">⤢</button>
+  <button class="ctl" id="originBtn" type="button" aria-label="原点へ" title="原点(0, 0)へ">◎</button>
+</div>
+
+<div id="scaleBar" class="panel"><div id="scaleLine"></div><span id="scaleText"></span></div>
 
 <div id="coord" class="panel"></div>
 
@@ -130,11 +192,29 @@
 (() => {
   const TYPE_LABEL = { residential: '生活道路', general: '一般道路', highway: '高速道路' };
   const MODE_LABEL = { earthwork: '土工', bridge: '橋梁', tunnel: 'トンネル' };
-  const HW_COLOR = '#e8590c';
-  const OTHER_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--road').trim() || '#3e4c59';
   const GRAY_HEX = '#8a939b';          // トンネルに混ぜるグレー
   const TUNNEL_TINT = 0.45;            // トンネルのグレーの割合
   const LANE_SAMPLES = [1, 2, 4, 6, 8];
+  const ACCENT = '#1a73e8';
+
+  // 道路の色(面と縁)。地図アプリのように、縁取りで道路を見分けやすくする
+  const ROAD_STYLE = {
+    highway:     { fill: '#62d682', casing: '#3a9d57' },
+    general:     { fill: '#ffffff', casing: '#aab3bd' },
+    residential: { fill: '#fafaf8', casing: '#c9d0d7' },
+  };
+  // 路線の区分による色(国道・県道)。市町村道・私道は白系(一般道路と同じ色)
+  const ROUTE_STYLE = {
+    national:    { fill: '#ff7966', casing: '#c4493a' },
+    prefectural: { fill: '#ffd866', casing: '#c9a02a' },
+    municipal:   { fill: '#ffffff', casing: '#aab3bd' },
+    private:     { fill: '#ffffff', casing: '#aab3bd' },
+  };
+  const CATEGORY_LABEL = { national: '国道', prefectural: '都道府県道', municipal: '市町村道', private: '私道' };
+  // 描く順(上に重なる順)。白い道路 → 県道 → 国道 → 高速道路
+  const RANK = { national: 2, prefectural: 1 };
+  const rankOf = (r) => (r.highway ? 3 : (RANK[r.category] || 0));
+  const byRank = (list) => list.slice().sort((a, b) => rankOf(a) - rankOf(b));
 
   // ---- 地図画像の設定 ----
   // 地図は 3 × 3 に並ぶ。番号は左上から 1,2,3 / 4,5,6 / 7,8,9。ブロック5の中心が (0, 0)
@@ -150,6 +230,17 @@
   const canvas = document.getElementById('map');
   const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
+
+  // 描画に使う色(テーマに合わせて CSS から読む)
+  const T = { mapBg: '#f2efe9', halo: '#ffffff', ink: '#202124', railCasing: '#ffffff' };
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+    T.mapBg = g('--map-bg', '#f2efe9');
+    T.halo = g('--halo', '#ffffff');
+    T.ink = g('--ink', '#202124');
+    T.railCasing = g('--rail-casing', '#ffffff');
+  }
 
   const view = { cx: 0, cz: 0, scale: 4 };
   let roads = [];
@@ -179,10 +270,16 @@
     const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
     return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('');
   }
-  // 道路の色。トンネルは、グレーを混ぜて見分けやすくする
-  function colorOf(r) {
-    const base = r.highway ? HW_COLOR : OTHER_COLOR;
-    return r.mode === 'tunnel' ? mixHex(base, GRAY_HEX, TUNNEL_TINT) : base;
+  // 道路の見た目(面・縁・トンネルかどうか)。トンネルは、グレーを混ぜて縁を破線にする
+  function baseStyleOf(r) {
+    if (r.highway) return ROAD_STYLE.highway;
+    if (ROUTE_STYLE[r.category]) return ROUTE_STYLE[r.category];
+    return r.type === 'residential' ? ROAD_STYLE.residential : ROAD_STYLE.general;
+  }
+  function styleOf(r) {
+    const s = baseStyleOf(r);
+    if (r.mode === 'tunnel') return { fill: mixHex(s.fill, GRAY_HEX, TUNNEL_TINT), casing: s.casing, tunnel: true };
+    return { fill: s.fill, casing: s.casing, tunnel: false };
   }
 
   function resize() {
@@ -287,6 +384,9 @@
     }
     return {
       id: raw.id, type: raw.type, highway: raw.type === 'highway', lanes: raw.lanes, mode: raw.mode,
+      category: (raw.route && raw.route.category) || '',
+      routeNumber: (raw.route && raw.route.number) || '',
+      routeName: (raw.route && raw.route.name) || '',
       built: !!raw.built, length: raw.length, sidewalk: raw.sidewalk_width,
       from: raw.from, to: raw.to, dimension: raw.dimension, surface: raw.lane_surface,
       yMin, yMax,
@@ -348,34 +448,56 @@
     view.cz = (minZ + maxZ) / 2;
   }
 
+  // 縮尺バーの長さに使う、切りのよい距離(ブロック)
   function niceStep(raw) {
-    const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
+    const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
     return steps.find((s) => s >= raw) || 200000;
   }
 
-  function drawGrid() {
-    const step = niceStep(90 / view.scale);
-    const [x0, z0] = toWorld(0, 0);
-    const [x1, z1] = toWorld(innerWidth, innerHeight);
-    ctx.save();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(128,140,150,0.22)';
-    ctx.fillStyle = 'rgba(128,140,150,0.9)';
-    ctx.font = '11px system-ui, sans-serif';
-    for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
-      const [sx] = toScreen(x, 0);
-      ctx.beginPath(); ctx.moveTo(Math.round(sx) + 0.5, 0); ctx.lineTo(Math.round(sx) + 0.5, innerHeight); ctx.stroke();
-      ctx.fillText(String(x), sx + 3, innerHeight - 6);
+  // 縮尺バー(画面の下中央に、今の拡大率での長さを示す)
+  function updateScale() {
+    const blocks = niceStep(110 / view.scale);
+    $('scaleLine').style.width = (blocks * view.scale) + 'px';
+    $('scaleText').textContent = `${blocks} ブロック`;
+  }
+
+  // 縁取りを付けた道路(外側の縁 → 面 → 多車線の中央線の順に描く)
+  function drawRoads() {
+    const list = roads.filter(visible);
+    // 白い道路を先に描き、県道・国道・高速道路の順に上に重ねる
+    const ordered = byRank(list);
+    for (const r of ordered) {
+      const s = styleOf(r);
+      strokeLine(r.pts, lanePx(r.lanes) + 3, s.casing, r.built ? 1 : 0.45, s.tunnel ? [5, 4] : null);
     }
-    for (let z = Math.ceil(z0 / step) * step; z <= z1; z += step) {
-      const [, sy] = toScreen(0, z);
-      ctx.beginPath(); ctx.moveTo(0, Math.round(sy) + 0.5); ctx.lineTo(innerWidth, Math.round(sy) + 0.5); ctx.stroke();
-      ctx.fillText(String(z), 4, sy - 3);
+    for (const r of ordered) {
+      strokeLine(r.pts, lanePx(r.lanes), styleOf(r).fill, r.built ? 1 : 0.45);
     }
-    // 原点
+    for (const r of ordered) {
+      if (r.highway && r.lanes >= 2) {
+        strokeLine(r.pts, Math.max(1, lanePx(r.lanes) * 0.08), '#ffffff', (r.built ? 1 : 0.45) * 0.9, [6, 6]);
+      }
+    }
+    if (selected && visible(selected)) {
+      strokeLine(selected.pts, lanePx(selected.lanes) + 9, ACCENT, 0.35);
+    }
+    if (hover && hover !== selected && visible(hover)) {
+      strokeLine(hover.pts, lanePx(hover.lanes) + 6, ACCENT, 0.2);
+    }
+  }
+
+  // 原点(0, 0)の目印。控えめな十字
+  function drawOrigin() {
     const [ox, oz] = toScreen(0, 0);
-    ctx.strokeStyle = 'rgba(92,124,250,0.45)';
-    ctx.beginPath(); ctx.moveTo(ox - 8, oz); ctx.lineTo(ox + 8, oz); ctx.moveTo(ox, oz - 8); ctx.lineTo(ox, oz + 8); ctx.stroke();
+    if (ox < -20 || oz < -20 || ox > innerWidth + 20 || oz > innerHeight + 20) return;
+    ctx.save();
+    ctx.strokeStyle = ACCENT;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ox - 7, oz); ctx.lineTo(ox + 7, oz);
+    ctx.moveTo(ox, oz - 7); ctx.lineTo(ox, oz + 7);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -394,26 +516,6 @@
     });
     ctx.stroke();
     ctx.restore();
-  }
-
-  function drawRoads() {
-    const list = roads.filter(visible);
-    // 一般道路を先に描き、高速道路を上に重ねる。外枠線は付けない(継ぎ目を見やすくするため)
-    const ordered = [...list.filter((r) => !r.highway), ...list.filter((r) => r.highway)];
-    for (const r of ordered) {
-      const w = lanePx(r.lanes);
-      const alpha = r.built ? 1 : 0.45;
-      strokeLine(r.pts, w, colorOf(r), alpha);
-      if (r.highway && r.lanes >= 2) {
-        strokeLine(r.pts, Math.max(1, w * 0.12), '#ffffff', alpha * 0.9, [6, 6]);
-      }
-    }
-    if (selected && visible(selected)) {
-      strokeLine(selected.pts, lanePx(selected.lanes) + 9, '#1c7ed6', 0.55);
-    }
-    if (hover && hover !== selected && visible(hover)) {
-      strokeLine(hover.pts, lanePx(hover.lanes) + 6, '#1c7ed6', 0.25);
-    }
   }
 
   // ---- 地図画像(map_small1.jpg 〜 map_small9.jpg) ----
@@ -487,7 +589,7 @@
     }
     if (gen !== tileGen) return;
     if (!found.size) {
-      $('bgStatus').textContent = `${DEFAULT_DIR} フォルダに地図画像(map_small1.jpg など)が見つかりません。「地図フォルダを開く」から選ぶこともできます。`;
+      $('bgStatus').textContent = `${DEFAULT_DIR} フォルダに地図画像(map_small1.jpg など)が見つかりません。「地図フォルダ」から選ぶこともできます。`;
       return;
     }
     tiles = found;
@@ -617,11 +719,13 @@
   }
 
   function draw() {
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    ctx.fillStyle = T.mapBg;
+    ctx.fillRect(0, 0, innerWidth, innerHeight);
     drawMap();
-    drawGrid();
+    drawOrigin();
     if (roads.length) drawRoads();
     if (railOn()) drawRail();
+    updateScale();
   }
 
   function distToSeg(px, py, ax, ay, bx, by) {
@@ -634,10 +738,10 @@
   }
 
   // 画面上の点に最も近い道路(線の太さの範囲内)
-  // 描いた順(一般道路 → 高速道路)で見て、同じ距離なら後に描いた方(上に見える方)を選ぶ
+  // 描いた順(白い道路 → 県道 → 国道 → 高速道路)で見て、同じ距離なら後に描いた方(上に見える方)を選ぶ
   function pick(sx, sy) {
     let best = null, bestD = Infinity;
-    const list = [...roads.filter((r) => !r.highway), ...roads.filter((r) => r.highway)];
+    const list = byRank(roads);
     for (const r of list) {
       if (!visible(r)) continue;
       const tol = lanePx(r.lanes) / 2 + 6;
@@ -661,9 +765,13 @@
   function showInfo(r) {
     const box = $('info');
     if (!r) { selectedRail = null; box.style.display = 'none'; return; }
+    $('infoBar').style.background = styleOf(r).casing;
     $('infoTitle').textContent = `${TYPE_LABEL[r.type] || r.type} #${r.id}`;
     const dl = $('infoBody');
     dl.textContent = '';
+    if (!r.highway) addRow(dl, '区分', CATEGORY_LABEL[r.category] || '未設定');
+    addRow(dl, r.highway ? 'ナンバリング' : '路線番号', r.routeNumber || '-');
+    addRow(dl, '路線名', r.routeName || '-');
     addRow(dl, '作り方', MODE_LABEL[r.mode] || r.mode || '-');
     addRow(dl, '車線数', `${r.lanes} 車線`);
     addRow(dl, '長さ', `${r.length} ブロック`);
@@ -684,20 +792,22 @@
       const row = document.createElement('div');
       row.className = 'lanes-row';
       const label = document.createElement('span');
+      label.className = 'lbl';
       label.textContent = `${n} 車線`;
       const bar = document.createElement('span');
-      bar.className = 'swatch';
       bar.style.height = `${lanePx(n)}px`;
-      bar.style.background = 'var(--road)';
       bar.style.width = '70px';
       bar.style.display = 'inline-block';
+      bar.style.borderRadius = '4px';
+      bar.style.background = ROAD_STYLE.general.fill;
+      bar.style.boxShadow = `inset 0 0 0 1.5px ${ROAD_STYLE.general.casing}`;
       row.append(label, bar);
       box.append(row);
     }
   }
 
   // ---- 鉄道(駅番号などは、駅を選んだ時の詳細欄にだけ出す) ----
-  const RAIL_COLOR = '#2f9e44';
+  const RAIL_COLOR = '#4a5563';        // 鉄道の線(系統の色で塗らない時)
   const RAIL_LABEL_SCALE = 0.2;        // これより拡大した時だけ駅名を描く
   const CLUSTER_SIM = 0.7;             // 通る区間の一致率(Jaccard)がこれ以上の系統は、1本の路線にまとめる
   let rail = null;                     // { stations: Map, sections: [...], total }
@@ -967,7 +1077,7 @@
   const PLATFORM_LENGTH = 100;         // ホームの長さ(ブロック)。暫定値
   const PLATFORM_WIDTH = 4;            // ホームの幅(ブロック)
   const PLATFORM_SCALE = 0.2;          // これより拡大した時だけホームを描く
-  const PLATFORM_FILL = '#ff5b4b';     // ホームの塗りつぶし(モックアップの赤)
+  const PLATFORM_FILL = '#e8523f';     // ホームの塗りつぶし
   const PLATFORM_DIR_MAX = 60;         // ホームの中心からこの距離(ブロック)以内に線路が無ければ、vertical の向きを使う
 
   // ホームの中心に最も近い線路の区間の向き(単位ベクトル)を返す
@@ -1189,7 +1299,14 @@
     needsDraw = true;
   }
 
-  // 1本の区間を、通る系統の色で描く。複数の系統が通る区間は、色の帯を重ねて見せる
+  // 1本の区間の、系統を並べた帯の太さ(px)
+  function sectionBandWidth(sec) {
+    const k = Math.max(1, view.scale / LINE_REF_SCALE);
+    const n = Math.max(1, sec.routes.length);
+    return (n - 1) * LANE_GAP_PX * k + LINE_WIDTH_PX * k;
+  }
+
+  // 1本の区間を、通る系統の色で描く。複数の系統が通る区間は、色の帯を並べて見せる
   function drawSectionColored(sec) {
     if (!sec.routes.length) { strokeLine(sec.pts, 2, '#9aa3ab', 0.9); return; }
     // 路線ごと・色ごとに並べ順を固定し、区間が変わっても線の位置がずれないようにする
@@ -1224,48 +1341,46 @@
   function drawRail() {
     const hiSec = selectedRail && selectedRail.type === 'section' ? selectedRail.sec : null;
     const hiSt = selectedRail && selectedRail.type === 'station' ? selectedRail.st : null;
+    const colored = routeColorOn();
+    const list = rail.sections.filter((s) => s !== hiSec && (!colored || !s.skipDraw));
     ctx.save();
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    if (routeColorOn()) {
-      for (const sec of rail.sections) {
-        if (sec !== hiSec && !sec.skipDraw) drawSectionColored(sec);
-      }
-    } else {
-      ctx.strokeStyle = RAIL_COLOR;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      for (const sec of rail.sections) {
-        if (sec === hiSec) continue;
-        sec.pts.forEach(([x, z], i) => {
-          const [sx, sy] = toScreen(x, z);
-          if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
-        });
-      }
-      ctx.stroke();
+    // 1) 白い縁(線路を地図から浮かせて見やすくする)
+    for (const sec of list) {
+      strokeLine(sec.pts, colored ? sectionBandWidth(sec) + 3 : 5, T.railCasing, 1);
     }
-    if (hiSec) strokeLine(hiSec.pts, 8, '#1c7ed6', 0.6);
+    // 2) 線路本体
+    if (colored) {
+      for (const sec of list) drawSectionColored(sec);
+    } else {
+      for (const sec of list) strokeLine(sec.pts, 2.5, RAIL_COLOR, 1);
+    }
+    if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
+    // 駅の丸印(白に濃い縁。選んだ駅は青)
     for (const st of rail.stations.values()) {
       const [sx, sy] = toScreen(st.x, st.z);
       ctx.beginPath();
-      ctx.arc(sx, sy, st === hiSt ? 6 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.arc(sx, sy, st === hiSt ? 6.5 : 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = st === hiSt ? ACCENT : '#ffffff';
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = RAIL_COLOR;
+      ctx.strokeStyle = st === hiSt ? '#ffffff' : T.ink;
       ctx.stroke();
     }
+    // 駅名(白や黒の縁取りで、地図の上でも読めるようにする)
     if (view.scale >= RAIL_LABEL_SCALE) {
-      ctx.font = '12px system-ui, "Hiragino Sans", sans-serif';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillStyle = '#1f2933';
+      ctx.font = '600 12px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = T.halo;
+      ctx.fillStyle = T.ink;
       for (const st of rail.stations.values()) {
         const [sx, sy] = toScreen(st.x, st.z);
         const label = st.ja || st.en;
-        ctx.strokeText(label, sx + 7, sy + 4);
-        ctx.fillText(label, sx + 7, sy + 4);
+        ctx.strokeText(label, sx + 8, sy + 4);
+        ctx.fillText(label, sx + 8, sy + 4);
       }
     }
     ctx.restore();
@@ -1296,8 +1411,8 @@
       ctx.closePath();
       ctx.fillStyle = PLATFORM_FILL;
       ctx.fill();
-      ctx.lineWidth = hi ? 4 : 2;
-      ctx.strokeStyle = hi ? '#1c7ed6' : '#000000';
+      ctx.lineWidth = hi ? 3.5 : 1.5;
+      ctx.strokeStyle = hi ? ACCENT : '#ffffff';
       ctx.stroke();
     }
     ctx.restore();
@@ -1376,6 +1491,7 @@
     const box = $('info');
     const dl = $('infoBody');
     dl.textContent = '';
+    $('infoBar').style.background = RAIL_COLOR;
     if (item.type === 'station') {
       const st = item.st;
       $('infoTitle').textContent = `${stationName(st)} 駅`;
@@ -1427,6 +1543,19 @@
     needsDraw = true;
   }));
   $('closeInfo').addEventListener('click', () => { selected = null; showInfo(null); needsDraw = true; });
+
+  // メニューの開閉
+  $('toggleTop').addEventListener('click', () => { $('top').classList.toggle('collapsed'); });
+
+  // 地図の操作ボタン(拡大・縮小は画面の中心を基準にする)
+  function zoomBy(f) {
+    view.scale = clamp(view.scale * f, MIN_SCALE, MAX_SCALE);
+    needsDraw = true;
+  }
+  $('zoomIn').addEventListener('click', () => zoomBy(2));
+  $('zoomOut').addEventListener('click', () => zoomBy(0.5));
+  $('fitBtn').addEventListener('click', () => { fitView(); needsDraw = true; });
+  $('originBtn').addEventListener('click', () => { view.cx = 0; view.cz = 0; needsDraw = true; });
 
   let dragCount = 0;
   window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCount++; $('drop').style.display = 'flex'; });
@@ -1491,6 +1620,12 @@
     drag = null;
     canvas.classList.remove('dragging');
   });
+  // 凡例の高さを測り、上の読み込みパネルがその上までに収まるようにする
+  const setLegendHeight = () => {
+    document.documentElement.style.setProperty('--legend-h', $('legend').offsetHeight + 'px');
+  };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setLegendHeight).observe($('legend'));
+  setLegendHeight();
   canvas.addEventListener('pointerleave', () => { $('coord').textContent = ''; });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -1505,10 +1640,14 @@
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { selected = null; showInfo(null); needsDraw = true; }
   });
+  // OS の明るさを切り替えたら、地図の色も合わせる
+  const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', () => { readTheme(); needsDraw = true; });
 
+  readTheme();
   resize();
   buildLanesLegend();
-  $('tunnelSwatch').style.background = colorOf({ highway: false, mode: 'tunnel' });
+  $('tunnelSwatch').style.background = mixHex(ROAD_STYLE.general.fill, GRAY_HEX, TUNNEL_TINT);
   function frame() {
     if (needsDraw) { draw(); needsDraw = false; }
     requestAnimationFrame(frame);
