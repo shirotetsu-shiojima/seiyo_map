@@ -753,19 +753,32 @@
     }));
   }
 
-  // 1つの URL から JSON を取る。つながらない・時間切れ・JSON でない時は、理由を返す
+  // 1つの URL から JSON を取る(参考アプリと同じ取り方: GET・mode: cors)。
+  // 失敗した時は、同じ URL に no-cors で問い合わせ、サーバーに届くかどうかを調べる
   async function fetchTrainJson(url) {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), TRAIN_TIMEOUT_MS);
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('timeout')), TRAIN_TIMEOUT_MS);
+    });
     try {
-      const res = await fetch(url, { cache: 'no-store', mode: 'cors', signal: ctl.signal });
+      const res = await Promise.race([fetch(url, { method: 'GET', mode: 'cors' }), timeout]);
       if (!res.ok) return { error: `HTTP ${res.status}` };
       return { data: await res.json() };
     } catch (e) {
-      if (e.name === 'AbortError') return { error: '時間切れ' };
-      return { error: e instanceof SyntaxError ? 'JSONではありません' : 'つながりません' };
+      if (e.message === 'timeout') return { error: '時間切れ' };
+      if (e instanceof SyntaxError) return { error: 'JSONではありません' };
+      return { error: await diagnoseTrainUrl(url) };
     } finally {
       clearTimeout(timer);
+    }
+  }
+  // 失敗の理由を言葉にする。no-cors で届けば、サーバーは起動している(CORS か、ローカルネットワークの許可の問題)
+  async function diagnoseTrainUrl(url) {
+    try {
+      await fetch(url, { method: 'GET', mode: 'no-cors' });
+      return 'サーバーには届きますが、CORS またはローカルネットワークの許可の応答がありません';
+    } catch (e) {
+      return 'サーバーに届きません(起動していない、またはポートが違う、もしくはブラウザが通信を止めています)';
     }
   }
 
