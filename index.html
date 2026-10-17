@@ -140,7 +140,9 @@
     <label><input type="checkbox" id="showHighway" checked> 高速道路</label>
     <label><input type="checkbox" id="showOther" checked> 国道・県道・一般道路・生活道路</label>
     <label><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
+    <label><input type="checkbox" id="zoomFilter" checked> 縮尺に応じて細い道路を隠す</label>
     <label style="margin-top:6px"><input type="checkbox" id="showTrains"> 列車の位置を表示(ローカルAPI)</label>
+    <div class="meta" style="font-size:12px;margin-top:2px">※ ローカル専用です。このPCでAPIを起動した時だけ使えます。GitHub Pages などネット上の地図からは http://localhost に接続できないため、表示されません。</div>
     <input id="trainUrl" type="text" placeholder="APIのURL(空欄なら自動で探す)" style="margin-top:6px;width:100%;box-sizing:border-box">
     <div id="trainStatus" class="meta" style="margin-top:4px"></div>
     <div id="trainList" class="meta" style="font-size:12px"></div>
@@ -173,8 +175,9 @@
   <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span> 市町村道・私道・一般道路・生活道路</div>
   <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span> トンネル(グレーを混ぜた色・縁は破線)</div>
   <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span> 鉄道(系統の色。白丸は駅)</div>
-  <h2>太さ(車線数)</h2>
+  <h2>太さ(車線数と幅)</h2>
   <div id="lanesLegend"></div>
+  <div class="meta" style="margin-top:6px;font-size:12px;max-width:520px">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。拡大率が小さい時は、高速道路・国道などの主要な道路を見やすい最小の太さで描き、市町村道・一般道路・私道・生活道路などの細い道路を隠します(表示の欄で切り替え)。</div>
   <div class="meta" style="margin-top:6px;font-size:12px">未建設の道路は半透明で描きます。北は上です。</div>
 </div>
 
@@ -268,10 +271,36 @@
   const jobs = [];
   let activeJobs = 0;
 
-  // 車線数で太さを変える(画面のピクセル。ズームしても同じ太さ)
-  const lanePx = (lanes) => 2 + Math.max(1, lanes || 1) * 1.6;
+  // ---- 道路の太さ(縮尺に応じて変わる) ----
+  // 実際の幅(ブロック)× 拡大率(画面px/ブロック)で描く。拡大率が小さい時は、種類ごとの最小の太さ(画面px)より細くしない
+  // 主要な道路ほど太く、小さく見ても分かるようにする
+  const MIN_ROAD_PX = { highway: 4, national: 3.5, prefectural: 3, municipal: 2, general: 2, private: 1.5, residential: 1.5 };
+  // Mod の RoadLayout.crossSection と同じ並び: 白線2 + 車線 + 同じ向きの車線の間の破線 + 中央(高速は3、それ以外は1)
+  // (歩道は含めない。歩道は縁の外側の帯として描く)
+  function carriagewayBlocks(r) {
+    const lw = r.highway ? 4 : 3;
+    const n = Math.max(1, r.lanes || 1);
+    if (n === 1) return 2 + lw;
+    const per = Math.floor(n / 2);
+    return 2 + 2 * (per * lw + (per - 1)) + (r.highway ? 3 : 1);
+  }
+  const sidewalkBlocks = (r) => Math.max(0, r.sidewalk || 0);
+  // 車道の幅(画面px)
+  const fillPx = (r) => Math.max(MIN_ROAD_PX[tierOf(r)], carriagewayBlocks(r) * view.scale);
+  // 縁取りまで含めた幅(画面px)。歩道の幅の分だけ外側に広がる(最低1pxずつ)
+  const casingPx = (r) => fillPx(r) + 2 * Math.max(1, sidewalkBlocks(r) * view.scale);
+
+  // ---- 縮尺で表示を分ける ----
+  // 種類ごとに、この拡大率(画面px/ブロック)以上のときだけ表示する。小さく見る(遠くから見る)ほど、細い道路は隠れる
+  const ROAD_MIN_SCALE = { highway: 0, national: 0, prefectural: 0.05, municipal: 0.15, general: 0.15, private: 0.4, residential: 0.4 };
+  function tierOf(r) {
+    if (r.highway) return 'highway';
+    if (ROUTE_STYLE[r.category]) return r.category;
+    return r.type === 'residential' ? 'residential' : 'general';
+  }
+  const zoomOk = (r) => !$('zoomFilter').checked || view.scale >= ROAD_MIN_SCALE[tierOf(r)];
   const visible = (r) => (r.highway ? $('showHighway').checked : $('showOther').checked)
-    && (r.built || $('showUnbuilt').checked);
+    && (r.built || $('showUnbuilt').checked) && zoomOk(r);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const dpr = () => window.devicePixelRatio || 1;
 
@@ -479,21 +508,22 @@
     const ordered = byRank(list);
     for (const r of ordered) {
       const s = styleOf(r);
-      strokeLine(r.pts, lanePx(r.lanes) + 3, s.casing, r.built ? 1 : 0.45, s.tunnel ? [5, 4] : null);
+      strokeLine(r.pts, casingPx(r), s.casing, r.built ? 1 : 0.45, s.tunnel ? [5, 4] : null);
     }
     for (const r of ordered) {
-      strokeLine(r.pts, lanePx(r.lanes), styleOf(r).fill, r.built ? 1 : 0.45);
+      strokeLine(r.pts, fillPx(r), styleOf(r).fill, r.built ? 1 : 0.45);
     }
+    // 高速道路の中央(上り下りの境目)は、1ブロック幅の白い破線
     for (const r of ordered) {
       if (r.highway && r.lanes >= 2) {
-        strokeLine(r.pts, Math.max(1, lanePx(r.lanes) * 0.08), '#ffffff', (r.built ? 1 : 0.45) * 0.9, [6, 6]);
+        strokeLine(r.pts, Math.max(1, view.scale), '#ffffff', (r.built ? 1 : 0.45) * 0.9, [6, 6]);
       }
     }
     if (selected && visible(selected)) {
-      strokeLine(selected.pts, lanePx(selected.lanes) + 9, ACCENT, 0.35);
+      strokeLine(selected.pts, casingPx(selected) + 6, ACCENT, 0.35);
     }
     if (hover && hover !== selected && visible(hover)) {
-      strokeLine(hover.pts, lanePx(hover.lanes) + 6, ACCENT, 0.2);
+      strokeLine(hover.pts, casingPx(hover) + 4, ACCENT, 0.2);
     }
   }
 
@@ -925,7 +955,7 @@
     const list = byRank(roads);
     for (const r of list) {
       if (!visible(r)) continue;
-      const tol = lanePx(r.lanes) / 2 + 6;
+      const tol = casingPx(r) / 2 + 4;
       const pts = r.pts;
       for (let i = 1; i < pts.length; i++) {
         const [ax, ay] = toScreen(pts[i - 1][0], pts[i - 1][1]);
@@ -955,6 +985,7 @@
     addRow(dl, '路線名', r.routeName || '-');
     addRow(dl, '作り方', MODE_LABEL[r.mode] || r.mode || '-');
     addRow(dl, '車線数', `${r.lanes} 車線`);
+    addRow(dl, '幅', `${carriagewayBlocks(r)} ブロック(車道)`);
     addRow(dl, '長さ', `${r.length} ブロック`);
     addRow(dl, '歩道', r.sidewalk ? `両側 ${r.sidewalk} ブロック` : 'なし');
     addRow(dl, '舗装', r.surface || '-');
@@ -970,19 +1001,23 @@
     const box = $('lanesLegend');
     box.textContent = '';
     for (const n of LANE_SAMPLES) {
+      const w = carriagewayBlocks({ highway: false, lanes: n });
       const row = document.createElement('div');
       row.className = 'lanes-row';
       const label = document.createElement('span');
       label.className = 'lbl';
       label.textContent = `${n} 車線`;
       const bar = document.createElement('span');
-      bar.style.height = `${lanePx(n)}px`;
+      bar.style.height = `${w}px`;
       bar.style.width = '70px';
       bar.style.display = 'inline-block';
       bar.style.borderRadius = '4px';
       bar.style.background = ROAD_STYLE.general.fill;
       bar.style.boxShadow = `inset 0 0 0 1.5px ${ROAD_STYLE.general.casing}`;
-      row.append(label, bar);
+      const note = document.createElement('span');
+      note.className = 'meta';
+      note.textContent = `幅 ${w} ブロック`;
+      row.append(label, bar, note);
       box.append(row);
     }
   }
@@ -1797,7 +1832,7 @@
   }));
   $('bgClear').addEventListener('click', clearTiles);
   ['bgShow', 'bgAlpha'].forEach((id) => $(id).addEventListener('input', () => { needsDraw = true; }));
-  ['showHighway', 'showOther', 'showUnbuilt'].forEach((id) => $(id).addEventListener('change', () => {
+  ['showHighway', 'showOther', 'showUnbuilt', 'zoomFilter'].forEach((id) => $(id).addEventListener('change', () => {
     if (selected && !visible(selected)) { selected = null; showInfo(null); }
     needsDraw = true;
   }));
