@@ -161,6 +161,7 @@
 
   <!-- 鉄道経路: 乗換案内と運賃 -->
   <section class="pane" id="pane-rail">
+    <input type="text" id="stationFilter" class="field" placeholder="駅名・読み・駅番号で絞り込み" style="margin-bottom:10px">
     <div class="route-form">
       <span class="end-dot start"></span>
       <select id="fareFrom" class="field" aria-label="乗る駅"></select>
@@ -241,6 +242,7 @@
     </div>
     <input id="routeFile" type="file" accept=".json,application/json">
     <div id="routeSummary" class="meta"></div>
+    <label class="toggle"><input type="checkbox" id="showLineColor" checked> 路線カラーで線路を塗る(lines.csv)</label>
     <label class="toggle"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
     <label class="toggle"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
     <div id="error" class="error"></div>
@@ -252,7 +254,7 @@
       <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span> 県道(都道府県道)</div>
       <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span> 市町村道・私道・一般道路・生活道路</div>
       <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span> トンネル(グレーを混ぜた色・縁は破線)</div>
-      <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span> 鉄道(系統の色。白丸は駅)</div>
+      <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span> 鉄道(路線カラー。白丸は駅)</div>
       <h3 class="section-title">太さ(車線数と幅)</h3>
       <div id="lanesLegend"></div>
       <div class="meta" style="margin-top:6px">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。</div>
@@ -1660,7 +1662,7 @@
     if (colored) {
       for (const sec of list) drawSectionColored(sec);
     } else {
-      for (const sec of list) strokeLine(sec.pts, 2.5, RAIL_COLOR, 1);
+      for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
     }
     if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
@@ -1806,6 +1808,13 @@
       addRow(dl, '座標', `X ${Math.round(st.x)}, Z ${Math.round(st.z)}`);
       addRow(dl, '接続', `${st.neighbors.length} 方面`);
       addRow(dl, '系統', st.lines.length ? st.lines.map((l) => l.name).join(' ・ ') : '-');
+      const srow = stationRowOf(st);
+      if (srow) {
+        addRow(dl, '読み', srow.reading || '-');
+        addRow(dl, '都道府県', srow.pref || '-');
+        addRow(dl, '乗り入れ', srow.companies.length ? srow.companies.join(' ・ ') : '-');
+        addRow(dl, '利用者数', srow.ridership ? srow.ridership.toLocaleString('ja-JP') : '-');
+      }
       for (const nb of st.neighbors) {
         addRow(dl, '隣の駅', `${stationName(rail.stations.get(nb.id))}(${Math.round(nb.distance)} ブロック)`);
       }
@@ -1912,7 +1921,92 @@
     return String(text).split(/\r?\n/).map((s) => s.trim()).filter((s) => s !== '').map(Number);
   }
   // 駅番号(HL01 など)から路線コード(HL)を取る
-  const lineCodeOf = (code) => String(code || '').replace(/\d+$/, '');
+  // 路線コードの末尾の「-」は外して照合する(lines.csv の「M-」と、駅番号の「M15」を同じ路線として扱う)
+  const normLine = (s) => String(s || '').trim().replace(/-$/, '');
+  let lineInfo = new Map();          // 路線コード -> { code, company, name, color, companyTxt }
+  let stationByCode = new Map();     // 駅番号(HL01 など) -> { name, reading, pref, companies, ridership }
+  let interchangeGroups = [];        // 駅番号が複数ある駅(同じ駅で乗り換えられる駅番号の組)
+  // CSV を読む(引用符・改行に対応)
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = '', q = false;
+    const s = String(text).replace(/^﻿/, '');
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (q) {
+        if (c === '"') { if (s[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && s[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else field += c;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows.filter((r) => r.some((x) => x.trim() !== ''));
+  }
+  // 1行目を見出しにして、行ごとのオブジェクトにする
+  function tableOf(text) {
+    const rows = parseCSV(text);
+    const head = rows.shift().map((x) => x.trim());
+    return rows.map((r) => Object.fromEntries(head.map((k, i) => [k, (r[i] || '').trim()])));
+  }
+  // lines.csv: 路線の番号・会社・名前・色・会社の運賃ファイル名
+  function applyLines(text) {
+    lineInfo = new Map();
+    for (const r of tableOf(text)) {
+      const code = normLine(r['ナンバリング']);
+      if (!code || code.startsWith('#')) continue;
+      const hex = (r['16進数'] || '').replace('#', '');
+      lineInfo.set(code, {
+        code, company: r['会社'], name: r['路線名'],
+        color: /^[0-9a-fA-F]{6}$/.test(hex) ? '#' + hex : null,
+        companyTxt: r['会社txt'],
+      });
+      if (r['会社txt']) lineToCompany.set(code, r['会社txt']);
+    }
+  }
+  // linedata.txt(lines.csv が無い時): 路線コードと会社の運賃ファイル名だけ
+  function applyLinedata(text) {
+    for (const [k, v] of parseLineData(text)) lineToCompany.set(normLine(k), v);
+  }
+  // station.csv: 駅番号ごとの情報と、駅番号が複数ある駅(乗換駅)
+  function applyStations(text) {
+    stationByCode = new Map();
+    interchangeGroups = [];
+    railGraph = null;
+    for (const r of tableOf(text)) {
+      const name = r['駅名'];
+      if (!name || name.startsWith('#')) continue;
+      const codes = [...(r['駅番号'] || '').matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
+      const row = {
+        name, reading: r['読み'], pref: r['都道府県'],
+        companies: (r['乗り入れ会社'] || '').split('・').filter(Boolean),
+        ridership: Number(r['利用者数']) || 0,
+      };
+      for (const c of codes) stationByCode.set(c, row);
+      if (codes.length >= 2) interchangeGroups.push(codes);
+    }
+  }
+  // 路線の色・名前・会社名(表示用)
+  const lineColorOf = (code) => (lineInfo.get(code) && lineInfo.get(code).color) || lineColor(code);
+  const lineNameOf = (code) => (lineInfo.get(code) && lineInfo.get(code).name) || code;
+  const companyJa = (txt) => {
+    for (const li of lineInfo.values()) if (li.companyTxt === txt && li.company) return li.company;
+    return txt;
+  };
+  const stationRowOf = (st) => {
+    for (const c of st.codes || []) if (stationByCode.has(c)) return stationByCode.get(c);
+    return null;
+  };
+  const lineColorOn = () => $('showLineColor').checked && lineInfo.size > 0;
+  const lineOfSection = (sec) => {
+    const st = rail.stations.get(sec.fromId);
+    return st ? lineCodeOf(st.codes[0]) : '';
+  };
+
+  const lineCodeOf = (code) => normLine(String(code || '').replace(/\d+$/, ''));
   const companyOfStation = (st) => lineToCompany.get(lineCodeOf(st.codes[0])) || '';
 
   async function fetchText(url) {
@@ -1942,8 +2036,13 @@
 
   // HTML と同じフォルダから自動で読む(Web サーバー経由)
   async function loadFareData() {
+    // linedata.txt(路線と会社の対応)と lines.csv(路線の色・名前)を両方読み、足し合わせる
     const lineText = await fetchText('linedata.txt');
-    if (lineText !== null) lineToCompany = parseLineData(lineText);
+    if (lineText !== null) applyLinedata(lineText);
+    const linesCsv = await fetchText('lines.csv');
+    if (linesCsv !== null) applyLines(linesCsv);
+    const stationsCsv = await fetchText('station.csv');
+    if (stationsCsv !== null) applyStations(stationsCsv);
     const companies = [...new Set(lineToCompany.values())];
     await Promise.all(companies.map(async (c) => {
       const text = await fetchText(`${FARE_DIR}/${c}.txt`);
@@ -1954,8 +2053,10 @@
   }
   // 「データフォルダから読む」で選んだ中の linedata.txt と fare/*.txt を使う
   async function loadFareFromList(list) {
-    const lineFile = list.find((f) => f.name === 'linedata.txt');
-    if (lineFile) lineToCompany = parseLineData(await readText(lineFile));
+    const find = (name) => list.find((f) => f.name === name);
+    if (find('linedata.txt')) applyLinedata(await readText(find('linedata.txt')));
+    if (find('lines.csv')) applyLines(await readText(find('lines.csv')));
+    if (find('station.csv')) applyStations(await readText(find('station.csv')));
     const companies = new Set(lineToCompany.values());
     for (const f of list) {
       const company = f.name.replace(/\.txt$/, '');
@@ -1990,13 +2091,15 @@
       for (const line of lines) {
         const og = document.createElement('optgroup');
         const company = lineToCompany.get(line);
-        og.label = company ? `${line}(${company})` : line;
+        og.label = `${line} ${lineNameOf(line)}`;
         const sts = groups.get(line).slice().sort((a, b) =>
           (a.codes[0] || '').localeCompare(b.codes[0] || '', 'en', { numeric: true }));
         for (const st of sts) {
           const opt = document.createElement('option');
           opt.value = st.id;
           opt.textContent = `${st.codes[0] || ''} ${st.ja || st.en || '-'}`.trim();
+          const row = stationRowOf(st);
+          opt.dataset.q = `${st.ja || ''} ${st.en || ''} ${row ? row.reading : ''} ${st.codes.join(' ')}`;
           og.append(opt);
         }
         frag.append(og);
@@ -2005,7 +2108,26 @@
     }
     from.value = keepFrom;
     to.value = keepTo;
+    filterFareOptions($('stationFilter').value);
   }
+
+  // 駅名・読み・駅番号で、駅の選択肢を絞り込む
+  function filterFareOptions(text) {
+    const key = String(text || '').trim().toLowerCase();
+    for (const sel of [$('fareFrom'), $('fareTo')]) {
+      for (const og of sel.querySelectorAll('optgroup')) {
+        let any = false;
+        for (const opt of og.children) {
+          const ok = !key || (opt.dataset.q || '').toLowerCase().includes(key);
+          opt.hidden = !ok;
+          any = any || ok;
+        }
+        og.hidden = !any;
+      }
+    }
+  }
+  $('stationFilter').addEventListener('input', (e) => filterFareOptions(e.target.value));
+  $('showLineColor').addEventListener('change', () => { needsDraw = true; });
 
   // ---- 鉄道の乗換案内(運賃も同じ経路で計算) ----
   // 同じ駅名で路線が違う駅どうしは、乗換でつなぐ。乗換 1 回は距離 TRANSFER_COST_M ぶんの重みとして、乗換の少ない経路を優先する
@@ -2019,20 +2141,34 @@
 
   function buildRailGraph() {
     if (railGraph && railGraph.rail === rail) return railGraph;
-    const byName = new Map();
-    for (const st of rail.stations.values()) {
-      const name = (st.ja || '').trim();
-      if (!name) continue;
-      if (!byName.has(name)) byName.set(name, []);
-      byName.get(name).push(st);
-    }
     const transfers = new Map();
-    for (const list of byName.values()) {
-      for (const a of list) {
-        for (const b of list) {
-          if (a.id === b.id || lineCodeOf(a.codes[0]) === lineCodeOf(b.codes[0])) continue;
-          if (!transfers.has(a.id)) transfers.set(a.id, []);
-          transfers.get(a.id).push(b.id);
+    const addPair = (a, b) => {
+      if (a === b) return;
+      if (!transfers.has(a)) transfers.set(a, []);
+      if (!transfers.get(a).includes(b)) transfers.get(a).push(b);
+    };
+    if (interchangeGroups.length) {
+      // station.csv の駅番号が複数ある駅は、同じ駅として乗り換えられる
+      const codeToId = new Map();
+      for (const st of rail.stations.values()) for (const c of st.codes) if (!codeToId.has(c)) codeToId.set(c, st.id);
+      for (const group of interchangeGroups) {
+        const ids = [...new Set(group.map((c) => codeToId.get(c)).filter(Boolean))];
+        for (const x of ids) for (const y of ids) {
+          if (lineCodeOf(rail.stations.get(x).codes[0]) !== lineCodeOf(rail.stations.get(y).codes[0])) addPair(x, y);
+        }
+      }
+    } else {
+      // station.csv が無い時は、同じ駅名で路線が違う駅どうしを乗換とみなす
+      const byName = new Map();
+      for (const st of rail.stations.values()) {
+        const name = (st.ja || '').trim();
+        if (!name) continue;
+        if (!byName.has(name)) byName.set(name, []);
+        byName.get(name).push(st);
+      }
+      for (const list of byName.values()) {
+        for (const x of list) for (const y of list) {
+          if (lineCodeOf(x.codes[0]) !== lineCodeOf(y.codes[0])) addPair(x.id, y.id);
         }
       }
     }
@@ -2151,8 +2287,8 @@
     item('stop', null, `出発  ${stName(r.path[0].id)}`, '');
     r.items.forEach((it, i) => {
       if (it.type === 'ride') {
-        item('ride', lineColor(it.line), `${it.line}線(${it.company})に乗車`,
-          `${stName(it.fromId)} → ${stName(it.toId)}・${it.stops} 駅・${(it.m / 1000).toFixed(1)} km`);
+        item('ride', lineColorOf(it.line), `${it.line}線 ${lineNameOf(it.line)}に乗車`,
+          `${companyJa(it.company)}・${stName(it.fromId)} → ${stName(it.toId)}・${it.stops} 駅・${(it.m / 1000).toFixed(1)} km`);
       } else {
         const prevRide = r.items.slice(0, i).reverse().find((x) => x.type === 'ride');
         const nextRide = r.items.slice(i + 1).find((x) => x.type === 'ride');
@@ -2164,7 +2300,7 @@
     nodes.push(ol);
 
     for (const p of r.fares) {
-      nodes.push(metaLine(`${p.company}: ${p.km} km → ` +
+      nodes.push(metaLine(`${companyJa(p.company)}: ${p.km} km → ` +
         (p.yen === null ? '運賃表にありません' : `${p.yen.toLocaleString('ja-JP')} CP`)));
     }
     const det = document.createElement('details');
