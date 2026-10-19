@@ -71,6 +71,7 @@
   #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 0 0 8px; }
   #info .close:hover { color: var(--ink); }
 
+  .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   /* 運賃検索 */
   .fare-select { width: 100%; margin: 4px 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
     background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; }
@@ -176,6 +177,15 @@
     <div class="row"><button class="btn primary" id="fareRun" type="button">運賃を調べる</button></div>
     <div id="fareStatus" class="meta" style="margin-top:6px">運賃データを読み込んでいます…</div>
     <div id="fareResult" style="margin-top:6px"></div>
+    <h2>経路案内(車)</h2>
+    <div class="row">
+      <button class="btn" id="pinStart" type="button">出発地点にピン</button>
+      <button class="btn" id="pinGoal" type="button">到着地点にピン</button>
+    </div>
+    <div class="row"><button class="btn" id="pinClear" type="button">ピンを消す</button></div>
+    <div id="routeStatus" class="meta" style="margin-top:6px"></div>
+    <div id="routeResult" style="margin-top:6px"></div>
+
 
   </div>
 </div>
@@ -192,6 +202,7 @@
   <div id="lanesLegend"></div>
   <div class="meta" style="margin-top:6px;font-size:12px;max-width:520px">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。拡大率が小さい時は、高速道路・国道などの主要な道路を見やすい最小の太さで描き、市町村道・一般道路・私道・生活道路などの細い道路を隠します(表示の欄で切り替え)。</div>
   <div class="meta" style="margin-top:6px;font-size:12px">未建設の道路は半透明で描きます。北は上です。</div>
+  <div class="meta" style="margin-top:6px;font-size:12px">経路案内の速さ: 高速道路 100km/h・2車線以上の一般道路・生活道路 60km/h・1車線 30km/h(1ブロック = 1m とみなします)</div>
 </div>
 
 <div id="info" class="panel">
@@ -271,6 +282,10 @@
 
   const view = { cx: 0, cz: 0, scale: 4 };
   let roads = [];
+  let roadGraph = null;                    // 道路の網(経路案内用)
+  let pins = { start: null, goal: null };  // ピン(ワールド座標)
+  let pinMode = null;                      // 'start' | 'goal' | null
+  let route = null;                        // 経路の計算結果
   let selected = null;
   let hover = null;
   let needsDraw = true;
@@ -460,6 +475,7 @@
       return;
     }
     showError('');
+    roadGraph = null;
     roads = data.roads
       .filter((r) => r && r.from && r.to)
       .map(normalize);
@@ -468,6 +484,7 @@
     showInfo(null);
     updateSummary(data);
     fitView();
+    updateRoute();
     needsDraw = true;
   }
 
@@ -949,6 +966,8 @@
     if (roads.length) drawRoads();
     if (railOn()) drawRail();
     if (trainOn() && trains.length) drawTrains();
+    drawRoute();
+    drawPins();
     updateScale();
   }
 
@@ -2001,7 +2020,7 @@
     const box = $('fareResult');
     const total = document.createElement('div');
     total.className = 'fare-total';
-    total.textContent = r.ok ? `${r.total.toLocaleString('ja-JP')} 円` : '計算できません';
+    total.textContent = r.ok ? `${r.total.toLocaleString('ja-JP')} CP` : '計算できません';
     total.style.color = r.ok ? '' : 'var(--danger)';
     const km = document.createElement('div');
     km.className = 'meta';
@@ -2011,7 +2030,7 @@
       const row = document.createElement('div');
       row.className = 'meta';
       row.textContent = `${p.company}: ${p.km} km → ` +
-        (p.yen === null ? '運賃表にありません' : `${p.yen.toLocaleString('ja-JP')} 円`);
+        (p.yen === null ? '運賃表にありません' : `${p.yen.toLocaleString('ja-JP')} CP`);
       box.append(row);
     }
     const det = document.createElement('details');
@@ -2037,6 +2056,342 @@
     [f.value, t.value] = [t.value, f.value];
     runFare();
   });
+
+  // ---- 経路案内(車) ----
+  // 距離: 1ブロック = 1m とみなす。速さ: 高速道路 100km/h、2車線以上の一般道路・生活道路 60km/h、1車線 30km/h
+  // 探索は「所要時間が最小」の経路。速い道路・車線の多い道路が自然に優先される。未建設の道路は使わない
+  // 道路の端点は、1.5 ブロック以内かつ高さの差 2 以内なら同じ交差点とみなす
+  const speedOfRoad = (r) => (r.highway ? 100 : ((r.lanes || 1) >= 2 ? 60 : 30));
+  const TIER_NAMES = [[100, '高速道路'], [60, '2車線以上の一般・生活道路'], [30, '1車線の一般・生活道路']];
+
+  // 時間の表示: 1時間未満は「分・秒」、それ以上は「時間・分」
+  function fmtTime(sec) {
+    const s = Math.round(sec);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    if (h) return `${h}時間${m}分`;
+    if (m) return `${m}分${String(r).padStart(2, '0')}秒`;
+    return `${r}秒`;
+  }
+
+  // 道の上の長さ(弧長)の累積。pts は [x, z] の並び
+  function arcOf(pts) {
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    }
+    return cum;
+  }
+  // 弧長 s の位置の座標
+  function pointAt(pts, cum, s) {
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < s) i++;
+    const seg = cum[i] - cum[i - 1];
+    const t = seg > 0 ? (s - cum[i - 1]) / seg : 0;
+    return [pts[i - 1][0] + t * (pts[i][0] - pts[i - 1][0]), pts[i - 1][1] + t * (pts[i][1] - pts[i - 1][1])];
+  }
+  // 弧長 s0 から s1 までの座標の並び(s0 > s1 なら逆向き)
+  function sliceArc(pts, cum, s0, s1) {
+    const lo = Math.min(s0, s1), hi = Math.max(s0, s1);
+    const out = [pointAt(pts, cum, lo)];
+    for (let i = 0; i < pts.length; i++) if (cum[i] > lo && cum[i] < hi) out.push(pts[i]);
+    out.push(pointAt(pts, cum, hi));
+    return s1 >= s0 ? out : out.reverse();
+  }
+
+  // 道路の網を作る(道路データが変わった時だけ作り直す)
+  function getRoadGraph() {
+    if (roadGraph) return roadGraph;
+    const nodes = [], cell = new Map(), adj = [];
+    const gRoads = [], cum = [], lenM = [], ends = [];
+    const nodeAt = (p) => {
+      const cx = Math.floor(p.x / 2), cz = Math.floor(p.z / 2);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+        for (const idx of cell.get(`${cx + i},${cz + j}`) || []) {
+          const n = nodes[idx];
+          if (Math.abs(n.x - p.x) <= 1.5 && Math.abs(n.z - p.z) <= 1.5 && Math.abs(n.y - (p.y || 0)) <= 2) return idx;
+        }
+      }
+      const idx = nodes.length;
+      nodes.push({ x: p.x, y: p.y || 0, z: p.z });
+      adj.push([]);
+      const key = `${cx},${cz}`;
+      if (!cell.has(key)) cell.set(key, []);
+      cell.get(key).push(idx);
+      return idx;
+    };
+    for (const r of roads) {
+      if (!r.built || !r.pts || r.pts.length < 2 || !r.from || !r.to) continue;
+      const c = arcOf(r.pts), total = c[c.length - 1];
+      const L = r.length > 0 ? r.length : total;
+      if (!(L > 0) || !(total > 0)) continue;
+      const a = nodeAt(r.from), b = nodeAt(r.to);
+      if (a === b) continue;
+      const ri = gRoads.length;
+      gRoads.push(r); cum.push(c); lenM.push(L); ends.push({ a, b, total });
+      const time = L * 3.6 / speedOfRoad(r);
+      adj[a].push({ to: b, time, ri });
+      adj[b].push({ to: a, time, ri });
+    }
+    roadGraph = { roads: gRoads, cum, lenM, ends, adj, nodes };
+    return roadGraph;
+  }
+
+  // ピンに一番近い道路の上の点(道路の番号 ri、区切り、弧長 s、距離 d)
+  function snapToRoads(g, px, pz) {
+    let best = null;
+    g.roads.forEach((r, ri) => {
+      const pts = r.pts, c = g.cum[ri];
+      for (let i = 1; i < pts.length; i++) {
+        const ax = pts[i - 1][0], az = pts[i - 1][1];
+        const dx = pts[i][0] - ax, dz = pts[i][1] - az;
+        const len2 = dx * dx + dz * dz;
+        const t = clamp(len2 ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0, 0, 1);
+        const qx = ax + t * dx, qz = az + t * dz;
+        const d = Math.hypot(qx - px, qz - pz);
+        if (!best || d < best.d) best = { ri, d, s: c[i - 1] + t * (c[i] - c[i - 1]) };
+      }
+    });
+    return best;
+  }
+
+  // 出発 → 到着の経路(所要時間が最小)。区間ごとに、道路の番号・座標・長さ・時間を並べる
+  function computeRoute(start, goal) {
+    const g = getRoadGraph();
+    if (!g.roads.length) return { error: '道路データ(road.json)を読み込んでください。' };
+    const sa = snapToRoads(g, start.x, start.z), sb = snapToRoads(g, goal.x, goal.z);
+    if (!sa || !sb) return { error: '道路が見つかりません。' };
+
+    // ピンから、その道路の両端までの距離(m)と時間(秒)
+    const legOf = (sn) => {
+      const L = g.lenM[sn.ri], total = g.ends[sn.ri].total;
+      const frac = total > 0 ? sn.s / total : 0;
+      const k = 3.6 / speedOfRoad(g.roads[sn.ri]);
+      return { dA: frac * L, dB: (1 - frac) * L, tA: frac * L * k, tB: (1 - frac) * L * k };
+    };
+    const la = legOf(sa), lb = legOf(sb);
+    const ea = g.ends[sa.ri], eb = g.ends[sb.ri];
+
+    // Dijkstra(時間が最小)。ヒープは配列で簡単に作る
+    const N = g.nodes.length;
+    const dist = new Float64Array(N).fill(Infinity);
+    const prev = new Array(N).fill(null);
+    const heap = [];
+    const push = (d, n) => {
+      heap.push([d, n]);
+      let i = heap.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (heap[p][0] <= heap[i][0]) break;
+        [heap[p], heap[i]] = [heap[i], heap[p]];
+        i = p;
+      }
+    };
+    const pop = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+          if (m === i) break;
+          [heap[m], heap[i]] = [heap[i], heap[m]];
+          i = m;
+        }
+      }
+      return top;
+    };
+    dist[ea.a] = la.tA; prev[ea.a] = { start: true };
+    dist[ea.b] = la.tB; prev[ea.b] = { start: true };
+    push(la.tA, ea.a); push(la.tB, ea.b);
+    const done = new Uint8Array(N);
+    while (heap.length) {
+      const [d, u] = pop();
+      if (done[u] || d > dist[u]) continue;
+      done[u] = 1;
+      for (const e of g.adj[u]) {
+        const nd = d + e.time;
+        if (nd < dist[e.to]) { dist[e.to] = nd; prev[e.to] = { node: u, ri: e.ri }; push(nd, e.to); }
+      }
+    }
+
+    // 到着側: 到着道路のどちらの端点から入るか
+    let bestNode = null, bestCost = Infinity;
+    if (dist[eb.a] + lb.tA < bestCost) { bestCost = dist[eb.a] + lb.tA; bestNode = eb.a; }
+    if (dist[eb.b] + lb.tB < bestCost) { bestCost = dist[eb.b] + lb.tB; bestNode = eb.b; }
+    // 同じ道路の上なら、道路の上をそのまま進む方が速い場合がある
+    let direct = null;
+    if (sa.ri === sb.ri) {
+      const m = Math.abs(sa.s - sb.s) / ea.total * g.lenM[sa.ri];
+      direct = { m, tt: m * 3.6 / speedOfRoad(g.roads[sa.ri]) };
+    }
+    const useDirect = !!direct && direct.tt <= bestCost;
+    if (!useDirect && bestNode === null) return { error: '経路が見つかりません(道路がつながっていません)。' };
+
+    const pieces = [];
+    const add = (ri, pts, m, tt) => {
+      if (m > 0.01) pieces.push({ ri, pts, m, tt, kmh: speedOfRoad(g.roads[ri]) });
+    };
+    if (useDirect) {
+      add(sa.ri, sliceArc(g.roads[sa.ri].pts, g.cum[sa.ri], sa.s, sb.s), direct.m, direct.tt);
+    } else {
+      // 出発 → 最初の交差点(道路の上の一部)
+      const edges = [];
+      let node = bestNode;
+      while (prev[node] && !prev[node].start) {
+        edges.push({ from: prev[node].node, to: node, ri: prev[node].ri });
+        node = prev[node].node;
+      }
+      edges.reverse();
+      const startAtA = node === ea.a;
+      add(sa.ri, sliceArc(g.roads[sa.ri].pts, g.cum[sa.ri], sa.s, startAtA ? 0 : ea.total),
+        startAtA ? la.dA : la.dB, startAtA ? la.tA : la.tB);
+      // 交差点どうし(道路の全体)
+      for (const e of edges) {
+        const r = g.roads[e.ri];
+        const geo = g.ends[e.ri].a === e.from ? r.pts : r.pts.slice().reverse();
+        add(e.ri, geo, g.lenM[e.ri], g.lenM[e.ri] * 3.6 / speedOfRoad(r));
+      }
+      // 最後の交差点 → 到着(道路の上の一部)
+      const goalAtA = bestNode === eb.a;
+      add(sb.ri, sliceArc(g.roads[sb.ri].pts, g.cum[sb.ri], goalAtA ? 0 : eb.total, sb.s),
+        goalAtA ? lb.dA : lb.dB, goalAtA ? lb.tA : lb.tB);
+    }
+    const meters = pieces.reduce((s, p) => s + p.m, 0);
+    const seconds = pieces.reduce((s, p) => s + p.tt, 0);
+    return { pieces, meters, seconds, startGap: sa.d, goalGap: sb.d, graph: g };
+  }
+
+  // 案内用: 同じ道路(番号・種類・速さ)が続く区間をまとめる
+  function roadLabel(r) {
+    const name = r.routeNumber || r.routeName || '';
+    const base = r.highway ? '高速道路' : (CATEGORY_LABEL[r.category] || TYPE_LABEL[r.type] || '道路');
+    const lanes = r.highway ? '' : `・${r.lanes || 1}車線`;
+    return `${base}${name ? ' ' + name : ''}${lanes}(${speedOfRoad(r)}km/h)`;
+  }
+  function routeSteps(pieces, g) {
+    const steps = [];
+    for (const p of pieces) {
+      const label = roadLabel(g.roads[p.ri]);
+      const last = steps[steps.length - 1];
+      if (last && last.label === label) { last.m += p.m; last.tt += p.tt; }
+      else steps.push({ label, m: p.m, tt: p.tt });
+    }
+    return steps;
+  }
+
+  function setRouteStatus(text, isError = false) {
+    if (pinMode) return;   // ピンを打つ指示を優先
+    const box = $('routeStatus');
+    box.style.color = isError ? 'var(--danger)' : '';
+    box.textContent = text;
+  }
+  function metaLine(text, color) {
+    const d = document.createElement('div');
+    d.className = 'meta';
+    d.style.color = color || '';
+    d.textContent = text;
+    return d;
+  }
+
+  function renderRoute(r) {
+    const big = document.createElement('div');
+    big.className = 'fare-total';
+    big.textContent = `約 ${fmtTime(r.seconds)}`;
+    const nodes = [big, metaLine(`道のり ${(r.meters / 1000).toFixed(2)} km`)];
+    for (const [kmh, name] of TIER_NAMES) {
+      const ps = r.pieces.filter((p) => p.kmh === kmh);
+      if (!ps.length) continue;
+      const m = ps.reduce((s, p) => s + p.m, 0), tt = ps.reduce((s, p) => s + p.tt, 0);
+      nodes.push(metaLine(`${name}(${kmh}km/h): ${(m / 1000).toFixed(2)} km・${fmtTime(tt)}`));
+    }
+    if (r.startGap > 20 || r.goalGap > 20) {
+      nodes.push(metaLine(`ピンが道路から離れています(出発 約${Math.round(r.startGap)} m / 到着 約${Math.round(r.goalGap)} m)`, 'var(--danger)'));
+    }
+    const det = document.createElement('details');
+    det.style.marginTop = '8px';
+    const sum = document.createElement('summary');
+    const steps = routeSteps(r.pieces, r.graph);
+    sum.textContent = `案内(${steps.length} 区間)`;
+    det.append(sum, ...steps.map((s, i) => metaLine(
+      `${i + 1}. ${s.label} を ${(s.m / 1000).toFixed(2)} km(${fmtTime(s.tt)})`)));
+    nodes.push(det);
+    $('routeResult').replaceChildren(...nodes);
+  }
+
+  function updatePinUI() {
+    $('pinStart').classList.toggle('active', pinMode === 'start');
+    $('pinGoal').classList.toggle('active', pinMode === 'goal');
+    canvas.style.cursor = pinMode ? 'crosshair' : '';
+    if (pinMode) {
+      const box = $('routeStatus');
+      box.style.color = '';
+      box.textContent = `地図をクリックして${pinMode === 'start' ? '出発' : '到着'}地点を指定してください(Esc で取消)`;
+    }
+  }
+  function placePin(kind, x, z) {
+    pins[kind] = { x, z };
+    pinMode = null;
+    updatePinUI();
+    updateRoute();
+  }
+  // ピンと道路が揃ったら、経路を計算して表示する
+  function updateRoute() {
+    if (!pins.start || !pins.goal) {
+      route = null;
+      $('routeResult').replaceChildren();
+      setRouteStatus('出発地点と到着地点にピンを打つと、経路を計算します。');
+    } else if (!roads.length) {
+      route = null;
+      $('routeResult').replaceChildren();
+      setRouteStatus('道路データ(road.json)が読み込めていません。', true);
+    } else {
+      route = computeRoute(pins.start, pins.goal);
+      if (route.error) {
+        $('routeResult').replaceChildren();
+        setRouteStatus(route.error, true);
+      } else {
+        setRouteStatus('経路を計算しました。');
+        renderRoute(route);
+      }
+    }
+    needsDraw = true;
+  }
+
+  function drawRoute() {
+    if (!route || route.error) return;
+    for (const p of route.pieces) strokeLine(p.pts, 9, '#ffffff', 0.9);
+    for (const p of route.pieces) strokeLine(p.pts, 5, ACCENT, 1);
+  }
+  // 出発(緑)・到着(赤)のピン
+  function drawPins() {
+    ctx.save();
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (const [k, label, color] of [['start', '出発', '#34a853'], ['goal', '到着', '#ea4335']]) {
+      const p = pins[k];
+      if (!p) continue;
+      const [sx, sy] = toScreen(p.x, p.z);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = T.halo;
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeText(label, sx + 12, sy - 10);
+      ctx.fillStyle = T.ink;
+      ctx.fillText(label, sx + 12, sy - 10);
+    }
+    ctx.restore();
+  }
+
+  $('pinStart').addEventListener('click', () => { pinMode = pinMode === 'start' ? null : 'start'; updatePinUI(); updateRoute(); });
+  $('pinGoal').addEventListener('click', () => { pinMode = pinMode === 'goal' ? null : 'goal'; updatePinUI(); updateRoute(); });
+  $('pinClear').addEventListener('click', () => { pins = { start: null, goal: null }; pinMode = null; updatePinUI(); updateRoute(); });
 
   // 入力
   $('file').addEventListener('change', (e) => readFile(e.target.files[0]));
@@ -2124,7 +2479,10 @@
     }
   });
   canvas.addEventListener('pointerup', (e) => {
-    if (drag && !drag.moved) {
+    if (pinMode && drag && !drag.moved) {
+      const [wx, wz] = toWorld(e.clientX, e.clientY);
+      placePin(pinMode, wx, wz);
+    } else if (drag && !drag.moved) {
       // 駅の丸印 → ホームの長方形 → 道路 → 鉄道の区間の順に、近いものを選ぶ
       let st = railOn() ? pickStation(e.clientX, e.clientY) : null;
       if (!st && railOn()) {
@@ -2166,7 +2524,10 @@
   }, { passive: false });
   window.addEventListener('resize', resize);
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { selected = null; showInfo(null); needsDraw = true; }
+    if (e.key === 'Escape') {
+      selected = null; showInfo(null); needsDraw = true;
+      if (pinMode) { pinMode = null; updatePinUI(); updateRoute(); }
+    }
   });
   // OS の明るさを切り替えたら、地図の色も合わせる
   const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
