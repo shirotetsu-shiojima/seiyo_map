@@ -2058,11 +2058,15 @@
   });
 
   // ---- 経路案内(車) ----
-  // 距離: 1ブロック = 1m とみなす。速さ: 高速道路 100km/h、2車線以上の一般道路・生活道路 60km/h、1車線 30km/h
-  // 探索は「所要時間が最小」の経路。速い道路・車線の多い道路が自然に優先される。未建設の道路は使わない
-  // 道路の端点は、1.5 ブロック以内かつ高さの差 2 以内なら同じ交差点とみなす
+  // 距離: 1ブロック = 1m。速さ: 高速道路 100km/h、2車線以上の一般・生活道路 60km/h、1車線 30km/h
+  // 道路の網の作り方: 道路どうしが交わる場所・端点が別の道路に接している場所で道路を切り、
+  // 区間(セグメント)ごとに網を作る。端点どうしが近い場合も同じ交差点とみなす。高さが違う(橋とトンネル等)場合は交わらない
+  // 探索は所要時間が最小の経路。未建設の道路は使わない
   const speedOfRoad = (r) => (r.highway ? 100 : ((r.lanes || 1) >= 2 ? 60 : 30));
   const TIER_NAMES = [[100, '高速道路'], [60, '2車線以上の一般・生活道路'], [30, '1車線の一般・生活道路']];
+  const NODE_TOL = 2;     // この距離以内の交差点どうしは同じ点
+  const JOIN_TOL = 2;     // 端点がこの距離以内で他の道路の上にあれば、そこで交わる
+  const HEIGHT_TOL = 2;   // 高さの差がこれ以内なら、交わる(橋とトンネルは交わらない)
 
   // 時間の表示: 1時間未満は「分・秒」、それ以上は「時間・分」
   function fmtTime(sec) {
@@ -2098,80 +2102,178 @@
     return s1 >= s0 ? out : out.reverse();
   }
 
-  // 道路の網を作る(道路データが変わった時だけ作り直す)
+  // 2 本の線分の交点(線分の上の位置 t, u を 0〜1 で返す。交わらなければ null)
+  function segHit(p, p2, q, q2) {
+    const rx = p2[0] - p[0], rz = p2[1] - p[1], sx = q2[0] - q[0], sz = q2[1] - q[1];
+    const d = rx * sz - rz * sx;
+    if (Math.abs(d) < 1e-9) return null;
+    const wx = q[0] - p[0], wz = q[1] - p[1];
+    const t = (wx * sz - wz * sx) / d, u = (wx * rz - wz * rx) / d;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    return { t, u };
+  }
+  // 点から道路の上の一番近い点(距離と、道路の上の位置 s)
+  function nearestOnRoad(it, px, pz) {
+    let best = null;
+    for (let q = 1; q < it.pts.length; q++) {
+      const ax = it.pts[q - 1][0], az = it.pts[q - 1][1];
+      const dx = it.pts[q][0] - ax, dz = it.pts[q][1] - az;
+      const len2 = dx * dx + dz * dz;
+      const t = clamp(len2 ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0, 0, 1);
+      const d = Math.hypot(ax + t * dx - px, az + t * dz - pz);
+      if (!best || d < best.d) best = { d, s: it.cum[q - 1] + t * (it.cum[q] - it.cum[q - 1]) };
+    }
+    return best;
+  }
+  // 2 本の道路が交わる場所を、両方の道路の位置(s)として登録する
+  function linkRoads(A, B, splitA, splitB) {
+    for (let p = 1; p < A.pts.length; p++) {
+      for (let q = 1; q < B.pts.length; q++) {
+        const hit = segHit(A.pts[p - 1], A.pts[p], B.pts[q - 1], B.pts[q]);
+        if (!hit) continue;
+        splitA.push(A.cum[p - 1] + hit.t * (A.cum[p] - A.cum[p - 1]));
+        splitB.push(B.cum[q - 1] + hit.u * (B.cum[q] - B.cum[q - 1]));
+      }
+    }
+    // 端点が、もう一方の道路の上にある(T字路)
+    for (const [X, Y, splitY] of [[A, B, splitB], [B, A, splitA]]) {
+      for (const p of [X.pts[0], X.pts[X.pts.length - 1]]) {
+        const n = nearestOnRoad(Y, p[0], p[1]);
+        if (n && n.d <= JOIN_TOL) splitY.push(n.s);
+      }
+    }
+  }
+
+  // 道路の網(区間 segs と交差点 nodes)を作る。道路を変えた時だけ作り直す
   function getRoadGraph() {
     if (roadGraph) return roadGraph;
-    const nodes = [], cell = new Map(), adj = [];
-    const gRoads = [], cum = [], lenM = [], ends = [];
-    const nodeAt = (p) => {
-      const cx = Math.floor(p.x / 2), cz = Math.floor(p.z / 2);
+    // 1) 通れる道路だけ
+    const items = [];
+    for (const r of roads) {
+      if (!r.built || !r.pts || r.pts.length < 2 || !r.from || !r.to) continue;
+      const cum = arcOf(r.pts), total = cum[cum.length - 1];
+      const L = r.length > 0 ? r.length : total;
+      if (!(total > 0) || !(L > 0)) continue;
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const [x, z] of r.pts) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (z < z0) z0 = z; if (z > z1) z1 = z;
+      }
+      const ymin = r.height ? r.height.min : (r.from.y || 0);
+      const ymax = r.height ? r.height.max : (r.from.y || 0);
+      items.push({ r, pts: r.pts, cum, total, L, ymin, ymax, bx0: x0 - JOIN_TOL, bx1: x1 + JOIN_TOL, bz0: z0 - JOIN_TOL, bz1: z1 + JOIN_TOL });
+    }
+    // 2) 近くにある道路どうしを調べ、交わる場所で切る
+    const CELL = 64;
+    const grid = new Map();
+    items.forEach((it, i) => {
+      for (let cx = Math.floor(it.bx0 / CELL); cx <= Math.floor(it.bx1 / CELL); cx++) {
+        for (let cz = Math.floor(it.bz0 / CELL); cz <= Math.floor(it.bz1 / CELL); cz++) {
+          const k = `${cx},${cz}`;
+          if (!grid.has(k)) grid.set(k, []);
+          grid.get(k).push(i);
+        }
+      }
+    });
+    const splits = items.map(() => []);
+    const checked = new Set();
+    for (const list of grid.values()) {
+      for (let x = 0; x < list.length; x++) {
+        for (let y = x + 1; y < list.length; y++) {
+          const i = Math.min(list[x], list[y]), j = Math.max(list[x], list[y]);
+          const key = `${i}|${j}`;
+          if (checked.has(key)) continue;
+          checked.add(key);
+          const A = items[i], B = items[j];
+          if (A.bx1 < B.bx0 || B.bx1 < A.bx0 || A.bz1 < B.bz0 || B.bz1 < A.bz0) continue;
+          if (A.ymin > B.ymax + HEIGHT_TOL || B.ymin > A.ymax + HEIGHT_TOL) continue;
+          linkRoads(A, B, splits[i], splits[j]);
+        }
+      }
+    }
+    // 3) 交差点を作り、区間ごとに道と隣り合う交差点をつなぐ
+    const nodes = [], cell = new Map(), adj = [], segs = [];
+    const nodeAt = (x, y, z) => {
+      const cx = Math.floor(x / NODE_TOL), cz = Math.floor(z / NODE_TOL);
       for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
         for (const idx of cell.get(`${cx + i},${cz + j}`) || []) {
           const n = nodes[idx];
-          if (Math.abs(n.x - p.x) <= 1.5 && Math.abs(n.z - p.z) <= 1.5 && Math.abs(n.y - (p.y || 0)) <= 2) return idx;
+          if (Math.abs(n.x - x) <= NODE_TOL && Math.abs(n.z - z) <= NODE_TOL && Math.abs(n.y - y) <= HEIGHT_TOL) return idx;
         }
       }
       const idx = nodes.length;
-      nodes.push({ x: p.x, y: p.y || 0, z: p.z });
+      nodes.push({ x, y, z });
       adj.push([]);
       const key = `${cx},${cz}`;
       if (!cell.has(key)) cell.set(key, []);
       cell.get(key).push(idx);
       return idx;
     };
-    for (const r of roads) {
-      if (!r.built || !r.pts || r.pts.length < 2 || !r.from || !r.to) continue;
-      const c = arcOf(r.pts), total = c[c.length - 1];
-      const L = r.length > 0 ? r.length : total;
-      if (!(L > 0) || !(total > 0)) continue;
-      const a = nodeAt(r.from), b = nodeAt(r.to);
-      if (a === b) continue;
-      const ri = gRoads.length;
-      gRoads.push(r); cum.push(c); lenM.push(L); ends.push({ a, b, total });
-      const time = L * 3.6 / speedOfRoad(r);
-      adj[a].push({ to: b, time, ri });
-      adj[b].push({ to: a, time, ri });
-    }
-    roadGraph = { roads: gRoads, cum, lenM, ends, adj, nodes };
+    items.forEach((it, i) => {
+      // 1 ブロック未満の近さの切れ目は、ひとつにまとめる(端に近い切れ目は端点に任せる)
+      const sorted = splits[i].filter((s) => s > 1 && s < it.total - 1).sort((a, b) => a - b);
+      const cuts = [0];
+      for (const s of sorted) if (s - cuts[cuts.length - 1] > 1) cuts.push(s);
+      cuts.push(it.total);
+      for (let k = 1; k < cuts.length; k++) {
+        const s0 = cuts[k - 1], s1 = cuts[k];
+        if (k === cuts.length - 1 && s1 - s0 < 0.5) continue;
+        const pts = sliceArc(it.pts, it.cum, s0, s1);
+        const cum = arcOf(pts), total = cum[cum.length - 1];
+        const lenM = it.L * (s1 - s0) / it.total;
+        const pos = (s) => {
+          if (s === 0) return nodeAt(it.r.from.x, it.r.from.y || 0, it.r.from.z);
+          if (s === it.total) return nodeAt(it.r.to.x, it.r.to.y || 0, it.r.to.z);
+          const [x, z] = pointAt(it.pts, it.cum, s);
+          return nodeAt(x, it.ymin, z);
+        };
+        const a = pos(s0), b = pos(s1);
+        if (a === b) continue;
+        const kmh = speedOfRoad(it.r);
+        const si = segs.length;
+        segs.push({ road: it.r, pts, cum, total, lenM, a, b, kmh });
+        const time = lenM * 3.6 / kmh;
+        adj[a].push({ to: b, time, si });
+        adj[b].push({ to: a, time, si });
+      }
+    });
+    roadGraph = { segs, nodes, adj };
     return roadGraph;
   }
 
-  // ピンに一番近い道路の上の点(道路の番号 ri、区切り、弧長 s、距離 d)
-  function snapToRoads(g, px, pz) {
+  // ピンに一番近い区間の上の点(区間の番号 si、区間の上の位置 s、距離 d)
+  function snapToSegments(g, px, pz) {
     let best = null;
-    g.roads.forEach((r, ri) => {
-      const pts = r.pts, c = g.cum[ri];
-      for (let i = 1; i < pts.length; i++) {
-        const ax = pts[i - 1][0], az = pts[i - 1][1];
-        const dx = pts[i][0] - ax, dz = pts[i][1] - az;
+    g.segs.forEach((sg, si) => {
+      for (let q = 1; q < sg.pts.length; q++) {
+        const ax = sg.pts[q - 1][0], az = sg.pts[q - 1][1];
+        const dx = sg.pts[q][0] - ax, dz = sg.pts[q][1] - az;
         const len2 = dx * dx + dz * dz;
         const t = clamp(len2 ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0, 0, 1);
-        const qx = ax + t * dx, qz = az + t * dz;
-        const d = Math.hypot(qx - px, qz - pz);
-        if (!best || d < best.d) best = { ri, d, s: c[i - 1] + t * (c[i] - c[i - 1]) };
+        const d = Math.hypot(ax + t * dx - px, az + t * dz - pz);
+        if (!best || d < best.d) best = { si, d, s: sg.cum[q - 1] + t * (sg.cum[q] - sg.cum[q - 1]) };
       }
     });
     return best;
   }
 
-  // 出発 → 到着の経路(所要時間が最小)。区間ごとに、道路の番号・座標・長さ・時間を並べる
+  // 出発 → 到着の経路(所要時間が最小)
   function computeRoute(start, goal) {
     const g = getRoadGraph();
-    if (!g.roads.length) return { error: '道路データ(road.json)を読み込んでください。' };
-    const sa = snapToRoads(g, start.x, start.z), sb = snapToRoads(g, goal.x, goal.z);
+    if (!g.segs.length) return { error: '道路データ(road.json)を読み込んでください。' };
+    const sa = snapToSegments(g, start.x, start.z), sb = snapToSegments(g, goal.x, goal.z);
     if (!sa || !sb) return { error: '道路が見つかりません。' };
+    const segA = g.segs[sa.si], segB = g.segs[sb.si];
 
-    // ピンから、その道路の両端までの距離(m)と時間(秒)
-    const legOf = (sn) => {
-      const L = g.lenM[sn.ri], total = g.ends[sn.ri].total;
-      const frac = total > 0 ? sn.s / total : 0;
-      const k = 3.6 / speedOfRoad(g.roads[sn.ri]);
-      return { dA: frac * L, dB: (1 - frac) * L, tA: frac * L * k, tB: (1 - frac) * L * k };
+    // ピンから、その区間の両端までの距離(m)と時間(秒)
+    const legOf = (sg, s) => {
+      const frac = sg.total > 0 ? s / sg.total : 0;
+      const k = 3.6 / sg.kmh;
+      return { dA: frac * sg.lenM, dB: (1 - frac) * sg.lenM, tA: frac * sg.lenM * k, tB: (1 - frac) * sg.lenM * k };
     };
-    const la = legOf(sa), lb = legOf(sb);
-    const ea = g.ends[sa.ri], eb = g.ends[sb.ri];
+    const la = legOf(segA, sa.s), lb = legOf(segB, sb.s);
 
-    // Dijkstra(時間が最小)。ヒープは配列で簡単に作る
+    // Dijkstra(時間が最小)
     const N = g.nodes.length;
     const dist = new Float64Array(N).fill(Infinity);
     const prev = new Array(N).fill(null);
@@ -2203,9 +2305,9 @@
       }
       return top;
     };
-    dist[ea.a] = la.tA; prev[ea.a] = { start: true };
-    dist[ea.b] = la.tB; prev[ea.b] = { start: true };
-    push(la.tA, ea.a); push(la.tB, ea.b);
+    dist[segA.a] = la.tA; prev[segA.a] = { start: true };
+    dist[segA.b] = la.tB; prev[segA.b] = { start: true };
+    push(la.tA, segA.a); push(la.tB, segA.b);
     const done = new Uint8Array(N);
     while (heap.length) {
       const [d, u] = pop();
@@ -2213,55 +2315,57 @@
       done[u] = 1;
       for (const e of g.adj[u]) {
         const nd = d + e.time;
-        if (nd < dist[e.to]) { dist[e.to] = nd; prev[e.to] = { node: u, ri: e.ri }; push(nd, e.to); }
+        if (nd < dist[e.to]) { dist[e.to] = nd; prev[e.to] = { node: u, si: e.si }; push(nd, e.to); }
       }
     }
 
-    // 到着側: 到着道路のどちらの端点から入るか
+    // 到着側: 到着区間のどちらの端から入るか
     let bestNode = null, bestCost = Infinity;
-    if (dist[eb.a] + lb.tA < bestCost) { bestCost = dist[eb.a] + lb.tA; bestNode = eb.a; }
-    if (dist[eb.b] + lb.tB < bestCost) { bestCost = dist[eb.b] + lb.tB; bestNode = eb.b; }
-    // 同じ道路の上なら、道路の上をそのまま進む方が速い場合がある
+    if (dist[segB.a] + lb.tA < bestCost) { bestCost = dist[segB.a] + lb.tA; bestNode = segB.a; }
+    if (dist[segB.b] + lb.tB < bestCost) { bestCost = dist[segB.b] + lb.tB; bestNode = segB.b; }
+    // 同じ区間の上なら、そのまま進む方が速い場合がある
     let direct = null;
-    if (sa.ri === sb.ri) {
-      const m = Math.abs(sa.s - sb.s) / ea.total * g.lenM[sa.ri];
-      direct = { m, tt: m * 3.6 / speedOfRoad(g.roads[sa.ri]) };
+    if (sa.si === sb.si) {
+      const m = Math.abs(sa.s - sb.s) / segA.total * segA.lenM;
+      direct = { m, tt: m * 3.6 / segA.kmh };
     }
     const useDirect = !!direct && direct.tt <= bestCost;
-    if (!useDirect && bestNode === null) return { error: '経路が見つかりません(道路がつながっていません)。' };
+    if (!useDirect && bestNode === null) {
+      return { error: '経路が見つかりません(道路がつながっていません)。' };
+    }
 
     const pieces = [];
-    const add = (ri, pts, m, tt) => {
-      if (m > 0.01) pieces.push({ ri, pts, m, tt, kmh: speedOfRoad(g.roads[ri]) });
+    const add = (sg, pts, m, tt) => {
+      if (m > 0.01) pieces.push({ road: sg.road, pts, m, tt, kmh: sg.kmh });
     };
     if (useDirect) {
-      add(sa.ri, sliceArc(g.roads[sa.ri].pts, g.cum[sa.ri], sa.s, sb.s), direct.m, direct.tt);
+      add(segA, sliceArc(segA.pts, segA.cum, sa.s, sb.s), direct.m, direct.tt);
     } else {
-      // 出発 → 最初の交差点(道路の上の一部)
+      // 出発 → 最初の交差点
       const edges = [];
       let node = bestNode;
       while (prev[node] && !prev[node].start) {
-        edges.push({ from: prev[node].node, to: node, ri: prev[node].ri });
+        edges.push({ from: prev[node].node, to: node, si: prev[node].si });
         node = prev[node].node;
       }
       edges.reverse();
-      const startAtA = node === ea.a;
-      add(sa.ri, sliceArc(g.roads[sa.ri].pts, g.cum[sa.ri], sa.s, startAtA ? 0 : ea.total),
+      const startAtA = node === segA.a;
+      add(segA, sliceArc(segA.pts, segA.cum, sa.s, startAtA ? 0 : segA.total),
         startAtA ? la.dA : la.dB, startAtA ? la.tA : la.tB);
-      // 交差点どうし(道路の全体)
+      // 交差点どうし(区間ごと)
       for (const e of edges) {
-        const r = g.roads[e.ri];
-        const geo = g.ends[e.ri].a === e.from ? r.pts : r.pts.slice().reverse();
-        add(e.ri, geo, g.lenM[e.ri], g.lenM[e.ri] * 3.6 / speedOfRoad(r));
+        const sg = g.segs[e.si];
+        const geo = sg.a === e.from ? sg.pts : sg.pts.slice().reverse();
+        add(sg, geo, sg.lenM, sg.lenM * 3.6 / sg.kmh);
       }
-      // 最後の交差点 → 到着(道路の上の一部)
-      const goalAtA = bestNode === eb.a;
-      add(sb.ri, sliceArc(g.roads[sb.ri].pts, g.cum[sb.ri], goalAtA ? 0 : eb.total, sb.s),
+      // 最後の交差点 → 到着
+      const goalAtA = bestNode === segB.a;
+      add(segB, sliceArc(segB.pts, segB.cum, goalAtA ? 0 : segB.total, sb.s),
         goalAtA ? lb.dA : lb.dB, goalAtA ? lb.tA : lb.tB);
     }
     const meters = pieces.reduce((s, p) => s + p.m, 0);
     const seconds = pieces.reduce((s, p) => s + p.tt, 0);
-    return { pieces, meters, seconds, startGap: sa.d, goalGap: sb.d, graph: g };
+    return { pieces, meters, seconds, startGap: sa.d, goalGap: sb.d };
   }
 
   // 案内用: 同じ道路(番号・種類・速さ)が続く区間をまとめる
@@ -2271,10 +2375,10 @@
     const lanes = r.highway ? '' : `・${r.lanes || 1}車線`;
     return `${base}${name ? ' ' + name : ''}${lanes}(${speedOfRoad(r)}km/h)`;
   }
-  function routeSteps(pieces, g) {
+  function routeSteps(pieces) {
     const steps = [];
     for (const p of pieces) {
-      const label = roadLabel(g.roads[p.ri]);
+      const label = roadLabel(p.road);
       const last = steps[steps.length - 1];
       if (last && last.label === label) { last.m += p.m; last.tt += p.tt; }
       else steps.push({ label, m: p.m, tt: p.tt });
@@ -2310,10 +2414,10 @@
     if (r.startGap > 20 || r.goalGap > 20) {
       nodes.push(metaLine(`ピンが道路から離れています(出発 約${Math.round(r.startGap)} m / 到着 約${Math.round(r.goalGap)} m)`, 'var(--danger)'));
     }
+    const steps = routeSteps(r.pieces);
     const det = document.createElement('details');
     det.style.marginTop = '8px';
     const sum = document.createElement('summary');
-    const steps = routeSteps(r.pieces, r.graph);
     sum.textContent = `案内(${steps.length} 区間)`;
     det.append(sum, ...steps.map((s, i) => metaLine(
       `${i + 1}. ${s.label} を ${(s.m / 1000).toFixed(2)} km(${fmtTime(s.tt)})`)));
