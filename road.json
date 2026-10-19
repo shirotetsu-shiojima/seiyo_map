@@ -1,7 +1,7 @@
 {
   "format": "car_input.roads",
   "version": 2,
-  "exported_at": "2026-10-19T10:00:25.521399600Z",
+  "exported_at": "2026-10-19T10:02:54.386947500Z",
   "roads": [
     {
       "id": 1,
@@ -248,6 +248,94 @@
         "curved": false,
         "start_dir": 6,
         "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 11,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 47230,
+        "y": 65,
+        "z": -31998
+      },
+      "to": {
+        "x": 47330,
+        "y": 65,
+        "z": -31998
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 100,
+      "sidewalk_width": 4,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:mud_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 12,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 47126,
+        "y": 65,
+        "z": -31998
+      },
+      "to": {
+        "x": 47025,
+        "y": 65,
+        "z": -31998
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 101,
+      "sidewalk_width": 4,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:mud_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
         "mid_angle": 0.0,
         "lead": 0.0,
         "r1": 0.0,
