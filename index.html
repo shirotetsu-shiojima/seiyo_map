@@ -71,6 +71,11 @@
   #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 0 0 8px; }
   #info .close:hover { color: var(--ink); }
 
+  /* 運賃検索 */
+  .fare-select { width: 100%; margin: 4px 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; }
+  .fare-total { font-size: 24px; font-weight: 700; margin: 8px 0 2px; font-variant-numeric: tabular-nums; }
+
   /* 地図の操作ボタン */
   .controls { position: fixed; right: 12px; bottom: 56px; display: flex; flex-direction: column; border-radius: 10px;
     overflow: hidden; box-shadow: var(--shadow); background: var(--panel); }
@@ -164,6 +169,14 @@
     <div id="routeSummary" class="meta" style="margin-top:6px"></div>
     <label style="margin-top:6px"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
     <label style="margin-top:4px"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
+    <h2>運賃検索</h2>
+    <select id="fareFrom" class="fare-select" aria-label="乗る駅"></select>
+    <div class="row"><button class="btn" id="fareSwap" type="button" aria-label="乗る駅と降りる駅を入れ替え">⇅ 入れ替え</button></div>
+    <select id="fareTo" class="fare-select" aria-label="降りる駅"></select>
+    <div class="row"><button class="btn primary" id="fareRun" type="button">運賃を調べる</button></div>
+    <div id="fareStatus" class="meta" style="margin-top:6px">運賃データを読み込んでいます…</div>
+    <div id="fareResult" style="margin-top:6px"></div>
+
   </div>
 </div>
 
@@ -1070,6 +1083,7 @@
     $('railSummary').textContent =
       `駅 ${stations.size} 駅・区間 ${sections.length} 本・合計 ${Math.round(total)} ブロック`;
     $('showRail').checked = true;
+    fillFareSelects();
     fitView();
     needsDraw = true;
   }
@@ -1804,6 +1818,226 @@
     setAutoStatus(lines);
   }
 
+  // ---- 運賃検索 ----
+  // linedata.txt: 「路線コード」と「会社名」が1行ずつ交互に並ぶ
+  // fare/会社名.txt: 1行目が1km、2行目が2km… の大人運賃(空行は無視)
+  // 区間の距離は鉄道JSON(distanceM)を使い、会社ごとに 営業キロ(切り上げ)→ 運賃表 で求めて合計する
+  const FARE_DIR = 'fare';
+  let lineToCompany = new Map();   // 路線コード(HL など) -> 会社名
+  const fareTables = new Map();    // 会社名 -> 運賃の配列(添字0が1km)
+
+  function parseLineData(text) {
+    const tokens = String(text).split(/\s+/).filter(Boolean);
+    const map = new Map();
+    for (let i = 0; i + 1 < tokens.length; i += 2) map.set(tokens[i], tokens[i + 1]);
+    return map;
+  }
+  function parseFareTable(text) {
+    return String(text).split(/\r?\n/).map((s) => s.trim()).filter((s) => s !== '').map(Number);
+  }
+  // 駅番号(HL01 など)から路線コード(HL)を取る
+  const lineCodeOf = (code) => String(code || '').replace(/\d+$/, '');
+  const companyOfStation = (st) => lineToCompany.get(lineCodeOf(st.codes[0])) || '';
+
+  async function fetchText(url) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      return res.ok ? await res.text() : null;
+    } catch (e) { return null; }
+  }
+  function setFareStatus(text, isError = false) {
+    const box = $('fareStatus');
+    box.style.color = isError ? 'var(--danger)' : '';
+    box.textContent = text;
+  }
+  function updateFareStatus() {
+    if (!lineToCompany.size) {
+      setFareStatus('linedata.txt が読めていません。運賃は計算できません。', true);
+      return;
+    }
+    const companies = [...new Set(lineToCompany.values())];
+    const missing = companies.filter((c) => !fareTables.has(c));
+    if (missing.length) {
+      setFareStatus(`運賃表が見つかりません: ${missing.join(', ')}(fare フォルダを確認してください)`, true);
+      return;
+    }
+    setFareStatus(`運賃データ: ${companies.length} 社・路線 ${lineToCompany.size} 本を読み込みました`);
+  }
+
+  // HTML と同じフォルダから自動で読む(Web サーバー経由)
+  async function loadFareData() {
+    const lineText = await fetchText('linedata.txt');
+    if (lineText !== null) lineToCompany = parseLineData(lineText);
+    const companies = [...new Set(lineToCompany.values())];
+    await Promise.all(companies.map(async (c) => {
+      const text = await fetchText(`${FARE_DIR}/${c}.txt`);
+      if (text !== null) fareTables.set(c, parseFareTable(text));
+    }));
+    updateFareStatus();
+    fillFareSelects();
+  }
+  // 「データフォルダから読む」で選んだ中の linedata.txt と fare/*.txt を使う
+  async function loadFareFromList(list) {
+    const lineFile = list.find((f) => f.name === 'linedata.txt');
+    if (lineFile) lineToCompany = parseLineData(await readText(lineFile));
+    const companies = new Set(lineToCompany.values());
+    for (const f of list) {
+      const company = f.name.replace(/\.txt$/, '');
+      const inFareFolder = (f.webkitRelativePath || '').split('/').includes(FARE_DIR);
+      if (f.name.endsWith('.txt') && inFareFolder && companies.has(company)) {
+        fareTables.set(company, parseFareTable(await readText(f)));
+      }
+    }
+    updateFareStatus();
+    fillFareSelects();
+  }
+
+  // 駅の選択肢を、路線ごと(会社名つき)に並べる
+  function fillFareSelects() {
+    const from = $('fareFrom'), to = $('fareTo');
+    const keepFrom = from.value, keepTo = to.value;
+    const groups = new Map();
+    if (rail) {
+      for (const st of rail.stations.values()) {
+        const line = lineCodeOf(st.codes[0]) || '-';
+        if (!groups.has(line)) groups.set(line, []);
+        groups.get(line).push(st);
+      }
+    }
+    const lines = [...groups.keys()].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+    for (const sel of [from, to]) {
+      const frag = document.createDocumentFragment();
+      const first = document.createElement('option');
+      first.value = '';
+      first.textContent = rail ? '駅を選んでください' : '鉄道JSONを読み込んでください';
+      frag.append(first);
+      for (const line of lines) {
+        const og = document.createElement('optgroup');
+        const company = lineToCompany.get(line);
+        og.label = company ? `${line}(${company})` : line;
+        const sts = groups.get(line).slice().sort((a, b) =>
+          (a.codes[0] || '').localeCompare(b.codes[0] || '', 'en', { numeric: true }));
+        for (const st of sts) {
+          const opt = document.createElement('option');
+          opt.value = st.id;
+          opt.textContent = `${st.codes[0] || ''} ${st.ja || st.en || '-'}`.trim();
+          og.append(opt);
+        }
+        frag.append(og);
+      }
+      sel.replaceChildren(frag);
+    }
+    from.value = keepFrom;
+    to.value = keepTo;
+  }
+
+  // 最短経路(区間の距離の合計が最小の駅の並び)
+  function shortestFarePath(fromId, toId) {
+    const dist = new Map([[fromId, 0]]);
+    const prev = new Map();
+    const done = new Set();
+    for (;;) {
+      let u = null, best = Infinity;
+      for (const [id, d] of dist) {
+        if (!done.has(id) && d < best) { best = d; u = id; }
+      }
+      if (u === null) return null;
+      if (u === toId) break;
+      done.add(u);
+      for (const nb of rail.stations.get(u).neighbors) {
+        if (done.has(nb.id)) continue;
+        const nd = best + nb.distance;
+        if (!dist.has(nb.id) || nd < dist.get(nb.id)) { dist.set(nb.id, nd); prev.set(nb.id, u); }
+      }
+    }
+    const path = [toId];
+    while (path[path.length - 1] !== fromId) path.push(prev.get(path[path.length - 1]));
+    return path.reverse();
+  }
+
+  function calcFare(fromId, toId) {
+    const path = shortestFarePath(fromId, toId);
+    if (!path) return { error: '経路が見つかりません(路線がつながっていません)' };
+    let meters = 0;
+    const byCompany = new Map();   // 会社 -> 営業キロ(m)
+    for (let i = 1; i < path.length; i++) {
+      const st = rail.stations.get(path[i - 1]);
+      const d = st.neighbors.find((n) => n.id === path[i]).distance;
+      const company = companyOfStation(st) || '不明';
+      meters += d;
+      byCompany.set(company, (byCompany.get(company) || 0) + d);
+    }
+    let total = 0, ok = true;
+    const parts = [...byCompany].map(([company, m]) => {
+      const km = Math.ceil(Math.round(m) / 1000);   // 運賃計算キロ: 1km 未満の端数は切り上げ
+      const table = fareTables.get(company);
+      let yen = null;
+      if (km === 0) yen = 0;
+      else if (table && km <= table.length && Number.isFinite(table[km - 1])) yen = table[km - 1];
+      if (yen === null) ok = false; else total += yen;
+      return { company, meters: m, km, yen };
+    });
+    return { path, meters, parts, total, ok };
+  }
+
+  function showFareMsg(text, isError = false) {
+    const box = $('fareResult');
+    const div = document.createElement('div');
+    div.className = 'meta';
+    div.style.color = isError ? 'var(--danger)' : '';
+    div.textContent = text;
+    box.replaceChildren(div);
+  }
+
+  function runFare() {
+    const a = $('fareFrom').value, b = $('fareTo').value;
+    if (!rail) return showFareMsg('鉄道JSONを読み込んでから使ってください。');
+    if (!a || !b) return showFareMsg('乗る駅と降りる駅を選んでください。');
+    if (a === b) return showFareMsg('同じ駅です。');
+    if (!lineToCompany.size) return showFareMsg('路線と会社の対応表(linedata.txt)がありません。', true);
+    const r = calcFare(a, b);
+    if (r.error) return showFareMsg(r.error, true);
+
+    const box = $('fareResult');
+    const total = document.createElement('div');
+    total.className = 'fare-total';
+    total.textContent = r.ok ? `${r.total.toLocaleString('ja-JP')} 円` : '計算できません';
+    total.style.color = r.ok ? '' : 'var(--danger)';
+    const km = document.createElement('div');
+    km.className = 'meta';
+    km.textContent = `営業キロ ${(r.meters / 1000).toFixed(1)} km`;
+    box.replaceChildren(total, km);
+    for (const p of r.parts) {
+      const row = document.createElement('div');
+      row.className = 'meta';
+      row.textContent = `${p.company}: ${p.km} km → ` +
+        (p.yen === null ? '運賃表にありません' : `${p.yen.toLocaleString('ja-JP')} 円`);
+      box.append(row);
+    }
+    const det = document.createElement('details');
+    det.style.marginTop = '8px';
+    const sum = document.createElement('summary');
+    sum.textContent = `経路(${r.path.length} 駅)`;
+    const body = document.createElement('div');
+    body.className = 'meta';
+    body.style.fontSize = '12px';
+    body.textContent = r.path.map((id) => {
+      const st = rail.stations.get(id);
+      return `${st.codes[0] || ''} ${st.ja || st.en || ''}`.trim();
+    }).join(' → ');
+    det.append(sum, body);
+    box.append(det);
+  }
+
+  $('fareRun').addEventListener('click', runFare);
+  $('fareFrom').addEventListener('change', runFare);
+  $('fareTo').addEventListener('change', runFare);
+  $('fareSwap').addEventListener('click', () => {
+    const f = $('fareFrom'), t = $('fareTo');
+    [f.value, t.value] = [t.value, f.value];
+    runFare();
+  });
+
   // 入力
   $('file').addEventListener('change', (e) => readFile(e.target.files[0]));
   $('railFile').addEventListener('change', (e) => readRailFile(e.target.files[0]));
@@ -1811,7 +2045,7 @@
   $('dataDir').addEventListener('change', (e) => {
     const list = Array.from(e.target.files || []);
     e.target.value = ''; // 同じフォルダを選び直しても反応するように
-    if (list.length) loadDataFolder(list);
+    if (list.length) { loadDataFolder(list); loadFareFromList(list); }
   });
   $('showRouteColor').addEventListener('change', () => { needsDraw = true; });
   $('hideDup').addEventListener('change', () => applyRoutes());
@@ -1949,6 +2183,7 @@
   requestAnimationFrame(frame);
   loadDefaultTiles();
   autoLoadData();
+  loadFareData();
   // テストやデバッグ用に、読み込み関数を公開する
   window.roadMap = {
     loadText, loadTileFiles, pick, view, autoLoadData, loadDataFolder,
