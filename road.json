@@ -1,7 +1,7 @@
 {
   "format": "car_input.roads",
   "version": 2,
-  "exported_at": "2026-10-19T09:07:04.988615600Z",
+  "exported_at": "2026-10-19T10:00:25.521399600Z",
   "roads": [
     {
       "id": 1,
@@ -180,53 +180,9 @@
       }
     },
     {
-      "id": 5,
+      "id": 7,
       "dimension": "minecraft:overworld",
-      "built": false,
-      "from": {
-        "x": 47128,
-        "y": 65,
-        "z": -31998
-      },
-      "to": {
-        "x": 46990,
-        "y": 65,
-        "z": -31999
-      },
-      "type": "residential",
-      "lanes": 1,
-      "mode": "earthwork",
-      "length": 138,
-      "sidewalk_width": 0,
-      "lane_surface": "minecraft:black_concrete",
-      "sidewalk_surface": "minecraft:oak_planks",
-      "shape": {
-        "curved": true,
-        "start_dir": 2,
-        "end_dir": 2,
-        "mid_angle": 3.1560851535495877,
-        "lead": 0.0,
-        "r1": 4761.24999999992,
-        "bridge": 0.0,
-        "r2": 4761.24999999992,
-        "tail": 0.0,
-        "smooth": false,
-        "handle": 0.0
-      },
-      "route": {
-        "category": "",
-        "number": "",
-        "name": ""
-      },
-      "height": {
-        "min": 65,
-        "max": 65
-      }
-    },
-    {
-      "id": 6,
-      "dimension": "minecraft:overworld",
-      "built": false,
+      "built": true,
       "from": {
         "x": 47128,
         "y": 65,
@@ -237,13 +193,13 @@
         "y": 65,
         "z": -31998
       },
-      "type": "highway",
-      "lanes": 4,
+      "type": "general",
+      "lanes": 6,
       "mode": "earthwork",
       "length": 100,
-      "sidewalk_width": 0,
+      "sidewalk_width": 4,
       "lane_surface": "minecraft:black_concrete",
-      "sidewalk_surface": "minecraft:oak_planks",
+      "sidewalk_surface": "minecraft:mud_bricks",
       "shape": {
         "curved": false,
         "start_dir": 6,
@@ -268,23 +224,23 @@
       }
     },
     {
-      "id": 7,
+      "id": 10,
       "dimension": "minecraft:overworld",
       "built": true,
       "from": {
-        "x": 47128,
+        "x": 47127,
         "y": 65,
         "z": -31998
       },
       "to": {
-        "x": 47228,
+        "x": 47229,
         "y": 65,
         "z": -31998
       },
       "type": "general",
       "lanes": 6,
       "mode": "earthwork",
-      "length": 100,
+      "length": 102,
       "sidewalk_width": 4,
       "lane_surface": "minecraft:black_concrete",
       "sidewalk_surface": "minecraft:mud_bricks",
