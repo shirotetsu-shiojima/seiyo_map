@@ -2215,17 +2215,29 @@
     }
   }
   // 系統ごとに、停車する駅と種別を駅の番号に集める
+  // 駅は、その駅自身の路線で表示する(直通の系統が他の路線の駅に停まっても、その駅の路線に出す)
+  // 系統の路線は、停車駅で一番多い路線(持ち主)を使い、その路線の番号を持つ駅にだけ種別を付ける
   function buildStopTypes() {
     stopTypes = new Map();
     if (!routeData) return;
+    const linesOfStation = (id) => {
+      const s = routeData.stations && routeData.stations[id];
+      if (!s) return [];
+      const head = String(s.name || '').split('|')[0];
+      return [...head.matchAll(/\[([^\]]+)\]/g)].map((m) => lineCodeOf(m[1]));
+    };
     for (const route of routeData.routes || []) {
       const type = String(route.number || '').split('|')[0].trim() || '-';
-      const firstId = String((route.stations || [])[0] || '').split('_')[0];
-      const first = routeData.stations && routeData.stations[firstId];
-      const m = first ? /^\[([^\]]+)\]/.exec(first.name || '') : null;
-      const line = m ? lineCodeOf(m[1]) : '';
-      for (const raw of route.stations || []) {
-        const id = String(raw).split('_')[0];
+      const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
+      const votes = new Map();
+      for (const id of ids) for (const l of linesOfStation(id)) votes.set(l, (votes.get(l) || 0) + 1);
+      let owner = '', best = 0;
+      for (const [l, n] of votes) if (n > best) { best = n; owner = l; }
+      for (const id of ids) {
+        const own = linesOfStation(id);
+        // 駅が別路線の番号しか持たない場合、この系統の種別は付けない
+        if (own.length && !own.includes(owner)) continue;
+        const line = owner;
         if (!stopTypes.has(id)) stopTypes.set(id, []);
         const list = stopTypes.get(id);
         if (!list.some((x) => x.line === line && x.type === type)) list.push({ line, type });
