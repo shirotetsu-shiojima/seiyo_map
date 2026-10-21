@@ -1520,7 +1520,7 @@
     let nDirect = 0, nEstimated = 0, nFailed = 0;
     let entries = [];
     for (const route of routeData.routes) {
-      const info = { name: jaName(route.name), color: colorHex(route.color) };
+      const info = { name: jaName(route.name), color: colorHex(route.color), secLine: new Map() };
       const routeKeys = new Set();
       const ids = (route.stations || []).map((s) => canon(String(s).split('_')[0]));
       for (let i = 1; i < ids.length; i++) {
@@ -1536,7 +1536,13 @@
           if (keys) nEstimated++;
           else { nFailed++; continue; }
         }
-        for (const k of keys) routeKeys.add(k);
+        for (const k of keys) {
+          routeKeys.add(k);
+          // 区間の路線が lines.csv にあれば、その路線の色を優先する(直通で路線が替わる駅で、色も替わる)
+          const sec = secByKey.get(k);
+          const code = sec ? sectionLineOf(sec.fromId, sec.toId) : '';
+          if (code && lineInfo.has(code)) info.secLine.set(k, lineColorOf(code));
+        }
       }
       if (!routeKeys.size) continue;
       entries.push({ info, keys: routeKeys, ids, stops: ids.length, hidden: false });
@@ -1588,7 +1594,11 @@
     let clusterNo = 0;
     for (const c of clusters.values()) {
       const uniq = new Map();
-      for (const m of c.members) uniq.set(m.name + '|' + m.color, m);
+      for (const m of c.members) {
+        const key = m.name + '|' + m.color;
+        if (!uniq.has(key)) uniq.set(key, { ...m, secLine: new Map() });
+        for (const [k, v] of m.secLine) uniq.get(key).secLine.set(k, v);
+      }
       const members = [...uniq.values()].sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : a.name < b.name ? -1 : 1));
       if (members.length > 1) nMerged++;
       const no = clusterNo++;
@@ -1646,7 +1656,7 @@
     const pts = sec.fromId <= sec.toId ? sec.pts : sec.pts.slice().reverse();
     const k = Math.max(1, view.scale / LINE_REF_SCALE);   // 拡大率が基準より大きい時は、太さと間隔を同じ比で大きくする
     const n = lanes.length, gap = LANE_GAP_PX * k;
-    lanes.forEach((lane, i) => strokeOffset(pts, (i - (n - 1) / 2) * gap, LINE_WIDTH_PX * k, lane.color));
+    lanes.forEach((lane, i) => strokeOffset(pts, (i - (n - 1) / 2) * gap, LINE_WIDTH_PX * k, (lineColorOn() && lane.secLine.get(sec.key)) || lane.color));
   }
 
   // 線を、法線方向に一定のピクセル数だけずらして描く(横並びの複数線用)
@@ -2064,10 +2074,7 @@
     return null;
   };
   const lineColorOn = () => $('showLineColor').checked && lineInfo.size > 0;
-  const lineOfSection = (sec) => {
-    const st = rail.stations.get(sec.fromId);
-    return st ? lineCodeOf(st.codes[0]) : '';
-  };
+  const lineOfSection = (sec) => sectionLineOf(sec.fromId, sec.toId);
 
   const lineCodeOf = (code) => normLine(String(code || '').replace(/\d+$/, ''));
   const companyOfStation = (st) => lineToCompany.get(lineCodeOf(st.codes[0])) || '';
@@ -2382,6 +2389,14 @@
     return ids.map((id, i) => ({ id, kind: i === 0 ? null : kinds[i - 1] }));
   }
 
+  // 区間の路線: 両端の駅が共通して持つ路線の番号を使う(乗換駅は複数の番号を持つため、先頭の番号では決めない)
+  function sectionLineOf(a, b) {
+    const sa = rail.stations.get(a), sb = rail.stations.get(b);
+    const ca = (sa.codes || []).map(lineCodeOf);
+    const cb = new Set((sb.codes || []).map(lineCodeOf));
+    const common = ca.find((c) => cb.has(c));
+    return common || ca[0] || '-';
+  }
   // 乗換案内: 乗る線・乗換・降りる駅と、会社ごとの運賃
   function calcTransit(fromId, toId) {
     const path = railPath(fromId, toId);
@@ -2393,7 +2408,7 @@
       if (kind === 'transfer') { items.push({ type: 'transfer', id: a }); continue; }
       const sa = st(a);
       const d = sa.neighbors.find((n) => n.id === b).distance;
-      const line = lineCodeOf(sa.codes[0]) || '-';
+      const line = sectionLineOf(a, b);
       const last = items[items.length - 1];
       if (last && last.type === 'ride' && last.line === line) {
         last.toId = b; last.stops++; last.m += d;
