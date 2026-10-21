@@ -132,7 +132,10 @@
   .types { margin: 0 0 12px; }
   .type-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
   .type-chip { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; background: var(--chip); color: var(--ink); }
-  .line-name { font-size: 12px; color: var(--muted); }
+  .type-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .line-head { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .type-list .type-row { margin: 0; }
+  .type-list .type-chip { flex: 1; padding: 6px 12px; border-radius: 8px; font-size: 13px; }
 
   /* 設定の中の凡例 */
   .legend-box { font-size: 13px; }
@@ -2235,7 +2238,7 @@
     const map = company && typeColors.get(company);
     return (map && map.get(type)) || null;
   };
-  // 駅の詳細: 路線ごとに、停車する種別をチップで表示する
+  // 駅の詳細: 路線ごとに見出しを付け、停車する種別を1種別1行で下に並べる
   function renderStopTypes(id) {
     const box = $('infoTypes');
     box.replaceChildren();
@@ -2245,33 +2248,35 @@
     const title = document.createElement('div');
     title.className = 'stat-label';
     title.textContent = '🚆 停車する種別';
-    box.append(title);
+    const wrap = document.createElement('div');
+    wrap.className = 'type-list';
     const byLine = new Map();
     for (const x of list) {
       if (!byLine.has(x.line)) byLine.set(x.line, []);
       byLine.get(x.line).push(x);
     }
     for (const [line, items] of byLine) {
-      const row = document.createElement('div');
-      row.className = 'type-row';
-      const badge = document.createElement('span');
-      badge.className = 'code-badge';
-      badge.textContent = line || '-';
-      if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
-      const name = document.createElement('span');
-      name.className = 'line-name';
-      name.textContent = `${lineNameOf(line)} 経由`;
-      row.append(badge, name);
+      const head = document.createElement('div');
+      head.className = 'line-head';
+      head.textContent = `${lineNameOf(line)} 経由`;
+      wrap.append(head);
       for (const x of items) {
+        const row = document.createElement('div');
+        row.className = 'type-row';
+        const badge = document.createElement('span');
+        badge.className = 'code-badge';
+        badge.textContent = line || '-';
+        if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
         const chip = document.createElement('span');
         chip.className = 'type-chip';
         chip.textContent = x.type;
         const s = typeStyleOf(x.line, x.type);
         if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
-        row.append(chip);
+        row.append(badge, chip);
+        wrap.append(row);
       }
-      box.append(row);
     }
+    box.append(title, wrap);
   }
 
   // ---- 鉄道の乗換案内(運賃も同じ経路で計算) ----
