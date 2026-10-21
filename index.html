@@ -128,6 +128,12 @@
   .code-badge { display: inline-block; padding: 1px 7px; border-radius: 6px; border: 2px solid var(--muted);
     font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--ink); background: var(--panel); }
 
+  /* 停車する種別(color.txt の色) */
+  .types { margin: 0 0 12px; }
+  .type-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+  .type-chip { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; background: var(--chip); color: var(--ink); }
+  .line-name { font-size: 12px; color: var(--muted); }
+
   /* 設定の中の凡例 */
   .legend-box { font-size: 13px; }
   .legend-box .row { margin: 4px 0; }
@@ -281,6 +287,7 @@
     <button class="close" id="closeInfo" aria-label="閉じる">×</button>
     <h1 id="infoTitle"></h1>
     <div id="infoHero" class="hero" hidden></div>
+    <div id="infoTypes" class="types" hidden></div>
     <dl id="infoBody"></dl>
   </div>
 </div>
@@ -1204,6 +1211,7 @@
 
   function loadRouteData(data, name) {
     routeData = { routes: data.routes, stations: data.stations || {}, positions: data.positions || {}, name };
+    buildStopTypes();
     $('routeName').textContent = name;
     if (!rail) {
       $('routeSummary').textContent = '系統データを読み込みました。先に鉄道JSONを開くと、線路に色を付けます。';
@@ -1827,6 +1835,7 @@
     dl.textContent = '';
     hero.replaceChildren();
     hero.hidden = true;
+    $('infoTypes').hidden = true;
     $('infoBar').style.background = RAIL_COLOR;
     if (item.type === 'station') {
       const st = item.st;
@@ -1855,6 +1864,7 @@
         statCard('🌏 都道府県', [document.createTextNode(srow && srow.pref ? srow.pref : '-')]),
       );
       hero.hidden = false;
+      renderStopTypes(st.id);
 
       // 下の一覧: 残りの項目
       addRow(dl, '英語名', st.en || '-');
@@ -2091,6 +2101,8 @@
     if (lineText !== null) applyLinedata(lineText);
     const linesCsv = await fetchText('lines.csv');
     if (linesCsv !== null) applyLines(linesCsv);
+    const colorText = await fetchText('color.txt');
+    if (colorText !== null) applyTypeColors(colorText);
     const stationsCsv = await fetchText('station.csv');
     if (stationsCsv !== null) applyStations(stationsCsv);
     const companies = [...new Set(lineToCompany.values())];
@@ -2107,6 +2119,7 @@
     if (find('linedata.txt')) applyLinedata(await readText(find('linedata.txt')));
     if (find('lines.csv')) applyLines(await readText(find('lines.csv')));
     if (find('station.csv')) applyStations(await readText(find('station.csv')));
+    if (find('color.txt')) applyTypeColors(await readText(find('color.txt')));
     const companies = new Set(lineToCompany.values());
     for (const f of list) {
       const company = f.name.replace(/\.txt$/, '');
@@ -2178,6 +2191,88 @@
   }
   $('stationFilter').addEventListener('input', (e) => filterFareOptions(e.target.value));
   $('showLineColor').addEventListener('change', () => { needsDraw = true; });
+
+  // ---- 停車する種別(train.json の系統 と color.txt の色) ----
+  let typeColors = new Map();   // 会社txt -> Map(種別名 -> { bg, fg })
+  let stopTypes = new Map();    // 駅 id -> [{ line, type }]
+  // color.txt: 「(c)会社txt」の下に、「種別名・背景色・文字色」の3行が1組で並ぶ
+  function applyTypeColors(text) {
+    typeColors = new Map();
+    const isHex = (s) => /^#[0-9a-fA-F]{6}$/.test(s);
+    let company = null;
+    const lines = String(text).replace(/^﻿/, '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    for (let i = 0; i < lines.length;) {
+      const l = lines[i];
+      const m = /^\(c\)(.+)$/.exec(l);
+      if (m) { company = m[1]; if (!typeColors.has(company)) typeColors.set(company, new Map()); i++; continue; }
+      if (company && !isHex(l) && isHex(lines[i + 1]) && isHex(lines[i + 2])) {
+        typeColors.get(company).set(l, { bg: lines[i + 1], fg: lines[i + 2] });
+        i += 3;
+      } else i++;
+    }
+  }
+  // 系統ごとに、停車する駅と種別を駅の番号に集める
+  function buildStopTypes() {
+    stopTypes = new Map();
+    if (!routeData) return;
+    for (const route of routeData.routes || []) {
+      const type = String(route.number || '').split('|')[0].trim() || '-';
+      const firstId = String((route.stations || [])[0] || '').split('_')[0];
+      const first = routeData.stations && routeData.stations[firstId];
+      const m = first ? /^\[([^\]]+)\]/.exec(first.name || '') : null;
+      const line = m ? lineCodeOf(m[1]) : '';
+      for (const raw of route.stations || []) {
+        const id = String(raw).split('_')[0];
+        if (!stopTypes.has(id)) stopTypes.set(id, []);
+        const list = stopTypes.get(id);
+        if (!list.some((x) => x.line === line && x.type === type)) list.push({ line, type });
+      }
+    }
+  }
+  // 路線(会社)と種別から、color.txt の色を探す
+  const typeStyleOf = (line, type) => {
+    const company = lineToCompany.get(line);
+    const map = company && typeColors.get(company);
+    return (map && map.get(type)) || null;
+  };
+  // 駅の詳細: 路線ごとに、停車する種別をチップで表示する
+  function renderStopTypes(id) {
+    const box = $('infoTypes');
+    box.replaceChildren();
+    const list = stopTypes.get(id) || [];
+    box.hidden = !list.length;
+    if (!list.length) return;
+    const title = document.createElement('div');
+    title.className = 'stat-label';
+    title.textContent = '🚆 停車する種別';
+    box.append(title);
+    const byLine = new Map();
+    for (const x of list) {
+      if (!byLine.has(x.line)) byLine.set(x.line, []);
+      byLine.get(x.line).push(x);
+    }
+    for (const [line, items] of byLine) {
+      const row = document.createElement('div');
+      row.className = 'type-row';
+      const badge = document.createElement('span');
+      badge.className = 'code-badge';
+      badge.textContent = line || '-';
+      if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
+      const name = document.createElement('span');
+      name.className = 'line-name';
+      name.textContent = `${lineNameOf(line)} 経由`;
+      row.append(badge, name);
+      for (const x of items) {
+        const chip = document.createElement('span');
+        chip.className = 'type-chip';
+        chip.textContent = x.type;
+        const s = typeStyleOf(x.line, x.type);
+        if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
+        row.append(chip);
+      }
+      box.append(row);
+    }
+  }
 
   // ---- 鉄道の乗換案内(運賃も同じ経路で計算) ----
   // 同じ駅名で路線が違う駅どうしは、乗換でつなぐ。乗換 1 回は距離 TRANSFER_COST_M ぶんの重みとして、乗換の少ない経路を優先する
