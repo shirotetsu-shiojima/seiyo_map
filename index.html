@@ -2267,6 +2267,18 @@
       if (!byLine.has(x.line)) byLine.set(x.line, []);
       byLine.get(x.line).push(x);
     }
+    // 種別の並びは color.txt に書かれている順(色の登録順)。登録のない種別は後ろに
+    const rankOf = (line, type) => {
+      const company = lineToCompany.get(line);
+      const map = company && typeColors.get(company);
+      if (!map) return Infinity;
+      let i = 0;
+      for (const k of map.keys()) { if (k === type) return i; i++; }
+      return Infinity;
+    };
+    for (const items of byLine.values()) {
+      items.sort((a, b) => rankOf(a.line, a.type) - rankOf(b.line, b.type));
+    }
     for (const [line, items] of byLine) {
       const head = document.createElement('div');
       head.className = 'line-head';
