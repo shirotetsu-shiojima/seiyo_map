@@ -11,7 +11,7 @@
 準急
 #34a853
 #ffffff
-各停
+各駅停車
 #0000ff
 #ffffff
 (c)shirokimetro
