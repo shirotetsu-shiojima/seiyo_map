@@ -203,6 +203,7 @@
       <button class="chip" id="pinGoal" type="button">到着地点にピン</button>
       <button class="chip" id="pinClear" type="button">ピンを消す</button>
     </div>
+    <label class="toggle" style="margin-top:6px"><input type="checkbox" id="showWalk"> 徒歩の時刻も表示(時速15km・歩道のある道を優先・高速道路を除く)</label>
     <div id="routeStatus" class="meta" style="margin-top:6px"></div>
     <div id="routeResult" style="margin-top:8px"></div>
   </section>
@@ -2850,9 +2851,10 @@
   }
 
   // ピンに一番近い区間の上の点(区間の番号 si、区間の上の位置 s、距離 d)
-  function snapToSegments(g, px, pz) {
+  function snapToSegments(g, px, pz, filter = null) {
     let best = null;
     g.segs.forEach((sg, si) => {
+      if (filter && !filter(sg)) return;
       for (let q = 1; q < sg.pts.length; q++) {
         const ax = sg.pts[q - 1][0], az = sg.pts[q - 1][1];
         const dx = sg.pts[q][0] - ax, dz = sg.pts[q][1] - az;
@@ -2865,19 +2867,29 @@
     return best;
   }
 
-  // 出発 → 到着の経路(所要時間が最小)
-  function computeRoute(start, goal) {
+  // 徒歩: 道路の種類に関係なく時速 WALK_KMH。歩道のある道を優先し(歩道のない道は重みを増やす)、高速道路は使わない
+  const WALK_KMH = 15;
+  const WALK_NO_SIDEWALK_WEIGHT = 1.5;
+  // 出発 → 到着の経路(車は所要時間が最小、徒歩は歩道を優先した重みが最小)
+  function computeRoute(start, goal, walk = false) {
     const g = getRoadGraph();
     if (!g.segs.length) return { error: '道路データ(road.json)を読み込んでください。' };
-    const sa = snapToSegments(g, start.x, start.z), sb = snapToSegments(g, goal.x, goal.z);
-    if (!sa || !sb) return { error: '道路が見つかりません。' };
+    const usable = (sg) => !walk || !sg.road.highway;
+    const sa = snapToSegments(g, start.x, start.z, usable), sb = snapToSegments(g, goal.x, goal.z, usable);
+    if (!sa || !sb) return { error: walk ? '徒歩で使える道路が見つかりません。' : '道路が見つかりません。' };
     const segA = g.segs[sa.si], segB = g.segs[sb.si];
+    // 1 m あたりの「重み」(経路の選び方)と「時間」(表示する時間, 秒)
+    const timeM = (sg) => (walk ? 3.6 / WALK_KMH : 3.6 / sg.kmh);
+    const costM = (sg) => (walk ? timeM(sg) * (sg.road.sidewalk > 0 ? 1 : WALK_NO_SIDEWALK_WEIGHT) : timeM(sg));
 
-    // ピンから、その区間の両端までの距離(m)と時間(秒)
+    // ピンから、その区間の両端までの距離(m)・重み・時間(秒)
     const legOf = (sg, s) => {
       const frac = sg.total > 0 ? s / sg.total : 0;
-      const k = 3.6 / sg.kmh;
-      return { dA: frac * sg.lenM, dB: (1 - frac) * sg.lenM, tA: frac * sg.lenM * k, tB: (1 - frac) * sg.lenM * k };
+      return {
+        dA: frac * sg.lenM, dB: (1 - frac) * sg.lenM,
+        tA: frac * sg.lenM * costM(sg), tB: (1 - frac) * sg.lenM * costM(sg),
+        uA: frac * sg.lenM * timeM(sg), uB: (1 - frac) * sg.lenM * timeM(sg),
+      };
     };
     const la = legOf(segA, sa.s), lb = legOf(segB, sb.s);
 
@@ -2922,7 +2934,9 @@
       if (done[u] || d > dist[u]) continue;
       done[u] = 1;
       for (const e of g.adj[u]) {
-        const nd = d + e.time;
+        const sg = g.segs[e.si];
+        if (walk && sg.road.highway) continue;
+        const nd = d + (walk ? sg.lenM * costM(sg) : e.time);
         if (nd < dist[e.to]) { dist[e.to] = nd; prev[e.to] = { node: u, si: e.si }; push(nd, e.to); }
       }
     }
@@ -2935,9 +2949,9 @@
     let direct = null;
     if (sa.si === sb.si) {
       const m = Math.abs(sa.s - sb.s) / segA.total * segA.lenM;
-      direct = { m, tt: m * 3.6 / segA.kmh };
+      direct = { m, cost: m * costM(segA), tt: m * timeM(segA) };
     }
-    const useDirect = !!direct && direct.tt <= bestCost;
+    const useDirect = !!direct && direct.cost <= bestCost;
     if (!useDirect && bestNode === null) {
       return { error: '経路が見つかりません(道路がつながっていません)。' };
     }
@@ -2959,21 +2973,21 @@
       edges.reverse();
       const startAtA = node === segA.a;
       add(segA, sliceArc(segA.pts, segA.cum, sa.s, startAtA ? 0 : segA.total),
-        startAtA ? la.dA : la.dB, startAtA ? la.tA : la.tB);
+        startAtA ? la.dA : la.dB, startAtA ? la.uA : la.uB);
       // 交差点どうし(区間ごと)
       for (const e of edges) {
         const sg = g.segs[e.si];
         const geo = sg.a === e.from ? sg.pts : sg.pts.slice().reverse();
-        add(sg, geo, sg.lenM, sg.lenM * 3.6 / sg.kmh);
+        add(sg, geo, sg.lenM, sg.lenM * timeM(sg));
       }
       // 最後の交差点 → 到着
       const goalAtA = bestNode === segB.a;
       add(segB, sliceArc(segB.pts, segB.cum, goalAtA ? 0 : segB.total, sb.s),
-        goalAtA ? lb.dA : lb.dB, goalAtA ? lb.tA : lb.tB);
+        goalAtA ? lb.dA : lb.dB, goalAtA ? lb.uA : lb.uB);
     }
     const meters = pieces.reduce((s, p) => s + p.m, 0);
     const seconds = pieces.reduce((s, p) => s + p.tt, 0);
-    return { pieces, meters, seconds, startGap: sa.d, goalGap: sb.d };
+    return { pieces, meters, seconds, startGap: sa.d, goalGap: sb.d, walk };
   }
 
   // 案内用: 同じ道路(番号・種類・速さ)が続く区間をまとめる
@@ -3008,6 +3022,19 @@
     return d;
   }
 
+  // 徒歩の結果(時間・道のり・歩道の区間)。経路が無い時は理由を書く
+  let walkRoute = null;
+  function walkNodes(w) {
+    if (!w) return [];
+    if (w.error) return [metaLine(`徒歩: ${w.error}`, 'var(--danger)')];
+    const withSide = w.pieces.filter((p) => p.road.sidewalk > 0).reduce((s, p) => s + p.m, 0);
+    const noSide = w.meters - withSide;
+    return [
+      metaLine(`徒歩 約 ${fmtTime(w.seconds)}(道のり ${(w.meters / 1000).toFixed(2)} km・時速 ${WALK_KMH} km)`),
+      metaLine(`うち歩道あり ${(withSide / 1000).toFixed(2)} km ・ 歩道なし ${(noSide / 1000).toFixed(2)} km`),
+    ];
+  }
+
   function renderRoute(r) {
     const big = document.createElement('div');
     big.className = 'fare-total';
@@ -3022,6 +3049,7 @@
     if (r.startGap > 20 || r.goalGap > 20) {
       nodes.push(metaLine(`ピンが道路から離れています(出発 約${Math.round(r.startGap)} m / 到着 約${Math.round(r.goalGap)} m)`, 'var(--danger)'));
     }
+    nodes.push(...walkNodes(walkRoute));
     const steps = routeSteps(r.pieces);
     const det = document.createElement('details');
     det.style.marginTop = '8px';
@@ -3053,15 +3081,19 @@
   function updateRoute() {
     if (!pins.start || !pins.goal) {
       route = null;
+      walkRoute = null;
       $('routeResult').replaceChildren();
       setRouteStatus('出発地点と到着地点にピンを打つと、経路を計算します。');
     } else if (!roads.length) {
       route = null;
+      walkRoute = null;
       $('routeResult').replaceChildren();
       setRouteStatus('道路データ(road.json)が読み込めていません。', true);
     } else {
       route = computeRoute(pins.start, pins.goal);
+      walkRoute = $('showWalk').checked ? computeRoute(pins.start, pins.goal, true) : null;
       if (route.error) {
+        walkRoute = null;
         $('routeResult').replaceChildren();
         setRouteStatus(route.error, true);
       } else {
@@ -3076,6 +3108,10 @@
     if (!route || route.error) return;
     for (const p of route.pieces) strokeLine(p.pts, 9, '#ffffff', 0.9);
     for (const p of route.pieces) strokeLine(p.pts, 5, ACCENT, 1);
+    // 徒歩の経路は、緑の破線で重ねる
+    if (walkRoute && !walkRoute.error) {
+      for (const p of walkRoute.pieces) strokeLine(p.pts, 4, '#34a853', 1, [8, 6]);
+    }
   }
   // 出発(緑)・到着(赤)のピン
   function drawPins() {
@@ -3101,6 +3137,7 @@
     ctx.restore();
   }
 
+  $('showWalk').addEventListener('change', updateRoute);
   $('pinStart').addEventListener('click', () => { pinMode = pinMode === 'start' ? null : 'start'; updatePinUI(); updateRoute(); });
   $('pinGoal').addEventListener('click', () => { pinMode = pinMode === 'goal' ? null : 'goal'; updatePinUI(); updateRoute(); });
   $('pinClear').addEventListener('click', () => { pins = { start: null, goal: null }; pinMode = null; updatePinUI(); updateRoute(); });
