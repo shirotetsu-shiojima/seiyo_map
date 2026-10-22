@@ -1,7 +1,7 @@
 {
   "format": "car_input.roads",
   "version": 2,
-  "exported_at": "2026-10-21T23:58:44.086103Z",
+  "exported_at": "2026-10-22T00:48:02.778074800Z",
   "roads": [
     {
       "id": 1,
@@ -1314,13 +1314,937 @@
         "handle": 0.0
       },
       "route": {
-        "category": "prefectural",
+        "category": "national",
         "number": "",
         "name": ""
       },
       "height": {
         "min": 65,
         "max": 65
+      }
+    },
+    {
+      "id": 35,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 34700,
+        "y": 82,
+        "z": 20900
+      },
+      "to": {
+        "x": 36000,
+        "y": 101,
+        "z": 20500
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 1407,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 334.3145750507621,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 1365.6854249492383,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 82,
+        "max": 101
+      }
+    },
+    {
+      "id": 36,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 36000,
+        "y": 101,
+        "z": 20500
+      },
+      "to": {
+        "x": 37200,
+        "y": 101,
+        "z": 19300
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 1200,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 101,
+        "max": 101
+      }
+    },
+    {
+      "id": 37,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 36000,
+        "y": 101,
+        "z": 20500
+      },
+      "to": {
+        "x": 37500,
+        "y": 101,
+        "z": 19000
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 1500,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 101,
+        "max": 101
+      }
+    },
+    {
+      "id": 38,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 37800,
+        "y": 132,
+        "z": 18700
+      },
+      "to": {
+        "x": 37500,
+        "y": 101,
+        "z": 19000
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 300,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 101,
+        "max": 132
+      }
+    },
+    {
+      "id": 39,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 37800,
+        "y": 138,
+        "z": 18700
+      },
+      "to": {
+        "x": 37500,
+        "y": 101,
+        "z": 19000
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 300,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 101,
+        "max": 138
+      }
+    },
+    {
+      "id": 40,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 37500,
+        "y": 101,
+        "z": 19000
+      },
+      "to": {
+        "x": 37750,
+        "y": 130,
+        "z": 18750
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 250,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 101,
+        "max": 130
+      }
+    },
+    {
+      "id": 41,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 37750,
+        "y": 130,
+        "z": 18750
+      },
+      "to": {
+        "x": 38058,
+        "y": 133,
+        "z": 18500
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 397,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": -0.5782567121429457,
+        "lead": 0.0,
+        "r1": 959.2513061606894,
+        "bridge": 0.0,
+        "r2": 959.2513061606894,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 130,
+        "max": 133
+      }
+    },
+    {
+      "id": 42,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 38058,
+        "y": 133,
+        "z": 18500
+      },
+      "to": {
+        "x": 37750,
+        "y": 129,
+        "z": 18750
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 397,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 2.563335941446848,
+        "lead": 0.0,
+        "r1": 959.2513061606874,
+        "bridge": 0.0,
+        "r2": 959.2513061606874,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 129,
+        "max": 133
+      }
+    },
+    {
+      "id": 43,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 37749,
+        "y": 130,
+        "z": 18751
+      },
+      "to": {
+        "x": 38058,
+        "y": 133,
+        "z": 18500
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 399,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": -0.5789912519460407,
+        "lead": 0.0,
+        "r1": 966.0663525517804,
+        "bridge": 0.0,
+        "r2": 966.0663525517804,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 130,
+        "max": 133
+      }
+    },
+    {
+      "id": 44,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 37748,
+        "y": 129,
+        "z": 18752
+      },
+      "to": {
+        "x": 38058,
+        "y": 133,
+        "z": 18500
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 400,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": -0.5797206189991309,
+        "lead": 0.0,
+        "r1": 972.9057819353263,
+        "bridge": 0.0,
+        "r2": 972.9057819353263,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 129,
+        "max": 133
+      }
+    },
+    {
+      "id": 45,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 37750,
+        "y": 130,
+        "z": 18749
+      },
+      "to": {
+        "x": 38058,
+        "y": 133,
+        "z": 18500
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 397,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": -0.5743359971786299,
+        "lead": 0.0,
+        "r1": 940.002586701931,
+        "bridge": 0.0,
+        "r2": 940.002586701931,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 130,
+        "max": 133
+      }
+    },
+    {
+      "id": 46,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 38543,
+        "y": 111,
+        "z": 18350
+      },
+      "to": {
+        "x": 38058,
+        "y": 133,
+        "z": 18499
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 525,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 1,
+        "mid_angle": 3.141592653589793,
+        "lead": 125.28217920640901,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 508.71782079359105,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 111,
+        "max": 133
+      }
+    },
+    {
+      "id": 47,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 38544,
+        "y": 111,
+        "z": 18350
+      },
+      "to": {
+        "x": 38938,
+        "y": 124,
+        "z": 18350
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 394,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 111,
+        "max": 124
+      }
+    },
+    {
+      "id": 48,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 38939,
+        "y": 124,
+        "z": 18349
+      },
+      "to": {
+        "x": 39170,
+        "y": 110,
+        "z": 18301
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 238,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.409753434074217,
+        "lead": 0.0,
+        "r1": 289.921875,
+        "bridge": 0.0,
+        "r2": 289.921875,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 110,
+        "max": 124
+      }
+    },
+    {
+      "id": 49,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 39579,
+        "y": 122,
+        "z": 18301
+      },
+      "to": {
+        "x": 39171,
+        "y": 110,
+        "z": 18301
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "tunnel",
+      "length": 408,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 110,
+        "max": 122
+      }
+    },
+    {
+      "id": 50,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 39580,
+        "y": 122,
+        "z": 18302
+      },
+      "to": {
+        "x": 40075,
+        "y": 103,
+        "z": 18096
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 550,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 5,
+        "mid_angle": -0.7853981633974483,
+        "lead": 0.0,
+        "r1": 697.7077195258245,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 2.3279938488576177,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 103,
+        "max": 122
+      }
+    },
+    {
+      "id": 51,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 40075,
+        "y": 103,
+        "z": 18096
+      },
+      "to": {
+        "x": 40378,
+        "y": 116,
+        "z": 17641
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 565,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 4,
+        "mid_angle": -0.7853981633974483,
+        "lead": 276.5067093990476,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 366.9604614807106,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 103,
+        "max": 116
+      }
+    },
+    {
+      "id": 52,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 40378,
+        "y": 130,
+        "z": 17641
+      },
+      "to": {
+        "x": 40075,
+        "y": 103,
+        "z": 18096
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 565,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 1,
+        "mid_angle": 2.356194490192345,
+        "lead": 0.0,
+        "r1": 366.96046148071036,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 276.5067093990479,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 103,
+        "max": 130
+      }
+    },
+    {
+      "id": 53,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 40378,
+        "y": 130,
+        "z": 17640
+      },
+      "to": {
+        "x": 40378,
+        "y": 99,
+        "z": 17491
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 149,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 99,
+        "max": 130
+      }
+    },
+    {
+      "id": 54,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 40378,
+        "y": 130,
+        "z": 17640
+      },
+      "to": {
+        "x": 40378,
+        "y": 119,
+        "z": 17543
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 97,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 119,
+        "max": 130
+      }
+    },
+    {
+      "id": 55,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 40378,
+        "y": 119,
+        "z": 17542
+      },
+      "to": {
+        "x": 40376,
+        "y": 119,
+        "z": 17279
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 263,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": -1.5860051591022835,
+        "lead": 0.0,
+        "r1": 8646.62499999993,
+        "bridge": 0.0,
+        "r2": 8646.62499999993,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "新白風高速道路"
+      },
+      "height": {
+        "min": 119,
+        "max": 119
       }
     }
   ]
