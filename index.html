@@ -1264,6 +1264,7 @@
   // ---- 鉄道(駅番号などは、駅を選んだ時の詳細欄にだけ出す) ----
   const RAIL_COLOR = '#4a5563';        // 鉄道の線(系統の色で塗らない時)
   const RAIL_LABEL_SCALE = 0.2;        // これより拡大した時だけ駅名を描く
+  const LOGO_PX = 14;                  // 駅名の前のロゴの大きさ(px)
   const CLUSTER_SIM = 0.7;             // 通る区間の一致率(Jaccard)がこれ以上の系統は、1本の路線にまとめる
   let rail = null;                     // { stations: Map, sections: [...], total }
   let selectedRail = null;             // { type: 'station', st } または { type: 'section', sec }
@@ -1843,8 +1844,16 @@
         if (!labelOn(row ? row.grade : 5)) continue;
         const [sx, sy] = toScreen(st.x, st.z);
         const label = st.ja || st.en;
-        ctx.strokeText(label, sx + 8, sy + 4);
-        ctx.fillText(label, sx + 8, sy + 4);
+        // 駅名の前に、乗入会社のロゴを並べる(ロゴが無い会社は飛ばす)
+        let x0 = sx + 8;
+        for (const id of companyIdsOf(st)) {
+          const img = logoFor(id);
+          if (!img) continue;
+          ctx.drawImage(img, x0, sy - 7, LOGO_PX, LOGO_PX);
+          x0 += LOGO_PX + 2;
+        }
+        ctx.strokeText(label, x0, sy + 4);
+        ctx.fillText(label, x0, sy + 4);
       }
     }
     ctx.restore();
@@ -2082,6 +2091,13 @@
   }
   // 選んだフォルダの中から3つのファイルを探す(同じ名前が下の階層にもあれば、一番浅いものを使う)
   async function loadDataFolder(list) {
+    // フォルダの logos/会社txt.png は、読み込んだ画像をそのまま使う
+    logoBlobUrls.clear();
+    logoCache.clear();
+    for (const f of list) {
+      const m = /(^|\/)logos\/([^/]+)\.png$/i.exec(f.webkitRelativePath || '');
+      if (m) logoBlobUrls.set(m[2], URL.createObjectURL(f));
+    }
     const found = {};
     for (const f of list) {
       const hit = DATA_FILES.find((d) => d.name === f.name);
@@ -2097,6 +2113,29 @@
       lines.push(`${d.name}: 読み込みました`);
     }
     setAutoStatus(lines);
+  }
+
+  // ---- 乗入会社のロゴ(logos/会社txtのid.png。会社txtは運賃txtの名前と同じ) ----
+  const logoCache = new Map();     // 会社txt -> { img, ok }
+  const logoBlobUrls = new Map();  // フォルダから読んだ時の、会社txt -> 画像の URL
+  function logoFor(id) {
+    if (!logoCache.has(id)) {
+      const entry = { img: new Image(), ok: false };
+      entry.img.onload = () => { entry.ok = true; needsDraw = true; };
+      entry.img.src = logoBlobUrls.get(id) || `logos/${encodeURIComponent(id)}.png`;
+      logoCache.set(id, entry);
+    }
+    const e = logoCache.get(id);
+    return e.ok ? e.img : null;
+  }
+  // 駅の乗入会社: 駅番号の路線コードから、会社txtを順に集める(重複は除く)
+  function companyIdsOf(st) {
+    const ids = [];
+    for (const c of st.codes || []) {
+      const t = lineToCompany.get(lineCodeOf(c));
+      if (t && !ids.includes(t)) ids.push(t);
+    }
+    return ids;
   }
 
   // ---- 運賃検索 ----
