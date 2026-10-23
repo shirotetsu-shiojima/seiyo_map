@@ -2346,7 +2346,7 @@
   }
   // 系統ごとに、停車する駅と種別を駅の番号に集める
   // 駅は、その駅自身の路線で表示する(直通の系統が他の路線の駅に停まっても、その駅の路線に出す)
-  // 系統の路線は、停車駅で一番多い路線(持ち主)を使い、その路線の番号を持つ駅にだけ種別を付ける
+  // 系統の路線は、停車駅で一番多い路線(持ち主)を使う。直通で他社線の駅に停まる時は、その駅の番号の路線で表示する
   function buildStopTypes() {
     stopTypes = new Map();
     if (!routeData) return;
@@ -2365,9 +2365,8 @@
       for (const [l, n] of votes) if (n > best) { best = n; owner = l; }
       for (const id of ids) {
         const own = linesOfStation(id);
-        // 駅が別路線の番号しか持たない場合、この系統の種別は付けない
-        if (own.length && !own.includes(owner)) continue;
-        const line = owner;
+        // 駅の路線: 系統の持ち主の番号を持つ駅はその路線。持たない駅(直通で他社線に入った先)は、駅が持つ路線で表示する
+        const line = own.length ? (own.includes(owner) ? owner : own[0]) : owner;
         if (!stopTypes.has(id)) stopTypes.set(id, []);
         const list = stopTypes.get(id);
         if (!list.some((x) => x.line === line && x.type === type)) list.push({ line, type });
