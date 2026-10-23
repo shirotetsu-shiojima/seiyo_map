@@ -134,6 +134,8 @@
   .type-chip { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; background: var(--chip); color: var(--ink); }
   .type-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
   .line-head { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .line-block { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .line-block .line-head { margin-top: 0; }
   .type-list .type-row { margin: 0; }
   .type-list .type-chip { flex: 1; padding: 6px 12px; border-radius: 8px; font-size: 13px; }
 
@@ -1826,13 +1828,19 @@
       ctx.stroke();
     }
     // 駅名(白や黒の縁取りで、地図の上でも読めるようにする)
-    if (view.scale >= RAIL_LABEL_SCALE) {
+    {
+      // 等級で、駅名を出す縮尺を変える: 1級は常に、2・3級は縮尺バー10000ブロック以下、4級は5000ブロック以下、5級以下は拡大率 RAIL_LABEL_SCALE 以上
+      const barBlocks = niceStep(110 / view.scale);
+      const labelOn = (grade) => grade <= 1 || (grade <= 3 && barBlocks <= 10000) ||
+        (grade === 4 && barBlocks <= 5000) || (grade >= 5 && view.scale >= RAIL_LABEL_SCALE);
       ctx.font = '600 12px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
       ctx.lineJoin = 'round';
       ctx.lineWidth = 4;
       ctx.strokeStyle = T.halo;
       ctx.fillStyle = T.ink;
       for (const st of rail.stations.values()) {
+        const row = stationRowOf(st);
+        if (!labelOn(row ? row.grade : 5)) continue;
         const [sx, sy] = toScreen(st.x, st.z);
         const label = st.ja || st.en;
         ctx.strokeText(label, sx + 8, sy + 4);
@@ -2174,6 +2182,7 @@
         name, reading: r['読み'], pref: r['都道府県'],
         companies: (r['乗り入れ会社'] || '').split('・').filter(Boolean),
         ridership: Number(r['利用者数']) || 0,
+        grade: Number(r['等級']) || 5,   // 等級が無い駅は5級(従来どおりの表示)
       };
       for (const c of codes) stationByCode.set(c, row);
       if (codes.length >= 2) interchangeGroups.push(codes);
@@ -2409,10 +2418,13 @@
       items.sort((a, b) => rankOf(a.line, a.type) - rankOf(b.line, b.type));
     }
     for (const [line, items] of byLine) {
+      const block = document.createElement('div');
+      block.className = 'line-block';
       const head = document.createElement('div');
       head.className = 'line-head';
       head.textContent = `${lineNameOf(line)} 経由`;
-      wrap.append(head);
+      block.append(head);
+      wrap.append(block);
       for (const x of items) {
         const row = document.createElement('div');
         row.className = 'type-row';
@@ -2426,7 +2438,7 @@
         const s = typeStyleOf(x.line, x.type);
         if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
         row.append(badge, chip);
-        wrap.append(row);
+        block.append(row);
       }
     }
     box.append(title, wrap);
