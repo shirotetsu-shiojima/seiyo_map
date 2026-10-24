@@ -1818,7 +1818,10 @@
     if (colored) {
       for (const sec of list) drawSectionColored(sec);
     } else {
-      for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
+      // 駅番号カラーでは、長い重複区間を先に描き、短い駅間区間を後から重ねる。
+      // 集約区間の端点番号が異なる路線でも、駅間ごとの正しい色が表に出る。
+      const lineSections = lineColorOn() ? list.slice().sort((a, b) => secLength(b) - secLength(a)) : list;
+      for (const sec of lineSections) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
     }
     if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
@@ -3377,3 +3380,4 @@
 </script>
 </body>
 </html>
+
