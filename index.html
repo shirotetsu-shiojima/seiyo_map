@@ -1815,6 +1815,9 @@
     const SPACING = 400;   // 繰り返しの間隔(画面px)
     const OFFSET = 14;     // 線からの離れ(画面px)
     const MARGIN = 12;     // 線の端との余白(画面px)
+    const CHAR_STEP = 16;  // 1文字ごとの間隔(線に沿った画面px)
+    const NEAR = 160;      // 同じ路線の別の表示がこの距離内なら、並行線の重複として表示を省く(画面px)
+    const placed = new Map();   // 路線コード -> 表示済みの位置の配列
     ctx.save();
     ctx.font = '700 15px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
     ctx.textAlign = 'center';
@@ -1825,15 +1828,15 @@
     for (const sec of list) {
       const code = lineOfSection(sec);
       if (!lineInfo.has(code)) continue;
-      const name = lineNameOf(code);
+      const chars = [...lineNameOf(code)];
       // 文字の色は路線カラー(lines.csv)
       ctx.fillStyle = lineColorOf(code);
-      const w = ctx.measureText(name).width;
+      const w = (chars.length - 1) * CHAR_STEP;   // 文字列の幅(中心から両端まで)
       const s = sec.pts.map(([x, z]) => toScreen(x, z));
       const cum = [0];
       for (let i = 1; i < s.length; i++) cum.push(cum[i - 1] + Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]));
       const total = cum[cum.length - 1];
-      if (total < w + MARGIN * 2) continue;
+      if (total < w + MARGIN * 2 + CHAR_STEP) continue;
       // 線上の距離 d の位置
       const at = (d) => {
         let i = 1;
@@ -1845,21 +1848,33 @@
       // 線の真ん中を中心に、間隔を空けて並べる(真ん中には必ず1つ入る)
       const half = w / 2 + MARGIN;
       const count = Math.max(1, Math.floor((total - 2 * half) / SPACING) + 1);
+      const seen = placed.get(code) || [];
+      placed.set(code, seen);
       for (let j = 0; j < count; j++) {
-        const d = Math.min(total - half, Math.max(half, total / 2 + (j - (count - 1) / 2) * SPACING));
-        const p = at(d);
-        // 文字の向きは、文字の両端の位置を結ぶ向きに合わせる(曲がった線でも沿う)
-        const a = at(d - w / 2), b = at(d + w / 2);
-        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-        // 文字が逆さまにならないように、向きを -90°〜90° の範囲に収める
-        if (ang > Math.PI / 2) ang -= Math.PI;
-        if (ang < -Math.PI / 2) ang += Math.PI;
-        ctx.save();
-        ctx.translate(p[0], p[1]);
-        ctx.rotate(ang);
-        ctx.strokeText(name, 0, -OFFSET);
-        ctx.fillText(name, 0, -OFFSET);
-        ctx.restore();
+        const mid = Math.min(total - half, Math.max(half, total / 2 + (j - (count - 1) / 2) * SPACING));
+        const c = at(mid);
+        // 同じ路線の表示が近くにあれば省く(並行する線路で重ならないように)
+        if (seen.some((q) => Math.hypot(q[0] - c[0], q[1] - c[1]) < NEAR)) continue;
+        seen.push(c);
+        // 1文字ずつ、線の上の位置と向きに合わせて描く(曲がった線では文字も曲がる)
+        // 線が画面の左向きに走る時は、文字の並びを逆にして、左から右へ読めるようにする
+        const sign = at(mid + CHAR_STEP)[0] - at(mid - CHAR_STEP)[0] < 0 ? -1 : 1;
+        chars.forEach((ch, k) => {
+          const d = mid + sign * (k * CHAR_STEP - w / 2);
+          const p = at(d);
+          // 文字の向きは、読む向き(文字の並び順)に合わせる
+          const a = at(d - sign * CHAR_STEP / 2), b = at(d + sign * CHAR_STEP / 2);
+          let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+          // 文字が逆さまにならないように、向きを -90°〜90° の範囲に収める
+          if (ang > Math.PI / 2) ang -= Math.PI;
+          if (ang < -Math.PI / 2) ang += Math.PI;
+          ctx.save();
+          ctx.translate(p[0], p[1]);
+          ctx.rotate(ang);
+          ctx.strokeText(ch, 0, -OFFSET);
+          ctx.fillText(ch, 0, -OFFSET);
+          ctx.restore();
+        });
       }
     }
     ctx.restore();
