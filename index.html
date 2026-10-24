@@ -1293,6 +1293,10 @@
       if (!s || !Array.isArray(s.points) || s.points.length < 2) continue;
       // 点は [x, y, z]。地図は平面なので、x と z だけ使う
       const pts = s.points.map((p) => [p[0], p[2]]);
+      // 測り直しの記録で、線形だけが大きく迂回している区間(両端の直線距離の3倍超)は、描く線を両端の直線にする(距離は変えない)
+      const polyLen = pts.reduce((sum, p, i) => (i ? sum + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0), 0);
+      const straight = Math.hypot(pts[pts.length - 1][0] - pts[0][0], pts[pts.length - 1][1] - pts[0][1]);
+      const drawPts = straight > 0 && polyLen > straight * 3 ? [pts[0], pts[pts.length - 1]] : pts;
       const from = parseStationName(s.from), to = parseStationName(s.to);
       const ends = [[s.fromStationId, from, pts[0]], [s.toStationId, to, pts[pts.length - 1]]];
       for (const [id, info, p] of ends) {
@@ -1303,7 +1307,7 @@
       if (seen.has(key)) continue;
       seen.add(key);
       const distance = Number(s.distanceM) || 0;
-      sections.push({ key, fromId: s.fromStationId, toId: s.toStationId, distance, measured: !!s.measured, pts, routes: [], names: [] });
+      sections.push({ key, fromId: s.fromStationId, toId: s.toStationId, distance, measured: !!s.measured, pts: drawPts, routes: [], names: [] });
       total += distance;
       stations.get(s.fromStationId).neighbors.push({ id: s.toStationId, distance });
       stations.get(s.toStationId).neighbors.push({ id: s.fromStationId, distance });
@@ -1818,10 +1822,7 @@
     if (colored) {
       for (const sec of list) drawSectionColored(sec);
     } else {
-      // 駅番号カラーでは、長い重複区間を先に描き、短い駅間区間を後から重ねる。
-      // 集約区間の端点番号が異なる路線でも、駅間ごとの正しい色が表に出る。
-      const lineSections = lineColorOn() ? list.slice().sort((a, b) => secLength(b) - secLength(a)) : list;
-      for (const sec of lineSections) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
+      for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
     }
     if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
@@ -3380,4 +3381,3 @@
 </script>
 </body>
 </html>
-
