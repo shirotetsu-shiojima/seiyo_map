@@ -138,6 +138,8 @@
   .line-head { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .line-block { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 4px; }
   .line-block .line-head { margin-top: 0; }
+  .line-head-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .line-name { font-size: 13px; font-weight: 600; }
   .type-list .type-row { margin: 0; }
   .type-list .type-chip { flex: 1; padding: 6px 12px; border-radius: 8px; font-size: 13px; }
 
@@ -1806,6 +1808,50 @@
     ctx.restore();
   }
 
+  // 路線カラーで塗っている線の横に、路線名を縦に1文字ずつ添える(線が画面で十分長い区間だけ)
+  function drawLineNames(list) {
+    if (!lineColorOn() || view.scale < RAIL_LABEL_SCALE) return;
+    const STEP = 12;
+    ctx.save();
+    ctx.font = '600 11px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = T.halo;
+    ctx.fillStyle = T.ink;
+    for (const sec of list) {
+      const code = lineOfSection(sec);
+      if (!lineInfo.has(code)) continue;
+      const chars = [...lineNameOf(code)];
+      const s = sec.pts.map(([x, z]) => toScreen(x, z));
+      const cum = [0];
+      for (let i = 1; i < s.length; i++) cum.push(cum[i - 1] + Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]));
+      const total = cum[cum.length - 1];
+      if (total < chars.length * STEP + 24) continue;
+      // 線の真ん中の位置と向き
+      const mid = total / 2;
+      let i = 1;
+      while (i < cum.length - 1 && cum[i] < mid) i++;
+      const seg = cum[i] - cum[i - 1] || 1;
+      const t = (mid - cum[i - 1]) / seg;
+      const px = s[i - 1][0] + (s[i][0] - s[i - 1][0]) * t;
+      const py = s[i - 1][1] + (s[i][1] - s[i - 1][1]) * t;
+      const dx = s[i][0] - s[i - 1][0], dy = s[i][1] - s[i - 1][1];
+      const top = -(chars.length - 1) * STEP / 2;
+      // 縦の線は右側、横の線は上側に、文字の列を置く
+      const vertical = Math.abs(dy) > Math.abs(dx);
+      const cx = vertical ? px + 14 : px;
+      const cy = vertical ? py : py - 14 + top;
+      chars.forEach((ch, k) => {
+        const y = vertical ? cy + top + k * STEP : cy + k * STEP;
+        ctx.strokeText(ch, cx, y);
+        ctx.fillText(ch, cx, y);
+      });
+    }
+    ctx.restore();
+  }
+
   function drawRail() {
     const hiSec = selectedRail && selectedRail.type === 'section' ? selectedRail.sec : null;
     const hiSt = selectedRail && selectedRail.type === 'station' ? selectedRail.st : null;
@@ -1824,6 +1870,7 @@
     } else {
       for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
     }
+    drawLineNames(list);
     if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
     // ホーム(赤い四角形)の中心: 駅ごとに、ホームの中心の平均。ホームが描かれる縮尺の時だけ使う
@@ -2511,24 +2558,29 @@
     for (const [line, items] of byLine) {
       const block = document.createElement('div');
       block.className = 'line-block';
+      // 見出し: 路線シンボル(路線コード)と路線名
       const head = document.createElement('div');
-      head.className = 'line-head';
-      head.textContent = `${lineNameOf(line)} 経由`;
+      head.className = 'line-head-row';
+      const badge = document.createElement('span');
+      badge.className = 'code-badge';
+      badge.textContent = line || '-';
+      if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
+      const name = document.createElement('span');
+      name.className = 'line-name';
+      name.textContent = lineNameOf(line);
+      head.append(badge, name);
       block.append(head);
       wrap.append(block);
+      // 種別: 1種別1行で、見出しの下に並べる
       for (const x of items) {
         const row = document.createElement('div');
         row.className = 'type-row';
-        const badge = document.createElement('span');
-        badge.className = 'code-badge';
-        badge.textContent = line || '-';
-        if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
         const chip = document.createElement('span');
         chip.className = 'type-chip';
         chip.textContent = x.type;
         const s = typeStyleOf(x.line, x.type);
         if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
-        row.append(badge, chip);
+        row.append(chip);
         block.append(row);
       }
     }
