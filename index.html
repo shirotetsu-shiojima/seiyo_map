@@ -1826,8 +1826,20 @@
     }
     if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
     drawPlatforms();
-    // 駅の丸印(白に濃い縁。選んだ駅は青)
+    // ホーム(赤い四角形)の中心: 駅ごとに、ホームの中心の平均。ホームが描かれる縮尺の時だけ使う
+    const platOn = view.scale >= PLATFORM_SCALE;
+    const platC = new Map();
+    if (platOn) {
+      for (const pf of rail.platforms || []) {
+        const c = platC.get(pf.station) || { x: 0, z: 0, n: 0 };
+        c.x += pf.cx; c.z += pf.cz; c.n++;
+        platC.set(pf.station, c);
+      }
+      for (const c of platC.values()) { c.x /= c.n; c.z /= c.n; }
+    }
+    // 駅の丸印(白に濃い縁。選んだ駅は青)。ホームとロゴが出ている駅は、白い丸を出さない
     for (const st of rail.stations.values()) {
+      if (st !== hiSt && platOn && platC.has(st.id) && logosOf(st).length) continue;
       const [sx, sy] = toScreen(st.x, st.z);
       ctx.beginPath();
       ctx.arc(sx, sy, st === hiSt ? 6.5 : 4.5, 0, Math.PI * 2);
@@ -1851,18 +1863,26 @@
       for (const st of rail.stations.values()) {
         const row = stationRowOf(st);
         if (!labelOn(row ? row.grade : 5)) continue;
-        const [sx, sy] = toScreen(st.x, st.z);
         const label = st.ja || st.en;
-        // 駅名の前に、乗入会社のロゴを並べる(ロゴが無い会社は飛ばす)
-        let x0 = sx + 8;
-        for (const id of companyIdsOf(st)) {
-          const img = logoFor(id);
-          if (!img) continue;
-          ctx.drawImage(img, x0, sy - 7, LOGO_PX, LOGO_PX);
-          x0 += LOGO_PX + 2;
+        const logos = logosOf(st);
+        if (!logos.length) {
+          const [sx, sy] = toScreen(st.x, st.z);
+          ctx.strokeText(label, sx + 8, sy + 4);
+          ctx.fillText(label, sx + 8, sy + 4);
+          continue;
         }
-        ctx.strokeText(label, x0, sy + 4);
-        ctx.fillText(label, x0, sy + 4);
+        // ロゴは、ホームの中心(ホームが無ければ駅の位置)に置く。複数のホームは中心の平均
+        const c = platC.get(st.id);
+        const [ax, ay] = c ? toScreen(c.x, c.z) : toScreen(st.x, st.z);
+        const totalW = logos.length * LOGO_PX + (logos.length - 1) * 2;
+        let x = ax - totalW / 2;
+        for (const img of logos) {
+          ctx.drawImage(img, x, ay - LOGO_PX / 2, LOGO_PX, LOGO_PX);
+          x += LOGO_PX + 2;
+        }
+        const tx = ax + totalW / 2 + 4;
+        ctx.strokeText(label, tx, ay + 4);
+        ctx.fillText(label, tx, ay + 4);
       }
     }
     ctx.restore();
@@ -2152,6 +2172,15 @@
     return e.ok ? e.img : null;
   }
   // 駅の乗入会社: 駅番号の路線コードから、会社txtを順に集める(重複は除く)
+  // 駅に描くロゴ(読み込めたものだけ)
+  function logosOf(st) {
+    const out = [];
+    for (const id of companyIdsOf(st)) {
+      const img = logoFor(id);
+      if (img) out.push(img);
+    }
+    return out;
+  }
   function companyIdsOf(st) {
     const ids = [];
     for (const c of st.codes || []) {
