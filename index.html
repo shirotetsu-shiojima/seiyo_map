@@ -1809,45 +1809,58 @@
   }
 
   // 路線カラーで塗っている線の横に、路線名を縦に1文字ずつ添える(線が画面で十分長い区間だけ)
+  // 線の形に沿って、路線名を一定の間隔で繰り返し描く(文字は線の向きに合わせて回転する)
   function drawLineNames(list) {
     if (!lineColorOn() || view.scale < RAIL_LABEL_SCALE) return;
-    const STEP = 12;
+    const SPACING = 400;   // 繰り返しの間隔(画面px)
+    const OFFSET = 14;     // 線からの離れ(画面px)
+    const MARGIN = 12;     // 線の端との余白(画面px)
     ctx.save();
-    ctx.font = '600 11px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
+    ctx.font = '700 15px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeStyle = T.halo;
-    ctx.fillStyle = T.ink;
     for (const sec of list) {
       const code = lineOfSection(sec);
       if (!lineInfo.has(code)) continue;
-      const chars = [...lineNameOf(code)];
+      const name = lineNameOf(code);
+      // 文字の色は路線カラー(lines.csv)
+      ctx.fillStyle = lineColorOf(code);
+      const w = ctx.measureText(name).width;
       const s = sec.pts.map(([x, z]) => toScreen(x, z));
       const cum = [0];
       for (let i = 1; i < s.length; i++) cum.push(cum[i - 1] + Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]));
       const total = cum[cum.length - 1];
-      if (total < chars.length * STEP + 24) continue;
-      // 線の真ん中の位置と向き
-      const mid = total / 2;
-      let i = 1;
-      while (i < cum.length - 1 && cum[i] < mid) i++;
-      const seg = cum[i] - cum[i - 1] || 1;
-      const t = (mid - cum[i - 1]) / seg;
-      const px = s[i - 1][0] + (s[i][0] - s[i - 1][0]) * t;
-      const py = s[i - 1][1] + (s[i][1] - s[i - 1][1]) * t;
-      const dx = s[i][0] - s[i - 1][0], dy = s[i][1] - s[i - 1][1];
-      const top = -(chars.length - 1) * STEP / 2;
-      // 縦の線は右側、横の線は上側に、文字の列を置く
-      const vertical = Math.abs(dy) > Math.abs(dx);
-      const cx = vertical ? px + 14 : px;
-      const cy = vertical ? py : py - 14 + top;
-      chars.forEach((ch, k) => {
-        const y = vertical ? cy + top + k * STEP : cy + k * STEP;
-        ctx.strokeText(ch, cx, y);
-        ctx.fillText(ch, cx, y);
-      });
+      if (total < w + MARGIN * 2) continue;
+      // 線上の距離 d の位置
+      const at = (d) => {
+        let i = 1;
+        while (i < cum.length - 1 && cum[i] < d) i++;
+        const seg = cum[i] - cum[i - 1] || 1;
+        const t = Math.min(1, Math.max(0, (d - cum[i - 1]) / seg));
+        return [s[i - 1][0] + (s[i][0] - s[i - 1][0]) * t, s[i - 1][1] + (s[i][1] - s[i - 1][1]) * t];
+      };
+      // 線の真ん中を中心に、間隔を空けて並べる(真ん中には必ず1つ入る)
+      const half = w / 2 + MARGIN;
+      const count = Math.max(1, Math.floor((total - 2 * half) / SPACING) + 1);
+      for (let j = 0; j < count; j++) {
+        const d = Math.min(total - half, Math.max(half, total / 2 + (j - (count - 1) / 2) * SPACING));
+        const p = at(d);
+        // 文字の向きは、文字の両端の位置を結ぶ向きに合わせる(曲がった線でも沿う)
+        const a = at(d - w / 2), b = at(d + w / 2);
+        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        // 文字が逆さまにならないように、向きを -90°〜90° の範囲に収める
+        if (ang > Math.PI / 2) ang -= Math.PI;
+        if (ang < -Math.PI / 2) ang += Math.PI;
+        ctx.save();
+        ctx.translate(p[0], p[1]);
+        ctx.rotate(ang);
+        ctx.strokeText(name, 0, -OFFSET);
+        ctx.fillText(name, 0, -OFFSET);
+        ctx.restore();
+      }
     }
     ctx.restore();
   }
@@ -2510,14 +2523,22 @@
       for (const id of ids) for (const l of linesOfStation(id)) votes.set(l, (votes.get(l) || 0) + 1);
       let owner = '', best = 0;
       for (const [l, n] of votes) if (n > best) { best = n; owner = l; }
-      for (const id of ids) {
+      // 両端の駅が共通して持つ路線(停車駅の前後の区間の路線)で、その停車駅の路線を決める
+      const commonLine = (a, b) => { const bl = linesOfStation(b); return linesOfStation(a).find((c) => bl.includes(c)); };
+      ids.forEach((id, i) => {
         const own = linesOfStation(id);
-        // 駅の路線: 系統の持ち主の番号を持つ駅はその路線。持たない駅(直通で他社線に入った先)は、駅が持つ路線で表示する
-        const line = own.length ? (own.includes(owner) ? owner : own[0]) : owner;
+        const lines = new Set();
+        // 境界駅では、前後の区間それぞれの路線で種別を出す(両方の路線に停まる系統は両方に出る)
+        if (i > 0) { const c = commonLine(ids[i - 1], id); if (c) lines.add(c); }
+        if (i < ids.length - 1) { const c = commonLine(id, ids[i + 1]); if (c) lines.add(c); }
+        // 前後で決まらない時(始発・終点など)は、系統の持ち主の番号を優先し、駅が持つ路線で表示する
+        if (!lines.size) lines.add(own.includes(owner) ? owner : (own[0] || owner));
         if (!stopTypes.has(id)) stopTypes.set(id, []);
         const list = stopTypes.get(id);
-        if (!list.some((x) => x.line === line && x.type === type)) list.push({ line, type });
-      }
+        for (const line of lines) {
+          if (!list.some((x) => x.line === line && x.type === type)) list.push({ line, type });
+        }
+      });
     }
   }
   // 路線(会社)と種別から、color.txt の色を探す
