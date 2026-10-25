@@ -2012,7 +2012,141 @@
       ctx.strokeStyle = hi ? ACCENT : '#ffffff';
       ctx.stroke();
     }
+    // 整備度(ST)に応じて、ホームの周りに設備や周辺の様子を描く
+    const doneStation = new Set();
+    for (const pf of rail.platforms) {
+      const st = rail.stations.get(pf.station);
+      const row = st && stationRowOf(st);
+      const feat = row && row.st ? stFeatures(row.st) : null;
+      if (!feat) continue;
+      drawStDecor(pf, feat, !doneStation.has(pf.station));
+      doneStation.add(pf.station);
+    }
     ctx.restore();
+  }
+
+  // 整備度(ST)の表示内容。A は設備、B は周辺開発と駐車場、C・D は駅ナカと追加の要素。上の段階は下の段階を含む
+  const ST_FEATURES = (() => {
+    const A1 = {};
+    const A2 = { guard: 1 };
+    const A3 = { ...A2, board: 1 };
+    const A4 = { ...A3, roof: 1 };
+    const A5 = { ...A4, building: 1 };
+    const A6 = { ...A5, path: 1 };
+    const A7 = { ...A5, path: 2 };
+    const B1 = { ...A7, town: 1 };
+    const B2 = { ...A7, town: 2, park: 1 };
+    const B3 = { ...B2, parking: 1, shops: 1 };
+    const B4 = { ...B2, parking: 2, shops: 1 };
+    const B5 = { ...B2, parking: 3, shops: 1 };
+    const B6 = { ...B2, parking: 3, shops: 2 };
+    const B7 = { ...B2, parking: 4, shops: 2 };
+    const Ca5 = { ...B7, parking: 6, shops: 2 };
+    const Cb5 = { ...B7, parking: 6, shops: 6 };
+    return {
+      'ST-A1': A1, 'ST-A2': A2, 'ST-A3': A3, 'ST-A4': A4, 'ST-A5': A5, 'ST-A6': A6, 'ST-A7': A7,
+      'ST-B1': B1, 'ST-B2': B2, 'ST-B3': B3, 'ST-B4': B4, 'ST-B5': B5, 'ST-B6': B6, 'ST-B7': B7,
+      'ST-Ca1': { ...B7, parking: 5, shops: 2 }, 'ST-Ca2': { ...B7, parking: 6, shops: 2 },
+      'ST-Ca3': { ...B7, parking: 6, shops: 2 }, 'ST-Ca4': { ...B7, parking: 6, shops: 2 }, 'ST-Ca5': Ca5,
+      'ST-Cb1': { ...B7, shops: 3 }, 'ST-Cb2': { ...B7, shops: 4 }, 'ST-Cb3': { ...B7, shops: 5 },
+      'ST-Cb4': { ...B7, shops: 6 }, 'ST-Cb5': Cb5,
+      'ST-Da1': { ...Ca5, star: 1 }, 'ST-Da2': { ...Ca5, star: 2 }, 'ST-Da3': { ...Ca5, star: 3 },
+      'ST-Da4': { ...Ca5, star: 4 }, 'ST-Da5': { ...Ca5, star: 5 },
+      // ネタ駅(DSQ)
+      'ST-DSQ1': A1, 'ST-DSQ2': { building: 1 }, 'ST-DSQ3': { building: 1, town: 1 },
+      'ST-DSQ4': { building: 1, town: 2, park: 1 }, 'ST-DSQ5': { building: 1, parking: 1 },
+    };
+  })();
+  const stFeatures = (code) => ST_FEATURES[code] || null;
+
+  // ホームの周りに、整備度の設備を描く。ホームの向き(長さ方向 L・幅方向 W)に合わせ、ホームの大きさに比例する
+  // 設備(ホームごと): guard(落下防止)・roof(屋根)・board(発車標)・path(導線)
+  // 駅ごと(初めのホームだけ): building(駅舎)・town(周辺開発)・park・parking(駐車場)・shops(駅ナカ)・star
+  function drawStDecor(pf, f, first) {
+    const cs = platformCorners(pf);
+    const C = [(cs[0][0] + cs[2][0]) / 2, (cs[0][1] + cs[2][1]) / 2];
+    const L = [(cs[1][0] - cs[0][0]) / 2, (cs[1][1] - cs[0][1]) / 2];
+    const W = [(cs[3][0] - cs[0][0]) / 2, (cs[3][1] - cs[0][1]) / 2];
+    // a: 長さ方向(-1〜1), b: 幅方向(-1〜1) の位置を画面の点にする
+    const P = (a, b) => [C[0] + L[0] * a + W[0] * b, C[1] + L[1] * a + W[1] * b];
+    const wpx = Math.hypot(W[0], W[1]);
+    const poly = (pts, fill, stroke, lw = 1) => {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => { if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+    };
+    const seg = (p, q, color, lw, dash = []) => {
+      ctx.beginPath(); ctx.setLineDash(dash);
+      ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); ctx.setLineDash([]);
+    };
+    // ホームごとの設備
+    if (f.guard) {
+      for (const b of [-0.92, 0.92]) seg(P(-1, b), P(1, b), '#6b2a20', 1.5);
+    }
+    if (f.roof) {
+      poly([P(-0.95, -0.7), P(0.95, -0.7), P(0.95, 0.7), P(-0.95, 0.7)], 'rgba(255,255,255,0.3)', null);
+    }
+    if (f.board) {
+      poly([P(0.45, 0.25), P(0.75, 0.25), P(0.75, 0.7), P(0.45, 0.7)], '#ffffff', '#333333', 0.8);
+    }
+    if (f.path) {
+      // 導線: ホームの端から延びる線。2 は安全な導線として、横断の印を付ける
+      seg(P(1.6, 0), P(2.6, 0), '#f2b100', f.path === 2 ? 2.5 : 1.5, f.path === 2 ? [] : [4, 3]);
+      if (f.path === 2) {
+        for (const a of [1.9, 2.3]) seg(P(a, -0.6), P(a, 0.6), '#f2b100', 1.2);
+      }
+    }
+    if (!first) return;
+    // 駅ごとの要素
+    if (f.building) {
+      poly([P(1.15, -1.3), P(1.6, -1.3), P(1.6, 1.3), P(1.15, 1.3)], '#cfc9bd', '#7d766a', 0.8);
+    }
+    if (f.town) {
+      const xs = [-0.5, 0, 0.5];
+      for (const a of xs) poly([P(a - 0.12, -1.5), P(a + 0.12, -1.5), P(a + 0.12, -2.1), P(a - 0.12, -2.1)], '#d8d2c4', '#8f887a', 0.6);
+      if (f.town >= 2) {
+        for (const a of xs) poly([P(a - 0.12, 1.5), P(a + 0.12, 1.5), P(a + 0.12, 2.1), P(a - 0.12, 2.1)], '#d8d2c4', '#8f887a', 0.6);
+      }
+    }
+    if (f.park) {
+      poly([P(-0.9, -2.3), P(0.9, -2.3), P(0.9, -2.9), P(-0.9, -2.9)], '#9ccc65', '#6a9a3a', 0.6);
+    }
+    if (f.parking) {
+      const n = Math.min(f.parking, 6);
+      const fs = Math.max(7, Math.min(12, wpx * 0.5));
+      for (let i = 0; i < n; i++) {
+        const a = -0.9 + i * 0.36;
+        poly([P(a - 0.15, 2.7), P(a + 0.15, 2.7), P(a + 0.15, 3.3), P(a - 0.15, 3.3)], '#1e6fd9', '#ffffff', 0.6);
+        ctx.save();
+        ctx.font = `bold ${fs}px system-ui, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        const q = P(a, 3.0);
+        ctx.fillText('P', q[0], q[1]);
+        ctx.restore();
+      }
+    }
+    if (f.shops) {
+      const r = Math.max(2, wpx * 0.25);
+      for (let i = 0; i < f.shops; i++) {
+        const q = P(1.25 + (i % 3) * 0.3, i < 3 ? 2.0 : 2.4);
+        ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff8f00'; ctx.fill();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; ctx.stroke();
+      }
+    }
+    if (f.star) {
+      const r = Math.max(2, wpx * 0.25);
+      for (let i = 0; i < f.star; i++) {
+        const q = P(-1.4 - i * 0.3, -2.0);
+        ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd54f'; ctx.fill();
+        ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 0.8; ctx.stroke();
+      }
+    }
   }
 
   // ホームの四隅(画面上の座標)。向きは画面上の向きにそろえ、長さは100ブロック、幅は並ぶ系統の束が収まる幅(px)以上
@@ -2369,6 +2503,7 @@
         companies: (r['乗り入れ会社'] || '').split('・').filter(Boolean),
         ridership: Number(r['利用者数']) || 0,
         grade: Number(r['等級']) || 5,   // 等級が無い駅は5級(従来どおりの表示)
+        st: /^ST-/.test((r['ST'] || '').trim()) ? r['ST'].trim() : '',   // 整備度(ST)。無い駅は空(ホームは赤い四角のまま)
       };
       for (const c of codes) stationByCode.set(c, row);
       if (codes.length >= 2) interchangeGroups.push(codes);
