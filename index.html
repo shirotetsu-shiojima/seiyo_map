@@ -2026,7 +2026,7 @@
   }
 
   // 整備度(ST)の見た目。段階が上がるほど設備が増える(上の段階は下の段階を含む)
-  // A: 落下防止(guard)・発車標(board)・屋根(roof)・導線(path)  B以上: 公園(park)・駐車場(parking)・駅ナカ(shops)  Da: 星(star)
+  // A: 落下防止(guard)・発車標(board)・屋根(roof)・導線(path)  B3以上: 駅ナカ(shops)
   const ST_PLATFORM_FILL = '#ff9a9a';   // 整備度のある駅のホームの基本色
   const ST_ROOF_FILL = '#ff0000';       // 屋根と導線の色
   const ST_FEATURES = (() => {
@@ -2035,23 +2035,20 @@
     const A4 = { ...A3, roof: 1 };
     const A6 = { ...A4, path: 1 };
     const A7 = { ...A6 };
-    const B2 = { ...A7, park: 1 };
-    const B3 = { ...B2, parking: 1, shops: 1 };
-    const B4 = { ...B2, parking: 2, shops: 1 };
-    const B5 = { ...B2, parking: 3, shops: 1 };
-    const B6 = { ...B2, parking: 3, shops: 2 };
-    const B7 = { ...B2, parking: 4, shops: 2 };
-    const Ca5 = { ...B7, parking: 6, shops: 2 };
+    const B3 = { ...A7, shops: 1 };
+    const B4 = { ...A7, shops: 1 };
+    const B5 = { ...A7, shops: 1 };
+    const B6 = { ...A7, shops: 2 };
+    const B7 = { ...A7, shops: 2 };
     return {
       'ST-A1': {}, 'ST-A2': A2, 'ST-A3': A3, 'ST-A4': A4, 'ST-A5': A4, 'ST-A6': A6, 'ST-A7': A7,
-      'ST-B1': A7, 'ST-B2': B2, 'ST-B3': B3, 'ST-B4': B4, 'ST-B5': B5, 'ST-B6': B6, 'ST-B7': B7,
-      'ST-Ca1': { ...B7, parking: 5, shops: 2 }, 'ST-Ca2': Ca5, 'ST-Ca3': Ca5, 'ST-Ca4': Ca5, 'ST-Ca5': Ca5,
+      'ST-B1': A7, 'ST-B2': A7, 'ST-B3': B3, 'ST-B4': B4, 'ST-B5': B5, 'ST-B6': B6, 'ST-B7': B7,
+      'ST-Ca1': { ...B7 }, 'ST-Ca2': { ...B7 }, 'ST-Ca3': { ...B7 }, 'ST-Ca4': { ...B7 }, 'ST-Ca5': { ...B7 },
       'ST-Cb1': { ...B7, shops: 3 }, 'ST-Cb2': { ...B7, shops: 4 }, 'ST-Cb3': { ...B7, shops: 5 },
-      'ST-Cb4': { ...B7, shops: 6 }, 'ST-Cb5': { ...B7, shops: 6, parking: 6 },
-      'ST-Da1': { ...Ca5, star: 1 }, 'ST-Da2': { ...Ca5, star: 2 }, 'ST-Da3': { ...Ca5, star: 3 },
-      'ST-Da4': { ...Ca5, star: 4 }, 'ST-Da5': { ...Ca5, star: 5 },
+      'ST-Cb4': { ...B7, shops: 6 }, 'ST-Cb5': { ...B7, shops: 6 },
+      'ST-Da1': { ...B7 }, 'ST-Da2': { ...B7 }, 'ST-Da3': { ...B7 }, 'ST-Da4': { ...B7 }, 'ST-Da5': { ...B7 },
       // ネタ駅(DSQ)
-      'ST-DSQ1': {}, 'ST-DSQ2': A4, 'ST-DSQ3': A7, 'ST-DSQ4': { ...A7, park: 1 }, 'ST-DSQ5': { ...A7, parking: 1 },
+      'ST-DSQ1': {}, 'ST-DSQ2': A4, 'ST-DSQ3': A7, 'ST-DSQ4': A7, 'ST-DSQ5': A7,
     };
   })();
   const stFeatures = (code) => ST_FEATURES[code] || null;
@@ -2066,7 +2063,7 @@
   const SHOP_MIN_RANK = stRank('ST-B3');
 
   // ホームを整備度の見た目で描く。ホームの向き(長さ方向 L・幅方向 W)に合わせ、ホームの大きさに比例する
-  // ホームごと: 基本色・落下防止・発車標・屋根・導線 / 駅ごと(初めのホームだけ): 公園・駐車場・駅ナカ・星
+  // ホームごと: 基本色・落下防止・発車標・屋根・導線 / 駅ごと(初めのホームだけ): 駅ナカ
   function drawStDecor(pf, f, first, code, hi) {
     const cs = platformCorners(pf);
     const C = [(cs[0][0] + cs[2][0]) / 2, (cs[0][1] + cs[2][1]) / 2];
@@ -2111,41 +2108,15 @@
       poly([P(-0.18, -1.3), P(0.18, -1.3), P(0.18, 1.3), P(-0.18, 1.3)], ST_ROOF_FILL, '#000000', 1.5);
     }
     if (!first) return;
-    // 駅ごとの要素
-    if (f.park) {
-      poly([P(-0.9, -3.0), P(0.9, -3.0), P(0.9, -3.6), P(-0.9, -3.6)], '#9ccc65', '#6a9a3a', 0.6);
-    }
-    if (f.parking) {
-      const n = Math.min(f.parking, 6);
-      const fs = Math.max(7, Math.min(12, wpx * 0.5));
-      for (let i = 0; i < n; i++) {
-        const a = -0.9 + i * 0.36;
-        poly([P(a - 0.15, 2.7), P(a + 0.15, 2.7), P(a + 0.15, 3.3), P(a - 0.15, 3.3)], '#1e6fd9', '#ffffff', 0.6);
-        ctx.save();
-        ctx.font = `bold ${fs}px system-ui, sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ffffff';
-        const q = P(a, 3.0);
-        ctx.fillText('P', q[0], q[1]);
-        ctx.restore();
-      }
-    }
+    // 駅ナカ(駅の内部のため、ホームの上に描く)
     if (f.shops && stRank(code) >= SHOP_MIN_RANK) {
       const r = Math.max(2, wpx * 0.25);
       for (let i = 0; i < f.shops; i++) {
-        const q = P(1.25 + (i % 3) * 0.3, i < 3 ? 2.0 : 2.4);
+        // ホームの中(屋根の外側の余白)に並べる
+        const q = P(0.5 + (i % 3) * 0.35, i < 3 ? -0.82 : 0.82);
         ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2);
         ctx.fillStyle = '#ff8f00'; ctx.fill();
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; ctx.stroke();
-      }
-    }
-    if (f.star) {
-      const r = Math.max(2, wpx * 0.25);
-      for (let i = 0; i < f.star; i++) {
-        const q = P(-1.4 - i * 0.3, -2.0);
-        ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffd54f'; ctx.fill();
-        ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 0.8; ctx.stroke();
       }
     }
   }
