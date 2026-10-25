@@ -2012,67 +2012,29 @@
       ctx.strokeStyle = hi ? ACCENT : '#ffffff';
       ctx.stroke();
     }
-    // 整備度(ST)に応じて、ホームの周りに設備や周辺の様子を描く
+    // 整備度(ST)に応じて、ホームの見た目を描く(整備度の無い駅は上の赤い四角のまま)
     const doneStation = new Set();
     for (const pf of rail.platforms) {
       const st = rail.stations.get(pf.station);
       const row = st && stationRowOf(st);
       const feat = row && row.st ? stFeatures(row.st) : null;
       if (!feat) continue;
-      drawStDecor(pf, feat, !doneStation.has(pf.station), row.st, row.grade);
+      drawStDecor(pf, feat, !doneStation.has(pf.station), row.st, selectedRail && selectedRail.type === 'station' && selectedRail.st.id === pf.station);
       doneStation.add(pf.station);
     }
     ctx.restore();
   }
 
-  // 整備度(ST)×級(1〜9)ごとの累計ポイント。P は累計P、SP は累計SP(xlsx「整備度基準」より)
-  const ST_POINTS = {
-    'ST-A1': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A2': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A3': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A4': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A5': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A6': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-A7': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B1': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B2': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B3': { P: [6,6,6,5,4,6,3,6,6], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B4': { P: [10,10,9,7,6,10,5,10,10], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B5': { P: [14,14,12,10,8,14,14,14,14], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B6': { P: [15,15,14,12,10,15,15,15,15], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-B7': { P: [20,20,16,14,20,20,20,20,20], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Ca1': { P: [25,25,18,16,25,25,25,25,25], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Ca2': { P: [30,30,22,20,30,30,30,30,30], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Ca3': { P: [35,35,30,30,35,35,35,35,35], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Ca4': { P: [40,40,38,40,40,40,40,40,40], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Ca5': { P: [50,50,50,50,50,50,50,50,50], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Cb1': { P: [20,20,20,20,20,20,20,20,20], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Cb2': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Cb3': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Cb4': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Cb5': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-Da1': { P: [50,50,50,50,50,50,50,50,50], SP: [50,50,50,50,50,50,50,50,50] },
-    'ST-Da2': { P: [50,50,50,50,50,50,50,50,50], SP: [60,60,60,60,60,60,60,60,60] },
-    'ST-Da3': { P: [50,50,50,50,50,50,50,50,50], SP: [70,70,70,70,70,70,70,70,70] },
-    'ST-Da4': { P: [50,50,50,50,50,50,50,50,50], SP: [80,80,80,80,80,80,80,80,80] },
-    'ST-Da5': { P: [50,50,50,50,50,50,50,50,50], SP: [90,90,90,90,90,90,90,90,90] },
-    'ST-DSQ1': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-DSQ2': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-DSQ3': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-DSQ4': { P: [0,0,0,0,0,0,0,0,0], SP: [0,0,0,0,0,0,0,0,0] },
-    'ST-DSQ5': { P: [0,0,0,0,0,0,0,0,2], SP: [0,0,0,0,0,0,0,0,0] },
-  };
-
-  // 整備度(ST)の表示内容。A は設備、B は周辺開発と駐車場、C・D は駅ナカと追加の要素。上の段階は下の段階を含む
+  // 整備度(ST)の見た目。段階が上がるほど設備が増える(上の段階は下の段階を含む)
+  // A: 落下防止(guard)・発車標(board)・屋根(roof)・導線(path)  B以上: 公園(park)・駐車場(parking)・駅ナカ(shops)  Da: 星(star)
+  const ST_PLATFORM_FILL = '#ff9a9a';   // 整備度のある駅のホームの基本色
+  const ST_ROOF_FILL = '#ff0000';       // 屋根と導線の色
   const ST_FEATURES = (() => {
-    const A1 = {};
     const A2 = { guard: 1 };
     const A3 = { ...A2, board: 1 };
     const A4 = { ...A3, roof: 1 };
-    const A5 = { ...A4, building: 1 };
-    const A6 = { ...A5, path: 1 };
-    const A7 = { ...A5, path: 2 };
-    const B1 = { ...A7 };
+    const A6 = { ...A4, path: 1 };
+    const A7 = { ...A6 };
     const B2 = { ...A7, park: 1 };
     const B3 = { ...B2, parking: 1, shops: 1 };
     const B4 = { ...B2, parking: 2, shops: 1 };
@@ -2080,19 +2042,16 @@
     const B6 = { ...B2, parking: 3, shops: 2 };
     const B7 = { ...B2, parking: 4, shops: 2 };
     const Ca5 = { ...B7, parking: 6, shops: 2 };
-    const Cb5 = { ...B7, parking: 6, shops: 6 };
     return {
-      'ST-A1': A1, 'ST-A2': A2, 'ST-A3': A3, 'ST-A4': A4, 'ST-A5': A5, 'ST-A6': A6, 'ST-A7': A7,
-      'ST-B1': B1, 'ST-B2': B2, 'ST-B3': B3, 'ST-B4': B4, 'ST-B5': B5, 'ST-B6': B6, 'ST-B7': B7,
-      'ST-Ca1': { ...B7, parking: 5, shops: 2 }, 'ST-Ca2': { ...B7, parking: 6, shops: 2 },
-      'ST-Ca3': { ...B7, parking: 6, shops: 2 }, 'ST-Ca4': { ...B7, parking: 6, shops: 2 }, 'ST-Ca5': Ca5,
+      'ST-A1': {}, 'ST-A2': A2, 'ST-A3': A3, 'ST-A4': A4, 'ST-A5': A4, 'ST-A6': A6, 'ST-A7': A7,
+      'ST-B1': A7, 'ST-B2': B2, 'ST-B3': B3, 'ST-B4': B4, 'ST-B5': B5, 'ST-B6': B6, 'ST-B7': B7,
+      'ST-Ca1': { ...B7, parking: 5, shops: 2 }, 'ST-Ca2': Ca5, 'ST-Ca3': Ca5, 'ST-Ca4': Ca5, 'ST-Ca5': Ca5,
       'ST-Cb1': { ...B7, shops: 3 }, 'ST-Cb2': { ...B7, shops: 4 }, 'ST-Cb3': { ...B7, shops: 5 },
-      'ST-Cb4': { ...B7, shops: 6 }, 'ST-Cb5': Cb5,
+      'ST-Cb4': { ...B7, shops: 6 }, 'ST-Cb5': { ...B7, shops: 6, parking: 6 },
       'ST-Da1': { ...Ca5, star: 1 }, 'ST-Da2': { ...Ca5, star: 2 }, 'ST-Da3': { ...Ca5, star: 3 },
       'ST-Da4': { ...Ca5, star: 4 }, 'ST-Da5': { ...Ca5, star: 5 },
       // ネタ駅(DSQ)
-      'ST-DSQ1': A1, 'ST-DSQ2': { building: 1 }, 'ST-DSQ3': { building: 1 },
-      'ST-DSQ4': { building: 1, park: 1 }, 'ST-DSQ5': { building: 1, parking: 1 },
+      'ST-DSQ1': {}, 'ST-DSQ2': A4, 'ST-DSQ3': A7, 'ST-DSQ4': { ...A7, park: 1 }, 'ST-DSQ5': { ...A7, parking: 1 },
     };
   })();
   const stFeatures = (code) => ST_FEATURES[code] || null;
@@ -2105,22 +2064,10 @@
   };
   // 駅ナカは ST-B3 以上(B3 を含む)の段階の駅だけ描く
   const SHOP_MIN_RANK = stRank('ST-B3');
-  // 建築物マークは累計ポイント(P + SP)5ごとに1個。ST-B1 は道路のみの開発なので建物を描かない
-  const BUILDING_PER_POINTS = 5;
-  const BUILDING_MAX = 12;
-  const stBuildings = (code, grade) => {
-    if (code === 'ST-B1') return 0;
-    const e = ST_POINTS[code];
-    if (!e) return 0;
-    const g = Math.min(9, Math.max(1, grade || 5));
-    const pts = (e.P[g - 1] || 0) + (e.SP[g - 1] || 0);
-    return Math.min(BUILDING_MAX, Math.floor(pts / BUILDING_PER_POINTS));
-  };
 
-  // ホームの周りに、整備度の設備を描く。ホームの向き(長さ方向 L・幅方向 W)に合わせ、ホームの大きさに比例する
-  // 設備(ホームごと): guard(落下防止)・roof(屋根)・board(発車標)・path(導線)
-  // 駅ごと(初めのホームだけ): building(駅舎)・park・parking(駐車場)・shops(駅ナカ)・star。建築物マークは累計ポイントから決める
-  function drawStDecor(pf, f, first, code, grade) {
+  // ホームを整備度の見た目で描く。ホームの向き(長さ方向 L・幅方向 W)に合わせ、ホームの大きさに比例する
+  // ホームごと: 基本色・落下防止・発車標・屋根・導線 / 駅ごと(初めのホームだけ): 公園・駐車場・駅ナカ・星
+  function drawStDecor(pf, f, first, code, hi) {
     const cs = platformCorners(pf);
     const C = [(cs[0][0] + cs[2][0]) / 2, (cs[0][1] + cs[2][1]) / 2];
     const L = [(cs[1][0] - cs[0][0]) / 2, (cs[1][1] - cs[0][1]) / 2];
@@ -2135,44 +2082,36 @@
       if (fill) { ctx.fillStyle = fill; ctx.fill(); }
       if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
     };
-    const seg = (p, q, color, lw, dash = []) => {
-      ctx.beginPath(); ctx.setLineDash(dash);
+    const seg = (p, q, color, lw) => {
+      ctx.beginPath();
       ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
-      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke();
     };
-    // ホームごとの設備
+    // ホームの基本色と縁(選んだ駅は青い縁)
+    poly(cs, ST_PLATFORM_FILL, hi ? ACCENT : '#ffffff', hi ? 3.5 : 1.5);
+    // 落下防止: 長い辺の外側の黒い線
     if (f.guard) {
-      for (const b of [-0.92, 0.92]) seg(P(-1, b), P(1, b), '#6b2a20', 1.5);
+      for (const b of [-1.02, 1.02]) seg(P(-1.05, b), P(1.05, b), '#000000', 1.8);
     }
-    if (f.roof) {
-      poly([P(-0.95, -0.7), P(0.95, -0.7), P(0.95, 0.7), P(-0.95, 0.7)], 'rgba(255,255,255,0.3)', null);
-    }
+    // 発車標: 白い札(黒い縁)
     if (f.board) {
-      poly([P(0.45, 0.25), P(0.75, 0.25), P(0.75, 0.7), P(0.45, 0.7)], '#ffffff', '#333333', 0.8);
+      const c = P(-0.6, -0.5);
+      const h = Math.max(2.5, wpx * 0.25);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(c[0] - h, c[1] - h, h * 2, h * 2);
+      ctx.strokeStyle = '#000000'; ctx.lineWidth = 1;
+      ctx.strokeRect(c[0] - h, c[1] - h, h * 2, h * 2);
     }
+    // 屋根: ホームの中央を覆う赤い帯
+    if (f.roof) {
+      poly([P(-1, -0.65), P(1, -0.65), P(1, 0.65), P(-1, 0.65)], ST_ROOF_FILL, null);
+    }
+    // 導線: ホームを横切り、両側へ延びる赤い十字の腕
     if (f.path) {
-      // 導線: ホームの端から延びる線。2 は安全な導線として、横断の印を付ける
-      seg(P(1.6, 0), P(2.6, 0), '#f2b100', f.path === 2 ? 2.5 : 1.5, f.path === 2 ? [] : [4, 3]);
-      if (f.path === 2) {
-        for (const a of [1.9, 2.3]) seg(P(a, -0.6), P(a, 0.6), '#f2b100', 1.2);
-      }
+      poly([P(-0.18, -1.3), P(0.18, -1.3), P(0.18, 1.3), P(-0.18, 1.3)], ST_ROOF_FILL, '#000000', 1.5);
     }
     if (!first) return;
     // 駅ごとの要素
-    if (f.building) {
-      poly([P(1.15, -1.3), P(1.6, -1.3), P(1.6, 1.3), P(1.15, 1.3)], '#cfc9bd', '#7d766a', 0.8);
-    }
-    const nb = stBuildings(code, grade);
-    for (let i = 0; i < nb; i++) {
-      // 建築物マーク: ホームの両側に、交互の大きさで並べる
-      const side = i < 6 ? -1 : 1;
-      const col = i % 6;
-      const a = -0.9 + col * 0.36;
-      const h = i % 2 ? 0.45 : 0.6;
-      const b0 = side < 0 ? -1.5 : 1.5;
-      const b1 = b0 + side * h * 1.2;
-      poly([P(a - 0.12, b0), P(a + 0.12, b0), P(a + 0.12, b1), P(a - 0.12, b1)], '#d8d2c4', '#8f887a', 0.6);
-    }
     if (f.park) {
       poly([P(-0.9, -3.0), P(0.9, -3.0), P(0.9, -3.6), P(-0.9, -3.6)], '#9ccc65', '#6a9a3a', 0.6);
     }
