@@ -1286,6 +1286,13 @@
     return { codes, ja: ja.trim(), en: en.trim() };
   }
 
+  // 暫定: ワールド側で削除済みなのに、データに残っている区間を描かない(駅名の組で判定。両方向とも除く)
+  const HIDDEN_SECTION_PAIRS = [['長海', 'アクアマリンドーム']];
+  const bareStationName = (t) => String(t || '').split('|')[0].replace(/\[[^\]]*\]/g, '').trim();
+  const isHiddenSection = (s) => {
+    const a = bareStationName(s.from), b = bareStationName(s.to);
+    return HIDDEN_SECTION_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
+  };
   function loadRailData(data, name) {
     const stations = new Map();
     const sections = [];
@@ -1293,6 +1300,7 @@
     let total = 0;
     for (const s of data.sections) {
       if (!s || !Array.isArray(s.points) || s.points.length < 2) continue;
+      if (isHiddenSection(s)) continue;
       // 点は [x, y, z]。地図は平面なので、x と z だけ使う
       const pts = s.points.map((p) => [p[0], p[2]]);
       // 測り直しの記録で、線形だけが大きく迂回している区間(両端の直線距離の3倍超)は、描く線を両端の直線にする(距離は変えない)
