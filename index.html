@@ -322,7 +322,6 @@
     <h1 id="infoTitle"></h1>
     <div id="infoHero" class="hero" hidden></div>
     <div id="infoTypes" class="types" hidden></div>
-    <div id="infoDepartures" class="types" hidden></div>
     <dl id="infoBody"></dl>
   </div>
 </div>
@@ -1016,7 +1015,7 @@
       trainBusy = false;
     }
     renderTrainList();
-    renderStationBoard();
+    refreshStationPanel();
     refreshTrainSelection();
     needsDraw = true;
     refreshTransit();
@@ -1188,13 +1187,18 @@
     trainIconCache.clear();
     needsDraw = true;
   }
-  // 列車が今走っている路線の名前(ナンバリングから。前後の駅が共通して持つ路線コード → lines.csv の路線名)。分からなければ ''
-  function trainLineName(t) {
+  // 列車が今走っている路線コード(前後の駅が共通して持つ路線コード)。分からなければ ''
+  function trainRunCode(t) {
     const from = String((t.dwelling && t.currentStationId) || t.prevStationId || '');
     const to = String(t.nextStationId || '');
     if (!rail || !rail.stations.has(from) || !rail.stations.has(to)) return '';
     const code = sectionLineOf(from, to);
-    return code && code !== '-' ? lineNameOf(code) : '';
+    return code && code !== '-' ? code : '';
+  }
+  // 列車が今走っている路線の名前(lines.csv の路線名)。分からなければ ''
+  function trainLineName(t) {
+    const code = trainRunCode(t);
+    return code ? lineNameOf(code) : '';
   }
   // 列車の走っている路線の「(l)路線名」の中から、車番(title)の範囲で、アイコンのキーを決める。見つからなければ null
   function trainIconKey(t) {
@@ -2395,7 +2399,6 @@
   }
   function showRailInfo(item) {
     syncBoardPolling();
-    $('infoDepartures').hidden = true;
     const box = $('info');
     const dl = $('infoBody');
     const hero = $('infoHero');
@@ -2445,8 +2448,7 @@
         statCard('🌏 都道府県', [document.createTextNode(srow && srow.pref ? srow.pref : '-')]),
       );
       hero.hidden = false;
-      renderStopTypes(st.id);
-      renderStationBoard();
+      renderStopTypes(st);
 
       // 下の一覧: 残りの項目
       addRow(dl, '英語名', st.en || '-');
@@ -2888,10 +2890,72 @@
     const map = company && typeColors.get(company);
     return (map && map.get(type)) || null;
   };
-  // 駅の詳細: 路線ごとに見出しを付け、停車する種別を1種別1行で下に並べる
-  function renderStopTypes(id) {
+  // ---- 駅の発車予定(列車位置のAPIから、方面(行先)ごとに4本まで。停車種別の路線タブの中に出す) ----
+  const DEP_PER_DIRECTION = 4;
+  const CHIP_PX = 13;   // 種別の図形の文字の大きさ(px)。図形の幅は全角4文字ぶん(52px)
+  // 5文字以上の種別は、全角4文字の幅に収まるように文字を小さくする
+  const chipFontPx = (text) => {
+    const n = [...String(text)].length;
+    return n > 4 ? Math.floor(CHIP_PX * 4 / n * 10) / 10 : CHIP_PX;
+  };
+  // その駅に停まる種別の列車を、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
+  // 路線は、その種別を停車させる路線のうち、列車の走っている路線を選ぶ
+  function stationDepartures(st) {
+    const sid = String(st.id);
+    const stopLines = stopTypes.get(sid) || [];
+    const byDest = new Map();
+    for (const t of trains) {
+      const dest = parseStationName(t.destination).ja || '-';
+      const type = jaName(t.routeNumber);
+      const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+      if (!candidates.length) continue;
+      if (st.ja && dest === st.ja) continue;
+      const title = t.title || t.formation || '';
+      let row = null;
+      if (t.dwelling && String(t.currentStationId) === sid) {
+        row = { sec: Number(t.dwellRemainSec) || 0, stopping: true };
+      } else {
+        const e = (t.etas || []).find((x) => String(x.stationId) === sid);
+        if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
+      }
+      if (!row) continue;
+      const run = trainRunCode(t);
+      const line = candidates.includes(run) ? run : candidates[0];
+      if (!byDest.has(dest)) byDest.set(dest, []);
+      byDest.get(dest).push({ ...row, type, dest, title, line });
+    }
+    // 方面(行先)ごとに4本まで。時刻の早い順に並べる
+    const out = [];
+    for (const list of byDest.values()) out.push(...list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
+    return out.sort((a, b) => a.sec - b.sec);
+  }
+  // 発車予定の1行: 種別の図形・時刻・行先・車番(◯F)
+  function depRowEl(x, styleOf) {
+    const row = document.createElement('div');
+    row.className = 'dep-row';
+    const chip = document.createElement('span');
+    chip.className = 'type-chip';
+    chip.textContent = x.type;
+    chip.style.fontSize = chipFontPx(x.type) + 'px';
+    const s = styleOf(x.type);
+    if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
+    const time = document.createElement('span');
+    time.className = 'dep-time';
+    time.textContent = x.stopping ? '停車中' : hhmm(trainsAt + x.sec * 1000);
+    const dest = document.createElement('span');
+    dest.className = 'dep-dest';
+    dest.textContent = x.dest;
+    const num = document.createElement('span');
+    num.className = 'dep-note';
+    num.textContent = x.title ? `${x.title}F` : '';
+    row.append(chip, time, dest, num);
+    return row;
+  }
+  // 駅の詳細: 路線ごとに見出しを付け、停車する種別を横に並べ、その路線の発車予定を下に出す
+  function renderStopTypes(st) {
     const box = $('infoTypes');
     box.replaceChildren();
+    const id = String(st.id);
     const list = stopTypes.get(id) || [];
     box.hidden = !list.length;
     if (!list.length) return;
@@ -2900,6 +2964,10 @@
     title.textContent = '🚆 停車する種別';
     const wrap = document.createElement('div');
     wrap.className = 'type-list';
+    // 発車予定の注意書き(列車データが無い・古い時)
+    const deps = stationDepartures(st);
+    const depNote = !trains.length ? '列車データを取得しています…'
+      : (Date.now() - trainsAt > TT_STALE_MS ? '列車データが古いため、発車予定を表示できません' : '');
     const byLine = new Map();
     for (const x of list) {
       if (!byLine.has(x.line)) byLine.set(x.line, []);
@@ -2917,6 +2985,11 @@
     for (const items of byLine.values()) {
       items.sort((a, b) => rankOf(a.line, a.type) - rankOf(b.line, b.type));
     }
+    const styleOf = (type) => {
+      // 発車予定の図形は、その路線の停車種別と同じ色
+      for (const [line] of byLine) { const s = typeStyleOf(line, type); if (s) return s; }
+      return null;
+    };
     for (const [line, items] of byLine) {
       const block = document.createElement('div');
       block.className = 'line-block';
@@ -2932,7 +3005,6 @@
       name.textContent = lineNameOf(line);
       head.append(badge, name);
       block.append(head);
-      wrap.append(block);
       // 種別: 見出しの下に、全角4文字ぶんの図形を横に並べる
       const row = document.createElement('div');
       row.className = 'type-row';
@@ -2946,94 +3018,28 @@
         row.append(chip);
       }
       block.append(row);
+      // この路線の発車予定
+      const mine = deps.filter((d) => d.line === line);
+      if (depNote || mine.length) {
+        const dh = document.createElement('div');
+        dh.className = 'dep-dir';
+        dh.textContent = '発車予定(方面ごとに4本)';
+        block.append(dh);
+      }
+      if (depNote) {
+        const n = document.createElement('div');
+        n.className = 'dep-note';
+        n.textContent = depNote;
+        block.append(n);
+      }
+      for (const d of mine) block.append(depRowEl(d, (type) => typeStyleOf(line, type)));
+      wrap.append(block);
     }
     box.append(title, wrap);
   }
-
-  // ---- 駅の発車予定(列車位置のAPIから、方面(行先)ごとに4本まで) ----
-  const DEP_PER_DIRECTION = 4;
-  const CHIP_PX = 13;   // 種別の図形の文字の大きさ(px)。図形の幅は全角4文字ぶん(CHIP_PX × 4)
-  // 5文字以上の種別は、全角4文字の幅に収まるように文字を小さくする
-  const chipFontPx = (text) => {
-    const n = [...String(text)].length;
-    return n > 4 ? Math.floor(CHIP_PX * 4 / n * 10) / 10 : CHIP_PX;
-  };
-  // その駅に停まる種別の列車だけを、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
-  // 停車する列車は到着(停車中は発車)の時刻を出す
-  function stationDepartures(sid, stationName) {
-    const stopHere = new Set((stopTypes.get(sid) || []).map((x) => x.type));
-    const byDest = new Map();
-    for (const t of trains) {
-      const dest = parseStationName(t.destination).ja || '-';
-      const type = jaName(t.routeNumber);
-      if (!stopHere.has(type)) continue;
-      if (stationName && dest === stationName) continue;
-      const title = t.title || t.formation || '';
-      let row = null;
-      if (t.dwelling && String(t.currentStationId) === sid) {
-        row = { sec: Number(t.dwellRemainSec) || 0, stopping: true };
-      } else {
-        const e = (t.etas || []).find((x) => String(x.stationId) === sid);
-        if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
-      }
-      if (!row) continue;
-      if (!byDest.has(dest)) byDest.set(dest, []);
-      byDest.get(dest).push({ ...row, type, dest, title });
-    }
-    // 方面(行先)ごとに4本まで。時刻の早い順に並べる
-    const out = [];
-    for (const list of byDest.values()) out.push(...list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
-    return out.sort((a, b) => a.sec - b.sec);
-  }
-  // 駅の詳細に発車予定を描く(列車データが無い・古い時は、その旨を出す)
-  function renderStationBoard() {
-    const box = $('infoDepartures');
-    box.replaceChildren();
-    const st = selectedRail && selectedRail.type === 'station' ? selectedRail.st : null;
-    box.hidden = !st;
-    if (!st) return;
-    const sid = String(st.id);
-    const title = document.createElement('div');
-    title.className = 'stat-label';
-    title.textContent = '🚉 発車予定(方面ごとに4本)';
-    box.append(title);
-    const note = (text) => {
-      const d = document.createElement('div');
-      d.className = 'dep-note';
-      d.textContent = text;
-      box.append(d);
-    };
-    if (!trains.length) { note('列車データを取得しています…'); return; }
-    if (Date.now() - trainsAt > TT_STALE_MS) { note('列車データが古いため、発車予定を表示できません'); return; }
-    const rows = stationDepartures(sid, st.ja);
-    if (!rows.length) { note('表示できる列車の予定はありません'); return; }
-    // 停車種別と同じ色を使う(その駅で停まる種別なら、路線カラーの色)
-    const styleOf = (type) => {
-      const hit = (stopTypes.get(sid) || []).find((x) => x.type === type);
-      return hit ? typeStyleOf(hit.line, type) : null;
-    };
-    for (const x of rows) {
-      const row = document.createElement('div');
-      row.className = 'dep-row';
-      const chip = document.createElement('span');
-      chip.className = 'type-chip';
-      chip.textContent = x.type;
-      chip.style.fontSize = chipFontPx(x.type) + 'px';
-      const s = styleOf(x.type);
-      if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
-      row.append(chip);
-      const time = document.createElement('span');
-      time.className = 'dep-time';
-      time.textContent = x.stopping ? '停車中' : hhmm(trainsAt + x.sec * 1000);
-      const dest = document.createElement('span');
-      dest.className = 'dep-dest';
-      dest.textContent = x.dest;
-      const num = document.createElement('span');
-      num.className = 'dep-note';
-      num.textContent = x.title ? `${x.title}F` : '';
-      row.append(time, dest, num);
-      box.append(row);
-    }
+  // 停車種別・発車予定を、今の列車データで描き直す(駅を選んでいる時)
+  function refreshStationPanel() {
+    if (selectedRail && selectedRail.type === 'station') renderStopTypes(selectedRail.st);
   }
 
   // ---- 鉄道の乗換案内(運賃も同じ経路で計算) ----
