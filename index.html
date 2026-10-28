@@ -1188,11 +1188,19 @@
     trainIconCache.clear();
     needsDraw = true;
   }
-  // 列車の路線(routeName の先頭)に合う「(l)路線名」の中から、車番(title)の範囲で、アイコンのキーを決める。見つからなければ null
+  // 列車が今走っている路線の名前(ナンバリングから。前後の駅が共通して持つ路線コード → lines.csv の路線名)。分からなければ ''
+  function trainLineName(t) {
+    const from = String((t.dwelling && t.currentStationId) || t.prevStationId || '');
+    const to = String(t.nextStationId || '');
+    if (!rail || !rail.stations.has(from) || !rail.stations.has(to)) return '';
+    const code = sectionLineOf(from, to);
+    return code && code !== '-' ? lineNameOf(code) : '';
+  }
+  // 列車の走っている路線の「(l)路線名」の中から、車番(title)の範囲で、アイコンのキーを決める。見つからなければ null
   function trainIconKey(t) {
     const num = Number(String(t.title || t.formation || '').replace(/[^0-9]/g, ''));
     if (!Number.isFinite(num) || !trainGroups.length) return null;
-    const route = String(t.routeName || '').split('|')[0].trim();
+    const route = trainLineName(t);
     if (!route) return null;
     for (const g of trainGroups) {
       if (!g.line || !route.includes(g.line)) continue;
