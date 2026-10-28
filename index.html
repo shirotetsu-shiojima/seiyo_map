@@ -2911,13 +2911,40 @@
         for (let i = 1; i < path.length; i++) {
           if (path[i].kind !== 'ride') continue;
           const line = sectionLineOf(path[i - 1].id, path[i].id);
-          if (candidates.includes(line)) return { line, next: path[i].id };
+          if (candidates.includes(line)) return { line, next: path[i].id, path };
           break;
         }
       }
     }
     const run = trainRunCode(t);
     return { line: candidates.includes(run) ? run : candidates[0], next: null };
+  }
+  // 経路の先の駅から、方面の名前にする駅を選ぶ。1・2級はまとめて最優先、その中で一番近い駅。無ければ3級、4級、5級の順
+  function dirLandmarkName(sid, paths) {
+    const dist = new Map();
+    const hopLen = (a, b) => {
+      const nb = rail.stations.get(a).neighbors.find((n) => n.id === b);
+      return nb ? nb.distance : 0;
+    };
+    for (const path of paths) {
+      let d = 0;
+      for (let i = 1; i < path.length; i++) {
+        d += hopLen(path[i - 1].id, path[i].id);
+        const id = path[i].id;
+        if (!dist.has(id) || d < dist.get(id)) dist.set(id, d);
+      }
+    }
+    const tierOf = (id) => {
+      const st = rail.stations.get(id);
+      const row = st && stationRowOf(st);
+      const grade = row ? row.grade : 5;
+      return grade <= 2 ? 2 : grade;
+    };
+    let best = null;
+    for (const [id, d] of dist) {
+      if (!best || tierOf(id) < tierOf(best.id) || (tierOf(id) === tierOf(best.id) && d < best.d)) best = { id, d };
+    }
+    return best ? (rail.stations.get(best.id).ja || '') : '';
   }
   function stationDepartures(st) {
     const sid = String(st.id);
@@ -2942,12 +2969,18 @@
       // 方面 = この駅から次に進む先の駅(分からなければ行先)
       const dir = hop.next || dest;
       const dirName = hop.next && rail.stations.get(hop.next) ? (rail.stations.get(hop.next).ja || '') : dest;
-      if (!byDest.has(dir)) byDest.set(dir, { dirName, list: [] });
-      byDest.get(dir).list.push({ ...row, type, dest, title, line: hop.line, dir, dirName });
+      if (!byDest.has(dir)) byDest.set(dir, { dirName, list: [], paths: [] });
+      const g = byDest.get(dir);
+      if (hop.path) g.paths.push(hop.path);
+      g.list.push({ ...row, type, dest, title, line: hop.line, dir, dirName });
     }
+    // 方面の名前: その方面の先の駅のうち、1・2級(まとめて扱う)の一番近い駅。無ければ3級、4級… の順で一番近い駅
+    const dirNames = new Map();
+    for (const [dir, g] of byDest) dirNames.set(dir, g.paths.length ? dirLandmarkName(sid, g.paths) : g.dirName);
     // 方面ごとに4本まで(到着の早い順)。方面の中は到着順、方面どうしは最初の到着順で並べる
     const out = [];
     for (const g of byDest.values()) out.push(...g.list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
+    for (const r of out) r.dirName = dirNames.get(r.dir) || r.dest;
     return out.sort((a, b) => a.sec - b.sec);
   }
   // 発車予定の1行: 種別の図形・時刻・行先・車番(◯F)
