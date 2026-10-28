@@ -2900,6 +2900,23 @@
   };
   // その駅に停まる種別の列車を、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
   // 路線は、その種別を停車させる路線のうち、列車の走っている路線を選ぶ
+  // この駅から行先まで列車が次に走る路線(経路の最初の乗車区間の路線)。候補に無ければ従来の判定に戻す
+  function departLineFor(sid, t, candidates) {
+    const dest = String(t.destStationId || '');
+    if (dest && dest !== sid && rail && rail.stations.has(sid) && rail.stations.has(dest)) {
+      const path = railPath(sid, dest);
+      if (path) {
+        for (let i = 1; i < path.length; i++) {
+          if (path[i].kind !== 'ride') continue;
+          const line = sectionLineOf(path[i - 1].id, path[i].id);
+          if (candidates.includes(line)) return line;
+          break;
+        }
+      }
+    }
+    const run = trainRunCode(t);
+    return candidates.includes(run) ? run : candidates[0];
+  }
   function stationDepartures(st) {
     const sid = String(st.id);
     const stopLines = stopTypes.get(sid) || [];
@@ -2919,8 +2936,7 @@
         if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
       }
       if (!row) continue;
-      const run = trainRunCode(t);
-      const line = candidates.includes(run) ? run : candidates[0];
+      const line = departLineFor(sid, t, candidates);
       if (!byDest.has(dest)) byDest.set(dest, []);
       byDest.get(dest).push({ ...row, type, dest, title, line });
     }
