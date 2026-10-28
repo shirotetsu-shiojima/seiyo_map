@@ -155,6 +155,7 @@
   .dep-time { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3.4em; }
   .dep-dest { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dep-note { font-size: 12px; opacity: .75; }
+  .dep-subdir { font-size: 12px; font-weight: 600; margin: 8px 0 2px; opacity: .85; }
 
   /* 設定の中の凡例 */
   .legend-box { font-size: 13px; }
@@ -2901,7 +2902,8 @@
   // その駅に停まる種別の列車を、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
   // 路線は、その種別を停車させる路線のうち、列車の走っている路線を選ぶ
   // この駅から行先まで列車が次に走る路線(経路の最初の乗車区間の路線)。候補に無ければ従来の判定に戻す
-  function departLineFor(sid, t, candidates) {
+  // 戻り値は { line: 乗る路線, next: この駅の次の駅(方面の目印) }。next は分からなければ null
+  function departHop(sid, t, candidates) {
     const dest = String(t.destStationId || '');
     if (dest && dest !== sid && rail && rail.stations.has(sid) && rail.stations.has(dest)) {
       const path = railPath(sid, dest);
@@ -2909,13 +2911,13 @@
         for (let i = 1; i < path.length; i++) {
           if (path[i].kind !== 'ride') continue;
           const line = sectionLineOf(path[i - 1].id, path[i].id);
-          if (candidates.includes(line)) return line;
+          if (candidates.includes(line)) return { line, next: path[i].id };
           break;
         }
       }
     }
     const run = trainRunCode(t);
-    return candidates.includes(run) ? run : candidates[0];
+    return { line: candidates.includes(run) ? run : candidates[0], next: null };
   }
   function stationDepartures(st) {
     const sid = String(st.id);
@@ -2936,13 +2938,16 @@
         if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
       }
       if (!row) continue;
-      const line = departLineFor(sid, t, candidates);
-      if (!byDest.has(dest)) byDest.set(dest, []);
-      byDest.get(dest).push({ ...row, type, dest, title, line });
+      const hop = departHop(sid, t, candidates);
+      // 方面 = この駅から次に進む先の駅(分からなければ行先)
+      const dir = hop.next || dest;
+      const dirName = hop.next && rail.stations.get(hop.next) ? (rail.stations.get(hop.next).ja || '') : dest;
+      if (!byDest.has(dir)) byDest.set(dir, { dirName, list: [] });
+      byDest.get(dir).list.push({ ...row, type, dest, title, line: hop.line, dir, dirName });
     }
-    // 方面(行先)ごとに4本まで。時刻の早い順に並べる
+    // 方面ごとに4本まで(到着の早い順)。方面の中は到着順、方面どうしは最初の到着順で並べる
     const out = [];
-    for (const list of byDest.values()) out.push(...list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
+    for (const g of byDest.values()) out.push(...g.list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
     return out.sort((a, b) => a.sec - b.sec);
   }
   // 発車予定の1行: 種別の図形・時刻・行先・車番(◯F)
@@ -3036,6 +3041,10 @@
       block.append(row);
       // この路線の発車予定
       const mine = deps.filter((d) => d.line === line);
+      // 方面ごとにまとめる(方面の順は最初の到着順、方面の中は到着順)
+      const firstSec = new Map();
+      for (const d of mine) firstSec.set(d.dir, Math.min(firstSec.get(d.dir) ?? Infinity, d.sec));
+      mine.sort((a, b) => (firstSec.get(a.dir) - firstSec.get(b.dir)) || (a.sec - b.sec));
       if (depNote || mine.length) {
         const dh = document.createElement('div');
         dh.className = 'dep-dir';
@@ -3048,7 +3057,18 @@
         n.textContent = depNote;
         block.append(n);
       }
-      for (const d of mine) block.append(depRowEl(d, (type) => typeStyleOf(line, type)));
+      // 方面ごとに小見出しを付けて、その中を到着順に並べる(方面の順は最初の到着順)
+      let lastDir = null;
+      for (const d of mine) {
+        if (d.dir !== lastDir) {
+          lastDir = d.dir;
+          const sh = document.createElement('div');
+          sh.className = 'dep-subdir';
+          sh.textContent = `${d.dirName || d.dest}方面`;
+          block.append(sh);
+        }
+        block.append(depRowEl(d, (type) => typeStyleOf(line, type)));
+      }
       wrap.append(block);
     }
     box.append(title, wrap);
