@@ -1143,6 +1143,67 @@
   }
 
   // 列車の印: 路線の色の丸、向き(ヨー角。Minecraft と同じ向き)の線、停車中は外側に輪、名前
+  // ---- 列車アイコン(車番で選ぶ。アイコンは trainicons/キー.png、判定表は trainnumber.txt。どちらもHTMLには内蔵しない) ----
+  const TRAIN_ICON_PX = 26;          // アイコンの高さ(px)
+  let trainGroups = [];              // [{ line, rules: [{ from, to, key }] }] (trainnumber.txt の内容)
+  const trainIconCache = new Map();  // キー -> { img, ok, failed, alt }
+  const trainIconBlobUrls = new Map(); // フォルダから読んだ時の、キー -> 画像の URL
+  // trainnumber.txt: 「(l)路線名」の下に、車番の始まり・終わり・アイコンのキーを1組ずつ並べる
+  function applyTrainNumbers(text) {
+    const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const groups = [];
+    let cur = null;
+    for (let i = 0; i < lines.length; ) {
+      if (/^\(l\)/.test(lines[i])) {
+        cur = { line: lines[i].replace(/^\(l\)/, '').trim(), rules: [] };
+        groups.push(cur);
+        i++;
+        continue;
+      }
+      const from = Number(lines[i]), to = Number(lines[i + 1]);
+      const key = lines[i + 2];
+      if (cur && Number.isFinite(from) && Number.isFinite(to) && key && !/^\(l\)/.test(key)) {
+        cur.rules.push({ from, to, key });
+      }
+      i += 3;
+    }
+    trainGroups = groups;
+    trainIconCache.clear();
+    needsDraw = true;
+  }
+  // 列車の車番(title)と路線(routeName の先頭)から、アイコンのキーを決める。見つからなければ null
+  function trainIconKey(t) {
+    const num = Number(String(t.title || t.formation || '').replace(/[^0-9]/g, ''));
+    if (!Number.isFinite(num) || !trainGroups.length) return null;
+    const line = String(t.routeName || '').split('|')[0].trim();
+    const groups = [...trainGroups.filter((g) => g.line === line), ...trainGroups.filter((g) => g.line !== line)];
+    for (const g of groups) {
+      const r = g.rules.find((x) => num >= x.from && num <= x.to);
+      if (r) return r.key;
+    }
+    return null;
+  }
+  // 画像: 読み込めたものだけ返す。名前の揺れ(shirokimetoro→shirokimetro)は一度だけ別名で試す
+  const trainIconAlias = (key) => key.replace('shirokimetoro', 'shirokimetro');
+  function trainIconImage(t) {
+    const key = trainIconKey(t);
+    if (!key) return null;
+    if (!trainIconCache.has(key)) {
+      const entry = { img: new Image(), ok: false, failed: false, alt: false };
+      const src = (k) => trainIconBlobUrls.get(k) || `trainicons/${encodeURIComponent(k)}.png`;
+      entry.img.onload = () => { entry.ok = true; needsDraw = true; };
+      entry.img.onerror = () => {
+        const alias = trainIconAlias(key);
+        if (!entry.alt && alias !== key) { entry.alt = true; entry.img.src = src(alias); return; }
+        entry.failed = true;
+      };
+      entry.img.src = src(key);
+      trainIconCache.set(key, entry);
+    }
+    const e = trainIconCache.get(key);
+    return e.ok ? e.img : null;
+  }
+
   function drawTrains() {
     ctx.save();
     ctx.font = '600 12px system-ui, sans-serif';
@@ -1152,28 +1213,42 @@
       const [sx, sy] = toScreen(t.x, t.z);
       if (sx < -60 || sy < -60 || sx > innerWidth + 60 || sy > innerHeight + 60) continue;
       const fill = t.routeColor || '#4a5563';
-      const rad = (Number(t.yaw) || 0) * Math.PI / 180;
-      const dx = -Math.sin(rad), dz = Math.cos(rad);
-      ctx.strokeStyle = T.ink;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + dx * 13, sy + dz * 13);
-      ctx.stroke();
-      if (t.atStop || t.dwelling) {
+      const label = String(t.title || t.formation || '');
+      const icon = trainIconImage(t);
+      if (icon) {
+        // 車番に合う列車アイコン(画像の縦横比のまま、高さ TRAIN_ICON_PX)
+        const h = TRAIN_ICON_PX, w = h * icon.naturalWidth / icon.naturalHeight;
+        if (t.atStop || t.dwelling) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, Math.max(w, h) / 2 + 3, 0, Math.PI * 2);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = T.ink;
+          ctx.stroke();
+        }
+        ctx.drawImage(icon, sx - w / 2, sy - h / 2, w, h);
+      } else {
+        const rad = (Number(t.yaw) || 0) * Math.PI / 180;
+        const dx = -Math.sin(rad), dz = Math.cos(rad);
+        ctx.strokeStyle = T.ink;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + dx * 13, sy + dz * 13);
+        ctx.stroke();
+        if (t.atStop || t.dwelling) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(sx, sy, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
         ctx.lineWidth = 2;
+        ctx.strokeStyle = T.halo;
         ctx.stroke();
       }
-      ctx.beginPath();
-      ctx.arc(sx, sy, 6.5, 0, Math.PI * 2);
-      ctx.fillStyle = fill;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = T.halo;
-      ctx.stroke();
-      const label = String(t.title || t.formation || '');
       ctx.lineWidth = 3;
       ctx.strokeStyle = T.halo;
       ctx.strokeText(label, sx + 10, sy - 10);
@@ -2365,7 +2440,11 @@
     for (const f of list) {
       const m = /(^|\/)logos\/([^/]+)\.png$/i.exec(f.webkitRelativePath || '');
       if (m) logoBlobUrls.set(m[2], URL.createObjectURL(f));
+      const ti = /(^|\/)trainicons\/([^/]+)\.png$/i.exec(f.webkitRelativePath || '');
+      if (ti) trainIconBlobUrls.set(ti[2], URL.createObjectURL(f));
     }
+    const numberFile = list.find((f) => f.name === 'trainnumber.txt');
+    if (numberFile) applyTrainNumbers(await readText(numberFile));
     const found = {};
     for (const f of list) {
       const hit = DATA_FILES.find((d) => d.name === f.name);
@@ -2564,6 +2643,8 @@
     if (colorText !== null) applyTypeColors(colorText);
     const stationsCsv = await fetchText('station.csv');
     if (stationsCsv !== null) applyStations(stationsCsv);
+    const numberText = await fetchText('trainnumber.txt');
+    if (numberText !== null) applyTrainNumbers(numberText);
     const companies = [...new Set(lineToCompany.values())];
     await Promise.all(companies.map(async (c) => {
       const text = await fetchText(`${FARE_DIR}/${c}.txt`);
