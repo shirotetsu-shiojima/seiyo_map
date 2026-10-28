@@ -1001,6 +1001,7 @@
     }
     renderTrainList();
     renderStationBoard();
+    refreshTrainSelection();
     needsDraw = true;
     refreshTransit();
   }
@@ -1183,25 +1184,63 @@
     }
     return null;
   }
-  // 画像: 読み込めたものだけ返す。名前の揺れ(shirokimetoro→shirokimetro)は一度だけ別名で試す
-  const trainIconAlias = (key) => key.replace('shirokimetoro', 'shirokimetro');
+  // 画像: 読み込めたものだけ返す
   function trainIconImage(t) {
     const key = trainIconKey(t);
     if (!key) return null;
     if (!trainIconCache.has(key)) {
-      const entry = { img: new Image(), ok: false, failed: false, alt: false };
-      const src = (k) => trainIconBlobUrls.get(k) || `trainicons/${encodeURIComponent(k)}.png`;
+      const entry = { img: new Image(), ok: false };
       entry.img.onload = () => { entry.ok = true; needsDraw = true; };
-      entry.img.onerror = () => {
-        const alias = trainIconAlias(key);
-        if (!entry.alt && alias !== key) { entry.alt = true; entry.img.src = src(alias); return; }
-        entry.failed = true;
-      };
-      entry.img.src = src(key);
+      entry.img.src = trainIconBlobUrls.get(key) || `trainicons/${encodeURIComponent(key)}.png`;
       trainIconCache.set(key, entry);
     }
     const e = trainIconCache.get(key);
     return e.ok ? e.img : null;
+  }
+
+  // ---- 列車の詳細(列車アイコンをクリックすると出す) ----
+  // 列車アイコンのうち、画面上でクリックされた位置に一番近いもの
+  function pickTrain(sx, sy) {
+    let best = null, bestD = TRAIN_ICON_PX;
+    for (const t of trains) {
+      if (!Number.isFinite(t.x) || !Number.isFinite(t.z) || !trainIconImage(t)) continue;
+      const [x, y] = toScreen(t.x, t.z);
+      const d = Math.hypot(x - sx, y - sy);
+      if (d <= bestD) { bestD = d; best = t; }
+    }
+    return best;
+  }
+  // 車番(◯F)・種別・行き先・今いる駅間(走行中)または停車中の駅
+  function trainPosition(t) {
+    const name = (raw) => parseStationName(raw).ja || '-';
+    if (t.currentStationId && (t.atStop || t.dwelling)) return `${name(t.currentStation)} 停車中`;
+    return `${name(t.prevStation)} ⇔ ${name(t.nextStation)} 間を走行中`;
+  }
+  function showTrainInfo(t) {
+    const box = $('info');
+    $('infoLogos').replaceChildren();
+    $('infoLogos').hidden = true;
+    $('infoHero').replaceChildren();
+    $('infoHero').hidden = true;
+    $('infoTypes').hidden = true;
+    $('infoDepartures').hidden = true;
+    $('infoBar').style.background = t.routeColor || RAIL_COLOR;
+    const num = `${t.title || t.formation || '-'}F`;
+    $('infoTitle').textContent = num;
+    const dl = $('infoBody');
+    dl.textContent = '';
+    addRow(dl, '車番', num);
+    addRow(dl, '種別', jaName(t.routeNumber));
+    addRow(dl, '行き先', parseStationName(t.destination).ja || '-');
+    addRow(dl, '位置', trainPosition(t));
+    box.style.display = 'block';
+  }
+  // 詳細を開いている列車は、取得し直すたびに最新の値に更新する。居なくなった列車は閉じる
+  function refreshTrainSelection() {
+    if (!selectedRail || selectedRail.type !== 'train') return;
+    const t = trains.find((x) => String(x.id) === String(selectedRail.id));
+    if (!t) { selectedRail = null; showInfo(null); return; }
+    showTrainInfo(t);
   }
 
   function drawTrains() {
@@ -1249,11 +1288,13 @@
         ctx.strokeStyle = T.halo;
         ctx.stroke();
       }
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = T.halo;
-      ctx.strokeText(label, sx + 10, sy - 10);
-      ctx.fillStyle = T.ink;
-      ctx.fillText(label, sx + 10, sy - 10);
+      if (!icon) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = T.halo;
+        ctx.strokeText(label, sx + 10, sy - 10);
+        ctx.fillStyle = T.ink;
+        ctx.fillText(label, sx + 10, sy - 10);
+      }
     }
     ctx.restore();
   }
@@ -3741,7 +3782,17 @@
       const [wx, wz] = toWorld(e.clientX, e.clientY);
       placePin(pinMode, wx, wz);
     } else if (drag && !drag.moved) {
-      // 駅の丸印 → ホームの長方形 → 道路 → 鉄道の区間の順に、近いものを選ぶ
+      // 列車アイコン → 駅の丸印 → ホームの長方形 → 道路 → 鉄道の区間の順に、近いものを選ぶ
+      const tr = trainOn() ? pickTrain(e.clientX, e.clientY) : null;
+      if (tr) {
+        selected = null;
+        selectedRail = { type: 'train', id: tr.id };
+        showTrainInfo(tr);
+        needsDraw = true;
+        drag = null;
+        canvas.classList.remove('dragging');
+        return;
+      }
       let st = railOn() ? pickStation(e.clientX, e.clientY) : null;
       if (!st && railOn()) {
         const pf = pickPlatform(e.clientX, e.clientY);
