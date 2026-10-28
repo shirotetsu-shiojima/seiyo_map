@@ -141,11 +141,11 @@
   .line-head-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
   .line-name { font-size: 13px; font-weight: 600; }
   .type-list .type-row { margin: 0; }
-  .type-list .type-chip { flex: 0 0 4em; width: 4em; box-sizing: border-box; padding: 6px 0; border-radius: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; }
-  .dep-dir { font-weight: 600; font-size: 13px; margin-top: 10px; }
-  .dep-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; flex-wrap: wrap; }
-  .dep-row .type-chip { flex: 0 0 4em; width: 4em; box-sizing: border-box; font-size: 12px; padding: 3px 0; text-align: center; white-space: nowrap; overflow: hidden; }
+  .type-list .type-chip { flex: 0 0 52px; width: 52px; box-sizing: border-box; padding: 6px 0; border-radius: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; }
+  .dep-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; }
+  .dep-row .type-chip { flex: 0 0 52px; width: 52px; box-sizing: border-box; padding: 6px 0; border-radius: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; }
   .dep-time { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3.4em; }
+  .dep-dest { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dep-note { font-size: 12px; opacity: .75; }
 
   /* 設定の中の凡例 */
@@ -2765,6 +2765,7 @@
         const chip = document.createElement('span');
         chip.className = 'type-chip';
         chip.textContent = x.type;
+        chip.style.fontSize = chipFontPx(x.type) + 'px';
         const s = typeStyleOf(x.line, x.type);
         if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
         row.append(chip);
@@ -2774,32 +2775,54 @@
     box.append(title, wrap);
   }
 
-  // ---- 駅の発車予定(列車位置のAPIの到着予定から、方面(行先)ごとに4本ずつ) ----
+  // ---- 駅の発車予定(列車位置のAPIから、方面(行先)ごとに4本まで) ----
   const DEP_PER_DIRECTION = 4;
-  // その駅に来る列車を、行先ごとにまとめる。停車中の列車は、停車している駅からの発車までの時間を使う
+  const CHIP_PX = 13;   // 種別の図形の文字の大きさ(px)。図形の幅は全角4文字ぶん(CHIP_PX × 4)
+  // 5文字以上の種別は、全角4文字の幅に収まるように文字を小さくする
+  const chipFontPx = (text) => {
+    const n = [...String(text)].length;
+    return n > 4 ? Math.floor(CHIP_PX * 4 / n * 10) / 10 : CHIP_PX;
+  };
+  // その駅に来る列車を行先ごとにまとめる。
+  // 停車する列車は到着(停車中は発車)の時刻を出す。停車しない列車で、まだこの駅を通っていないものは「通過」
   function stationDepartures(sid) {
+    // この駅に停まる種別(停車種別の表と同じもの)
+    const stopHere = new Set((stopTypes.get(sid) || []).map((x) => x.type));
     const byDest = new Map();
     for (const t of trains) {
       const dest = parseStationName(t.destination).ja || '-';
       const type = jaName(t.routeNumber);
-      const stopping = !!t.dwelling && String(t.currentStationId) === sid;
-      let sec = null;
-      if (stopping) sec = Number(t.dwellRemainSec) || 0;
-      else {
-        const e = (t.etas || []).find((x) => String(x.stationId) === sid);
-        if (e) sec = Number(e.sec);
+      const title = t.title || t.formation || '';
+      const add = (row) => {
+        if (!byDest.has(dest)) byDest.set(dest, []);
+        byDest.get(dest).push({ ...row, type, dest, title });
+      };
+      if (t.dwelling && String(t.currentStationId) === sid) {
+        add({ timed: true, sec: Number(t.dwellRemainSec) || 0, stopping: true });
+        continue;
       }
-      if (!Number.isFinite(sec) || sec < 0) continue;
-      if (!byDest.has(dest)) byDest.set(dest, []);
-      byDest.get(dest).push({ type, sec, stopping, title: t.title || t.formation || '', delay: Number(t.delaySec) || 0 });
+      const e = (t.etas || []).find((x) => String(x.stationId) === sid);
+      if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) {
+        add({ timed: true, sec: Number(e.sec), stopping: false });
+        continue;
+      }
+      // 停車しない種別の列車: これから先の経路(次の駅→行先)にこの駅が含まれる時だけ「通過」にする
+      if (stopHere.has(type) || !rail.stations.has(String(t.nextStationId)) || !rail.stations.has(String(t.destStationId))) continue;
+      const path = railPath(String(t.nextStationId), String(t.destStationId));
+      const at = path ? path.findIndex((x) => x.id === sid) : -1;
+      if (at < 0) continue;
+      add({ timed: false, ahead: at });
     }
-    const dirs = [...byDest.entries()].map(([dest, list]) => ({
-      dest, list: list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION),
-    }));
-    dirs.sort((a, b) => a.list[0].sec - b.list[0].sec);
-    return dirs;
+    // 方面ごとに、時刻の出る列車は4本まで、通過は4本まで(別々に数える)
+    const out = [];
+    for (const list of byDest.values()) {
+      const timed = list.filter((x) => x.timed).sort((a, b) => a.sec - b.sec);
+      const pass = list.filter((x) => !x.timed).sort((a, b) => a.ahead - b.ahead);
+      out.push(...timed.slice(0, DEP_PER_DIRECTION), ...pass.slice(0, DEP_PER_DIRECTION));
+    }
+    return out;
   }
-  // 駅の詳細に、方面ごとの発車予定を描く(列車データが無い・古い時は、その旨を出す)
+  // 駅の詳細に発車予定を描く(列車データが無い・古い時は、その旨を出す)
   function renderStationBoard() {
     const box = $('infoDepartures');
     box.replaceChildren();
@@ -2819,36 +2842,42 @@
     };
     if (!trains.length) { note('列車データを取得しています…'); return; }
     if (Date.now() - trainsAt > TT_STALE_MS) { note('列車データが古いため、発車予定を表示できません'); return; }
-    const dirs = stationDepartures(sid);
-    if (!dirs.length) { note('この駅に停車する列車の予定はありません'); return; }
+    const rows = stationDepartures(sid);
+    if (!rows.length) { note('この駅に来る列車の予定はありません'); return; }
     // 停車種別と同じ色を使う(その駅で停まる種別なら、路線カラーの色)
     const styleOf = (type) => {
       const hit = (stopTypes.get(sid) || []).find((x) => x.type === type);
       return hit ? typeStyleOf(hit.line, type) : null;
     };
-    for (const dir of dirs) {
-      const head = document.createElement('div');
-      head.className = 'dep-dir';
-      head.textContent = `→ ${dir.dest}`;
-      box.append(head);
-      for (const x of dir.list) {
-        const row = document.createElement('div');
-        row.className = 'dep-row';
-        const chip = document.createElement('span');
-        chip.className = 'type-chip';
-        chip.textContent = x.type;
-        const s = styleOf(x.type);
-        if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
+    for (const x of rows) {
+      const row = document.createElement('div');
+      row.className = 'dep-row';
+      const chip = document.createElement('span');
+      chip.className = 'type-chip';
+      chip.textContent = x.type;
+      chip.style.fontSize = chipFontPx(x.type) + 'px';
+      const s = styleOf(x.type);
+      if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
+      row.append(chip);
+      if (!x.timed) {
+        // 通過: 「通過」の文字だけを出す
+        const pass = document.createElement('span');
+        pass.className = 'dep-time';
+        pass.textContent = '通過';
+        row.append(pass);
+      } else {
         const time = document.createElement('span');
         time.className = 'dep-time';
         time.textContent = x.stopping ? '停車中' : hhmm(trainsAt + x.sec * 1000);
-        const info = document.createElement('span');
-        info.className = 'dep-note';
-        const mins = Math.max(0, Math.round(x.sec / 60));
-        info.textContent = `${x.stopping ? '' : `あと約${mins}分`}${x.title ? ` ・ ${x.title}号` : ''}${x.delay > 0 ? ` ・ 遅れ${Math.round(x.delay)}秒` : ''}`;
-        row.append(chip, time, info);
-        box.append(row);
+        const dest = document.createElement('span');
+        dest.className = 'dep-dest';
+        dest.textContent = x.dest;
+        const num = document.createElement('span');
+        num.className = 'dep-note';
+        num.textContent = x.title ? `${x.title}F` : '';
+        row.append(time, dest, num);
       }
+      box.append(row);
     }
   }
 
