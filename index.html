@@ -32,6 +32,14 @@
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
   canvas.dragging { cursor: grabbing; }
   .panel { position: fixed; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .train-card { width: 210px; overflow: hidden; z-index: 3; }
+  .train-card-bar { height: 5px; background: var(--accent); }
+  .train-card-body { padding: 8px 12px 10px; position: relative; }
+  .train-card-body .close { position: absolute; top: 4px; right: 6px; border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 4px; }
+  .train-card-title { font-size: 16px; font-weight: 600; margin: 0 24px 4px 0; }
+  .train-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font-size: 12px; }
+  .train-card dt { color: var(--muted); }
+  .train-card dd { margin: 0; overflow-wrap: anywhere; }
   button { font: inherit; }
   input[type="file"] { display: none; }
   input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
@@ -298,6 +306,14 @@
   </section>
 </aside>
 
+<div id="trainCard" class="panel train-card" hidden>
+  <div class="train-card-bar" id="trainCardBar"></div>
+  <div class="train-card-body">
+    <button class="close" id="closeTrainCard" aria-label="閉じる">×</button>
+    <div class="train-card-title" id="trainCardTitle"></div>
+    <dl id="trainCardRows"></dl>
+  </div>
+</div>
 <div id="info" class="panel">
   <div class="info-bar" id="infoBar"></div>
   <div class="inner">
@@ -1172,13 +1188,14 @@
     trainIconCache.clear();
     needsDraw = true;
   }
-  // 列車の車番(title)と路線(routeName の先頭)から、アイコンのキーを決める。見つからなければ null
+  // 列車の路線(routeName の先頭)に合う「(l)路線名」の中から、車番(title)の範囲で、アイコンのキーを決める。見つからなければ null
   function trainIconKey(t) {
     const num = Number(String(t.title || t.formation || '').replace(/[^0-9]/g, ''));
     if (!Number.isFinite(num) || !trainGroups.length) return null;
-    const line = String(t.routeName || '').split('|')[0].trim();
-    const groups = [...trainGroups.filter((g) => g.line === line), ...trainGroups.filter((g) => g.line !== line)];
-    for (const g of groups) {
+    const route = String(t.routeName || '').split('|')[0].trim();
+    if (!route) return null;
+    for (const g of trainGroups) {
+      if (!g.line || !route.includes(g.line)) continue;
       const r = g.rules.find((x) => num >= x.from && num <= x.to);
       if (r) return r.key;
     }
@@ -1216,30 +1233,47 @@
     if (t.currentStationId && (t.atStop || t.dwelling)) return `${name(t.currentStation)} 停車中`;
     return `${name(t.prevStation)} ⇔ ${name(t.nextStation)} 間を走行中`;
   }
+  // 列車の詳細カード(車両アイコンの近くに出し、線で列車アイコンと結ぶ)
   function showTrainInfo(t) {
-    const box = $('info');
-    $('infoLogos').replaceChildren();
-    $('infoLogos').hidden = true;
-    $('infoHero').replaceChildren();
-    $('infoHero').hidden = true;
-    $('infoTypes').hidden = true;
-    $('infoDepartures').hidden = true;
-    $('infoBar').style.background = t.routeColor || RAIL_COLOR;
+    const card = $('trainCard');
+    $('trainCardBar').style.background = t.routeColor || RAIL_COLOR;
     const num = `${t.title || t.formation || '-'}F`;
-    $('infoTitle').textContent = num;
-    const dl = $('infoBody');
+    $('trainCardTitle').textContent = num;
+    const dl = $('trainCardRows');
     dl.textContent = '';
     addRow(dl, '車番', num);
     addRow(dl, '種別', jaName(t.routeNumber));
     addRow(dl, '行き先', parseStationName(t.destination).ja || '-');
     addRow(dl, '位置', trainPosition(t));
-    box.style.display = 'block';
+    card.hidden = false;
+    needsDraw = true;
+  }
+  // 列車アイコンの画面上の位置から、カードを近くに置き、線の結び目を決める(カードが画面外へ出ないように)
+  function placeTrainCard(sx, sy) {
+    const card = $('trainCard');
+    if (card.hidden) return null;
+    const w = card.offsetWidth || 210, h = card.offsetHeight || 120;
+    const gap = 36;
+    let left = sx + gap;
+    if (left + w > innerWidth - 72) left = sx - gap - w;
+    left = Math.max(8, Math.min(left, innerWidth - w - 8));
+    const top = Math.max(8, Math.min(sy - h / 2, innerHeight - h - 8));
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+    // 線は、カードの近い側の辺の中ほどに結ぶ
+    const ax = left > sx ? left : left + w;
+    return [ax, Math.max(top + 12, Math.min(sy, top + h - 12))];
+  }
+  function hideTrainCard() {
+    $('trainCard').hidden = true;
+    if (selectedRail && selectedRail.type === 'train') selectedRail = null;
+    needsDraw = true;
   }
   // 詳細を開いている列車は、取得し直すたびに最新の値に更新する。居なくなった列車は閉じる
   function refreshTrainSelection() {
     if (!selectedRail || selectedRail.type !== 'train') return;
     const t = trains.find((x) => String(x.id) === String(selectedRail.id));
-    if (!t) { selectedRail = null; showInfo(null); return; }
+    if (!t) { hideTrainCard(); return; }
     showTrainInfo(t);
   }
 
@@ -1294,6 +1328,17 @@
         ctx.strokeText(label, sx + 10, sy - 10);
         ctx.fillStyle = T.ink;
         ctx.fillText(label, sx + 10, sy - 10);
+      }
+      if (selectedRail && selectedRail.type === 'train' && String(selectedRail.id) === String(t.id)) {
+        const anchor = placeTrainCard(sx, sy);
+        if (anchor) {
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(anchor[0], anchor[1]);
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = T.ink;
+          ctx.stroke();
+        }
       }
     }
     ctx.restore();
@@ -3725,6 +3770,7 @@
     needsDraw = true;
   }));
   $('closeInfo').addEventListener('click', () => { selected = null; showInfo(null); needsDraw = true; });
+  $('closeTrainCard').addEventListener('click', () => { hideTrainCard(); });
 
   // メニューの開閉
   $('toggleTop').addEventListener('click', () => { $('top').classList.toggle('collapsed'); });
@@ -3793,6 +3839,7 @@
         canvas.classList.remove('dragging');
         return;
       }
+      hideTrainCard();
       let st = railOn() ? pickStation(e.clientX, e.clientY) : null;
       if (!st && railOn()) {
         const pf = pickPlatform(e.clientX, e.clientY);
