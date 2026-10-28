@@ -2441,7 +2441,7 @@
             const span = document.createElement('span');
             span.className = 'code-badge';
             span.textContent = code;
-            if (lineColorOn()) span.style.borderColor = lineColorOf(lineCodeOf(code));
+            applyCodeShape(span, code);
             return span;
           })
         : [document.createTextNode('-')];
@@ -2646,6 +2646,25 @@
     return rows.map((r) => Object.fromEntries(head.map((k, i) => [k, (r[i] || '').trim()])));
   }
   // lines.csv: 路線の番号・会社・名前・色・会社の運賃ファイル名
+  // 駅番号の形(lines.csv の「No形状」): 白丸=路線色の枠+白、黒丸=路線色で塗る、白四角=角丸の路線色の枠+白、黒四角=角丸の路線色で塗る
+  // 円形は、駅番号が複数の文字でも収まるように両端を丸めた形(カプセル型)にする
+  function applyCodeShape(el, code) {
+    const line = lineCodeOf(code);
+    const li = lineInfo.get(line);
+    const shape = (li && li.shape) || '白丸';
+    const col = lineColorOn() ? lineColorOf(line) : null;
+    const filled = shape === '黒丸' || shape === '黒四角';
+    const round = shape === '白丸' || shape === '黒丸';
+    el.style.borderRadius = round ? '999px' : '6px';
+    el.style.borderColor = col || 'var(--muted)';
+    if (filled) {
+      el.style.background = col || 'var(--muted)';
+      el.style.color = '#fff';
+    } else {
+      el.style.background = '#fff';
+      el.style.color = 'var(--ink)';
+    }
+  }
   function applyLines(text) {
     lineInfo = new Map();
     for (const r of tableOf(text)) {
@@ -2656,6 +2675,7 @@
         code, company: r['会社'], name: r['路線名'],
         color: /^[0-9a-fA-F]{6}$/.test(hex) ? '#' + hex : null,
         companyTxt: r['会社txt'],
+        shape: (r['No形状'] || '').trim(),   // 駅番号の形: 白丸・黒丸・白四角・黒四角
       });
       if (r['会社txt']) lineToCompany.set(code, r['会社txt']);
     }
@@ -3082,7 +3102,8 @@
       const badge = document.createElement('span');
       badge.className = 'code-badge';
       badge.textContent = line || '-';
-      if (lineColorOn() && line) badge.style.borderColor = lineColorOf(line);
+      if (line) applyCodeShape(badge, line);
+      else badge.style.borderColor = 'var(--muted)';
       const name = document.createElement('span');
       name.className = 'line-name';
       name.textContent = lineNameOf(line);
