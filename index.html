@@ -94,7 +94,7 @@
   details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 8px; }
 
   /* 地図の上に浮かぶもの */
-  #info { top: 12px; right: 12px; width: 320px; display: none; padding: 0; overflow: hidden; }
+  #info { top: 12px; right: 72px; width: 320px; display: none; padding: 0; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
   .info-bar { height: 6px; background: var(--accent); }
   #info .inner { padding: 14px 16px 16px; }
   h1 { font-size: 18px; margin: 0 0 10px; font-weight: 500; }
@@ -158,7 +158,7 @@
   @media (max-width: 640px) {
     .sidebar { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 56vh; border-radius: 16px 16px 0 0; }
     .sidebar.collapsed { max-height: none; }
-    #info { top: 12px; left: 12px; right: 12px; width: auto; }
+    #info { top: 12px; left: 12px; right: 72px; width: auto; max-height: calc(100vh - 24px); }
     .controls { top: 12px; right: 12px; bottom: auto; }
     #scaleBar { display: none; }
   }
@@ -2783,44 +2783,32 @@
     const n = [...String(text)].length;
     return n > 4 ? Math.floor(CHIP_PX * 4 / n * 10) / 10 : CHIP_PX;
   };
-  // その駅に来る列車を行先ごとにまとめる。
-  // 停車する列車は到着(停車中は発車)の時刻を出す。停車しない列車で、まだこの駅を通っていないものは「通過」
-  function stationDepartures(sid) {
-    // この駅に停まる種別(停車種別の表と同じもの)
+  // その駅に停まる種別の列車だけを、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
+  // 停車する列車は到着(停車中は発車)の時刻を出す
+  function stationDepartures(sid, stationName) {
     const stopHere = new Set((stopTypes.get(sid) || []).map((x) => x.type));
     const byDest = new Map();
     for (const t of trains) {
       const dest = parseStationName(t.destination).ja || '-';
       const type = jaName(t.routeNumber);
+      if (!stopHere.has(type)) continue;
+      if (stationName && dest === stationName) continue;
       const title = t.title || t.formation || '';
-      const add = (row) => {
-        if (!byDest.has(dest)) byDest.set(dest, []);
-        byDest.get(dest).push({ ...row, type, dest, title });
-      };
+      let row = null;
       if (t.dwelling && String(t.currentStationId) === sid) {
-        add({ timed: true, sec: Number(t.dwellRemainSec) || 0, stopping: true });
-        continue;
+        row = { sec: Number(t.dwellRemainSec) || 0, stopping: true };
+      } else {
+        const e = (t.etas || []).find((x) => String(x.stationId) === sid);
+        if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
       }
-      const e = (t.etas || []).find((x) => String(x.stationId) === sid);
-      if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) {
-        add({ timed: true, sec: Number(e.sec), stopping: false });
-        continue;
-      }
-      // 停車しない種別の列車: これから先の経路(次の駅→行先)にこの駅が含まれる時だけ「通過」にする
-      if (stopHere.has(type) || !rail.stations.has(String(t.nextStationId)) || !rail.stations.has(String(t.destStationId))) continue;
-      const path = railPath(String(t.nextStationId), String(t.destStationId));
-      const at = path ? path.findIndex((x) => x.id === sid) : -1;
-      if (at < 0) continue;
-      add({ timed: false, ahead: at });
+      if (!row) continue;
+      if (!byDest.has(dest)) byDest.set(dest, []);
+      byDest.get(dest).push({ ...row, type, dest, title });
     }
-    // 方面ごとに、時刻の出る列車は4本まで、通過は4本まで(別々に数える)
+    // 方面(行先)ごとに4本まで。時刻の早い順に並べる
     const out = [];
-    for (const list of byDest.values()) {
-      const timed = list.filter((x) => x.timed).sort((a, b) => a.sec - b.sec);
-      const pass = list.filter((x) => !x.timed).sort((a, b) => a.ahead - b.ahead);
-      out.push(...timed.slice(0, DEP_PER_DIRECTION), ...pass.slice(0, DEP_PER_DIRECTION));
-    }
-    return out;
+    for (const list of byDest.values()) out.push(...list.sort((a, b) => a.sec - b.sec).slice(0, DEP_PER_DIRECTION));
+    return out.sort((a, b) => a.sec - b.sec);
   }
   // 駅の詳細に発車予定を描く(列車データが無い・古い時は、その旨を出す)
   function renderStationBoard() {
@@ -2842,8 +2830,8 @@
     };
     if (!trains.length) { note('列車データを取得しています…'); return; }
     if (Date.now() - trainsAt > TT_STALE_MS) { note('列車データが古いため、発車予定を表示できません'); return; }
-    const rows = stationDepartures(sid);
-    if (!rows.length) { note('この駅に来る列車の予定はありません'); return; }
+    const rows = stationDepartures(sid, st.ja);
+    if (!rows.length) { note('表示できる列車の予定はありません'); return; }
     // 停車種別と同じ色を使う(その駅で停まる種別なら、路線カラーの色)
     const styleOf = (type) => {
       const hit = (stopTypes.get(sid) || []).find((x) => x.type === type);
@@ -2859,24 +2847,16 @@
       const s = styleOf(x.type);
       if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
       row.append(chip);
-      if (!x.timed) {
-        // 通過: 「通過」の文字だけを出す
-        const pass = document.createElement('span');
-        pass.className = 'dep-time';
-        pass.textContent = '通過';
-        row.append(pass);
-      } else {
-        const time = document.createElement('span');
-        time.className = 'dep-time';
-        time.textContent = x.stopping ? '停車中' : hhmm(trainsAt + x.sec * 1000);
-        const dest = document.createElement('span');
-        dest.className = 'dep-dest';
-        dest.textContent = x.dest;
-        const num = document.createElement('span');
-        num.className = 'dep-note';
-        num.textContent = x.title ? `${x.title}F` : '';
-        row.append(time, dest, num);
-      }
+      const time = document.createElement('span');
+      time.className = 'dep-time';
+      time.textContent = x.stopping ? '停車中' : hhmm(trainsAt + x.sec * 1000);
+      const dest = document.createElement('span');
+      dest.className = 'dep-dest';
+      dest.textContent = x.dest;
+      const num = document.createElement('span');
+      num.className = 'dep-note';
+      num.textContent = x.title ? `${x.title}F` : '';
+      row.append(time, dest, num);
       box.append(row);
     }
   }
