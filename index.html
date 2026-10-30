@@ -2,312 +2,641 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>星陽マップ</title>
+<meta name="theme-color" content="#172a52">
+<script>
+  /* 保存した明るさを、画面が出る前に反映する(ちらつき防止) */
+  try { var t = localStorage.getItem('seiyo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
+  /* ============================================================
+     星陽マップ — デザイントークン
+     UI は紺と白だけにして、色は「路線カラー」と「種別」だけに任せる。
+     ============================================================ */
   :root {
-    --map-bg: #f2efe9; --panel: #ffffff; --ink: #202124; --muted: #5f6368;
-    --line: #dadce0; --chip: #f1f3f4; --accent: #1a73e8; --accent-soft: #e8f0fe; --danger: #d93025;
-    --halo: #ffffff; --rail-casing: #ffffff; --radius: 8px;
-    --shadow: 0 1px 2px rgba(60,64,67,.3), 0 2px 6px 2px rgba(60,64,67,.15);
+    --font: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", "Meiryo", system-ui, sans-serif;
+    --bg-map: #e9edf2;
+    --surface: #ffffff; --surface-2: #f4f6fa; --surface-3: #e8ecf3;
+    --ink: #172033; --muted: #55627a; --faint: #6b7890;
+    --line: #e1e6ee; --line-strong: #c8d0dd;
+    --primary: #172a52; --on-primary: #ffffff; --primary-hover: #223a6e;
+    --focus: #2f6bff;
+    --danger: #c62828; --danger-bg: #fdecec;
+    --warn-bg: #fff4d9; --warn-ink: #7a5200;
+    --ok: #1e8e4e;
+    --thumb: #ffffff;
+    --sel: #172a52; --sel-halo: #ffffff;
+    --halo: #ffffff; --rail-casing: #ffffff;
+    --grid: rgba(23, 32, 51, .07);
+    --tile-veil: rgba(0, 0, 0, 0);
+    --shadow-1: 0 1px 2px rgba(16, 24, 40, .08), 0 6px 18px rgba(16, 24, 40, .10);
+    --shadow-side: 6px 0 28px rgba(16, 24, 40, .08);
+    --sb-w: 408px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --map-bg: #1b2028; --panel: #202124; --ink: #e8eaed; --muted: #9aa0a6;
-      --line: #3c4043; --chip: #303134; --accent: #8ab4f8; --accent-soft: #263349; --danger: #f28b82;
-      --halo: #1b2028; --rail-casing: #1b2028;
-      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 2px 6px 2px rgba(0,0,0,.35);
+      --bg-map: #10141c;
+      --surface: #151b27; --surface-2: #1b2333; --surface-3: #242d40;
+      --ink: #e9eef8; --muted: #a0acc2; --faint: #8190a8;
+      --line: #263044; --line-strong: #37445c;
+      --primary: #e9eef8; --on-primary: #0e1523; --primary-hover: #ffffff;
+      --focus: #7da2ff;
+      --danger: #ff8a80; --danger-bg: #3a1e22;
+      --warn-bg: #3a2f10; --warn-ink: #ffd27a;
+      --ok: #5fd08c;
+      --thumb: #cfd7e6;
+      --sel: #ffffff; --sel-halo: #10141c;
+      --halo: #10141c; --rail-casing: #10141c;
+      --grid: rgba(255, 255, 255, .06);
+      --tile-veil: rgba(14, 18, 26, .58);
+      --shadow-1: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
+      --shadow-side: 6px 0 28px rgba(0, 0, 0, .35);
     }
   }
   :root[data-theme="dark"] {
-    --map-bg: #1b2028; --panel: #202124; --ink: #e8eaed; --muted: #9aa0a6;
-    --line: #3c4043; --chip: #303134; --accent: #8ab4f8; --accent-soft: #263349; --danger: #f28b82;
-    --halo: #1b2028; --rail-casing: #1b2028;
-    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 2px 6px 2px rgba(0,0,0,.35);
+    --bg-map: #10141c;
+    --surface: #151b27; --surface-2: #1b2333; --surface-3: #242d40;
+    --ink: #e9eef8; --muted: #a0acc2; --faint: #8190a8;
+    --line: #263044; --line-strong: #37445c;
+    --primary: #e9eef8; --on-primary: #0e1523; --primary-hover: #ffffff;
+    --focus: #7da2ff;
+    --danger: #ff8a80; --danger-bg: #3a1e22;
+    --warn-bg: #3a2f10; --warn-ink: #ffd27a;
+    --ok: #5fd08c;
+    --thumb: #cfd7e6;
+    --sel: #ffffff; --sel-halo: #10141c;
+    --halo: #10141c; --rail-casing: #10141c;
+    --grid: rgba(255, 255, 255, .06);
+    --tile-veil: rgba(14, 18, 26, .58);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
+    --shadow-side: 6px 0 28px rgba(0, 0, 0, .35);
   }
-  * { box-sizing: border-box; }
+
+  *, *::before, *::after { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  html, body { margin: 0; height: 100%; background: var(--map-bg); color: var(--ink); overflow: hidden;
-    font-family: Roboto, system-ui, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", "Meiryo", sans-serif; font-size: 14px; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-map); color: var(--ink);
+    font: 400 14px/1.55 var(--font); -webkit-font-smoothing: antialiased; text-size-adjust: 100%; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
   canvas.dragging { cursor: grabbing; }
-  .panel { position: fixed; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .train-card { width: 210px; overflow: hidden; z-index: 3; }
-  .train-card-bar { height: 5px; background: var(--accent); }
-  .train-card-body { padding: 8px 12px 10px; position: relative; }
-  .train-card-body .close { position: absolute; top: 4px; right: 6px; border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 4px; }
-  .train-card-title { font-size: 16px; font-weight: 600; margin: 0 24px 4px 0; }
-  .train-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font-size: 12px; }
+  button { font: inherit; color: inherit; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  input[type="file"] { display: none; }
+  input[type="range"] { accent-color: var(--primary); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- 共通部品 ---------- */
+  .icon-btn { width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; padding: 0; flex: none; color: var(--ink); }
+  .icon-btn:hover { background: var(--surface-2); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .btn.primary:hover { background: var(--primary-hover); }
+  .btn.small { height: 32px; padding: 0 12px; font-size: 12.5px; }
+  .btn.active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .field { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface);
+    color: var(--ink); font: inherit; font-size: 14px; }
+  .field::placeholder { color: var(--faint); }
+  .field:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: var(--focus); }
+  .meta { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; font-size: 12.5px; }
+  .notice { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.6; background: var(--warn-bg); color: var(--warn-ink); }
+  .notice.danger { background: var(--danger-bg); color: var(--danger); }
+  .hint { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+  .hint svg { margin-top: 2px; }
+  .sec-h { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .sec-h:first-child { margin-top: 4px; }
+  .sec-h .count { font-weight: 500; color: var(--faint); font-size: 12px; }
+
+  /* 駅番号のバッジ(形と色は lines.csv から、JS が付ける) */
+  .code-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; height: 26px; padding: 0 8px;
+    border: 2.5px solid var(--muted); font-size: 12px; font-weight: 900; letter-spacing: .02em; color: var(--ink); background: var(--surface); line-height: 1; flex: none; white-space: nowrap; }
+  .code-badge.lg { min-width: 48px; height: 32px; font-size: 15px; border-width: 3px; }
+
+  /* ---------- サイドバー(PC は左に常設、スマホは下からのシート) ---------- */
+  .sidebar { position: fixed; z-index: 6; top: 0; left: 0; bottom: 0; width: var(--sb-w); display: flex; flex-direction: column;
+    background: var(--surface); border-right: 1px solid var(--line); box-shadow: var(--shadow-side);
+    transition: transform .3s var(--ease), visibility 0s; }
+  .sidebar.collapsed { transform: translateX(calc(-1 * var(--sb-w) - 40px)); visibility: hidden; transition: transform .3s var(--ease), visibility 0s .3s; }
+  .sheet-handle { display: none; }
+  .sb-head { display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 12px 0 18px; flex: none; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 900; letter-spacing: .04em; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
+  .brand-mark svg { width: 17px; height: 17px; fill: currentColor; stroke: none; }
+  .sb-actions { display: flex; gap: 2px; }
+  .sb-open { position: fixed; z-index: 7; top: 12px; left: 12px; height: 44px; padding: 0 16px 0 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--surface); box-shadow: var(--shadow-1); display: none; align-items: center; gap: 8px; font-weight: 900; font-size: 15px; cursor: pointer; }
+  body.sb-collapsed .sb-open { display: inline-flex; }
+
+  /* 検索 */
+  .omni { position: relative; padding: 0 16px 12px; flex: none; }
+  .omni-field { position: relative; display: flex; align-items: center; }
+  .omni-field > svg { position: absolute; left: 13px; color: var(--muted); pointer-events: none; }
+  .omni-field input { width: 100%; height: 46px; padding: 0 40px 0 42px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2);
+    color: var(--ink); font: inherit; font-size: 15px; }
+  .omni-field input::placeholder { color: var(--faint); }
+  .omni-field input:focus { outline: 2px solid var(--focus); outline-offset: -1px; background: var(--surface); border-color: var(--focus); }
+  .omni-field input::-webkit-search-cancel-button { display: none; }
+  .omni-clear { position: absolute; right: 6px; width: 34px; height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  .omni-clear:hover { background: var(--surface-3); }
+  .suggest { position: absolute; z-index: 20; left: 16px; right: 16px; top: calc(100% - 6px); max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-1); padding: 6px; }
+  .suggest-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; min-height: 48px; }
+  .suggest-row:hover, .suggest-row.active { background: var(--surface-2); }
+  .suggest-row .lead { min-width: 56px; display: grid; place-items: center; flex: none; color: var(--muted); }
+  .suggest-row .main { flex: 1; min-width: 0; }
+  .suggest-row .name { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .suggest-row .sub { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .suggest-row .kind { font-size: 11.5px; color: var(--faint); flex: none; }
+  .suggest-row .badges { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .suggest-empty { padding: 14px 12px; color: var(--muted); font-size: 13px; }
+
+  .body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--line); flex: none; }
+  .tab { position: relative; flex: 1; height: 44px; border: 0; background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 8px 8px 0 0; }
+  .tab:hover { color: var(--ink); background: var(--surface-2); }
+  .tab[aria-selected="true"] { color: var(--ink); }
+  .tab[aria-selected="true"]::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--primary); }
+  .tab svg { width: 18px; height: 18px; }
+  .panes { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .pane { padding: 14px 16px 28px; }
+
+  /* 探す: 路線と駅の一覧 */
+  .co-head { display: flex; align-items: center; gap: 8px; margin: 16px 0 2px; padding: 0 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .co-head img { height: 20px; width: auto; max-width: 64px; object-fit: contain; }
+  .line-item, .stn-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 8px; border: 0; border-radius: 10px; background: transparent; text-align: left; cursor: pointer; min-height: 52px; }
+  .line-item:hover, .stn-item:hover { background: var(--surface-2); }
+  .line-item[aria-pressed="true"] { background: var(--surface-3); }
+  .li-main { flex: 1; min-width: 0; }
+  .li-name { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .li-sub { font-size: 12px; color: var(--muted); }
+  .li-end { color: var(--faint); flex: none; }
+  .stn-item .badges { display: flex; gap: 4px; flex-direction: column; align-items: flex-start; min-width: 56px; flex: none; }
+  .stn-item .code-badge { min-width: 0; height: 22px; padding: 0 6px; font-size: 11px; border-width: 2px; }
+  .stn-num { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+
+  /* 経路 */
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; }
+  .seg button { height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 700; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  .seg button svg { width: 18px; height: 18px; }
+  .seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(16, 24, 40, .14); }
+  .route-form { display: grid; grid-template-columns: 22px 1fr 44px; gap: 10px 8px; align-items: center; }
+  .route-dots { grid-row: 1 / span 2; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 0; }
+  .end-dot { width: 14px; height: 14px; flex: none; }
+  .end-dot.start { border-radius: 50%; border: 4px solid #2ea25f; background: var(--surface); }
+  .end-dot.goal { border-radius: 3px; background: #e5483d; }
+  .route-line { flex: 1; width: 0; border-left: 3px dotted var(--line-strong); min-height: 14px; }
+  .route-swap { grid-column: 3; grid-row: 1 / span 2; width: 44px; height: 44px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+  .route-swap:hover { background: var(--surface-2); }
+  .combo { position: relative; min-width: 0; }
+  .combo .suggest { left: 0; right: 0; top: calc(100% + 4px); }
+  .pin-btn { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); text-align: left; cursor: pointer; min-width: 0; }
+  .pin-btn:hover { background: var(--surface-2); }
+  .pin-btn.active { border-color: var(--focus); outline: 2px solid var(--focus); outline-offset: -1px; }
+  .pin-btn .pin-label { color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pin-btn.set .pin-label { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pin-btn .pin-act { font-size: 12px; color: var(--muted); flex: none; }
+  .route-extra { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+  .check-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 13px; color: var(--ink); line-height: 1.5; }
+  .check-row input { margin-top: 3px; accent-color: var(--primary); width: 16px; height: 16px; flex: none; }
+
+  .result { margin-top: 18px; }
+  .fare-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--surface); }
+  .fare-total { font-size: 36px; font-weight: 900; line-height: 1.1; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+  .fare-total small { font-size: 15px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+  .fare-sub { margin-top: 4px; color: var(--muted); font-size: 13px; }
+  .fare-co { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+  .fare-co div { display: flex; justify-content: space-between; gap: 10px; }
+  .fare-co b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .timeline { list-style: none; margin: 16px 0 6px; padding: 0; }
+  .tl { display: grid; grid-template-columns: 18px 1fr; gap: 0 12px; position: relative; }
+  .tl-rail { position: relative; display: flex; justify-content: center; align-items: flex-start; }
+  .tl-rail::before { content: ''; position: absolute; top: 0; bottom: 0; width: 6px; border-radius: 3px; background: var(--rc, var(--line-strong)); }
+  .tl.stop .tl-rail::before, .tl.xfer .tl-rail::before { display: none; }
+  .tl.stop .tl-rail::after { content: ''; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 4px solid var(--ink); background: var(--surface); margin-top: 3px; position: relative; z-index: 1; }
+  .tl.xfer .tl-rail::after { content: ''; flex: none; width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--muted); background: var(--surface); margin-top: 6px; }
+  .tl-body { padding: 0 0 14px; min-width: 0; }
+  .tl.stop .tl-body { padding-bottom: 6px; }
+  .tl.ride .tl-body { padding: 8px 0 18px; }
+  .tl-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tl.stop .tl-title { font-size: 16px; font-weight: 900; }
+  .tl-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .tl-time { margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+  .tl-time.off { color: var(--muted); }
+  details.fold { margin-top: 10px; }
+  details.fold > summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 700; padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::before { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; margin-right: 4px; }
+  details.fold[open] > summary::before { transform: rotate(45deg); }
+  .fold-body { padding: 4px 0 2px; }
+  .mix-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 12px 0 8px; background: var(--surface-3); }
+  .mix-bar i { display: block; height: 100%; }
+  .mix-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin: 3px 0; }
+  .mix-row i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .mix-row span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .steps { margin: 6px 0 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 24px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .steps li::before { content: counter(s); width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); color: var(--muted); font-size: 11.5px; font-weight: 700; display: grid; place-items: center; }
+
+  /* 地図(表示設定) */
+  .set-group { margin: 0 0 6px; }
+  .set-h { margin: 28px 0 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .set-h:first-child { margin-top: 4px; }
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+  .set-row .sub { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 1px; }
+  .set-row input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 42px; height: 26px; border-radius: 999px; background: var(--line-strong); position: relative; flex: none; cursor: pointer; transition: background .15s; margin: 0; }
+  .set-row input[type="checkbox"]::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--thumb); transition: transform .15s var(--ease); box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
+  .set-row input[type="checkbox"]:checked { background: var(--primary); }
+  .set-row input[type="checkbox"]:checked::after { transform: translateX(16px); background: var(--on-primary); }
+  .set-row input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .set-sub { padding: 10px 0 4px; display: grid; gap: 8px; }
+  .range-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 13px; color: var(--muted); }
+  .range-row input { flex: 1; }
+  .theme-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; margin-top: 6px; }
+  .theme-seg button { height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; cursor: pointer; }
+  .theme-seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(16, 24, 40, .14); }
+  .legend-grid { display: grid; gap: 8px; margin-top: 8px; font-size: 13px; }
+  .legend-grid .row, .row { display: flex; align-items: center; gap: 10px; }
+  .sw { display: inline-block; width: 44px; border-radius: 4px; flex: none; }
+  .lanes-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 12.5px; }
+  .lanes-row span.lbl { width: 52px; color: var(--muted); }
+  .data-tools { display: grid; gap: 8px; padding-top: 6px; }
+  .data-tools .row { flex-wrap: wrap; }
+  .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12.5px; }
+  .text-input { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+  .text-input:focus { outline: 2px solid var(--focus); outline-offset: -1px; }
+
+  /* ---------- 詳細(駅・道路・区間)。サイドバーの上に重ねる ---------- */
+  .detail { position: absolute; inset: 0; z-index: 4; background: var(--surface); display: none; flex-direction: column; }
+  .detail-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 6px 6px; flex: none; }
+  .back-btn { display: inline-flex; align-items: center; gap: 2px; height: 40px; padding: 0 12px 0 6px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; font-weight: 700; font-size: 14px; color: var(--ink); }
+  .back-btn:hover { background: var(--surface-2); }
+  .detail-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 32px; }
+
+  /* 駅名標(この地図の目玉) */
+  .sign { border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); overflow: hidden; }
+  .sign-band { display: flex; height: 12px; }
+  .sign-band.thin { height: 6px; }
+  .sign-band i { flex: 1; display: block; }
+  .sign-main { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 14px 14px; }
+  .sign-badges { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .sign-text { text-align: center; min-width: 0; }
+  .sign-kana { font-size: 12px; letter-spacing: .32em; color: var(--muted); margin-right: -.32em; min-height: 1.3em; }
+  .sign-name { margin: 0; font-weight: 900; line-height: 1.2; letter-spacing: .06em; overflow-wrap: anywhere; }
+  .sign-en { font-size: 12.5px; letter-spacing: .08em; color: var(--muted); margin-top: 2px; }
+  .sign-logos { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 14px 12px; }
+  .sign-logos img { height: 26px; width: auto; max-width: 96px; object-fit: contain; }
+  .plate { display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .plate-chip { min-width: 52px; height: 36px; padding: 0 10px; border-radius: 8px; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #1a1a1a; border: 3px solid rgba(0, 0, 0, .25); }
+  .plate h1 { margin: 0; font-size: 18px; font-weight: 900; line-height: 1.3; }
+  .plate small { color: var(--muted); font-size: 12.5px; }
+  .act-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+  .lines-at { display: grid; gap: 12px; margin-top: 16px; }
+  .lblock { border: 1px solid var(--line); border-top: 4px solid var(--lc, var(--line-strong)); border-radius: 10px; padding: 12px 12px 12px; }
+  .lblock-head { display: flex; align-items: center; gap: 10px; }
+  .lblock-name { font-weight: 900; font-size: 15px; line-height: 1.3; }
+  .lblock-co { font-size: 12px; color: var(--muted); }
+  .adj { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .adj-btn { display: flex; align-items: center; gap: 6px; padding: 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left; min-width: 0; min-height: 52px; }
+  .adj-btn:hover { background: var(--surface-2); }
+  .adj-btn.next { flex-direction: row-reverse; text-align: right; }
+  .adj-btn .t { min-width: 0; flex: 1; }
+  .adj-btn b { display: block; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adj-btn small { display: block; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .adj-empty { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; color: var(--faint); font-size: 12px; min-height: 52px; }
+  .lb-label { margin: 14px 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .type-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .type-chip { display: inline-block; padding: 2px 9px; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--surface-3); color: var(--ink); text-align: center; }
+  .type-row .type-chip, .dep-row .type-chip { flex: 0 0 60px; width: 60px; box-sizing: border-box; padding: 6px 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+  .dep-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 5px 0; }
+  .dep-time { font-variant-numeric: tabular-nums; font-weight: 900; min-width: 3.6em; }
+  .dep-dest { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dep-note { font-size: 12px; color: var(--muted); }
+  .dep-subdir { font-size: 12px; font-weight: 700; margin: 10px 0 2px; color: var(--muted); }
+  .facts { display: grid; grid-template-columns: 96px 1fr; gap: 0; margin: 18px 0 0; font-size: 13.5px; }
+  .facts dt, .facts dd { padding: 9px 0; border-top: 1px solid var(--line); margin: 0; }
+  .facts dt { color: var(--muted); }
+  .facts dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; font-weight: 500; }
+  .facts .copy { cursor: pointer; text-decoration: underline dotted var(--faint); text-underline-offset: 3px; background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; }
+  .facts .logos { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .facts .logos img { height: 20px; width: auto; max-width: 70px; object-fit: contain; }
+
+  /* ---------- 地図の上に浮かぶもの ---------- */
+  .mapbar { position: fixed; z-index: 5; top: 12px; left: calc(var(--sb-w) + 16px); right: 16px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; transition: left .3s var(--ease); }
+  body.sb-collapsed .mapbar { left: 176px; }
+  .mapbar > * { pointer-events: auto; }
+  .lchip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 11px; border-radius: 999px; border: 1.5px solid transparent;
+    background: color-mix(in srgb, var(--surface) 74%, transparent); backdrop-filter: blur(6px); color: var(--muted); font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: var(--shadow-1); }
+  .lchip svg { width: 17px; height: 17px; }
+  .lchip:hover { color: var(--ink); background: var(--surface); }
+  .lchip[aria-pressed="true"] { background: var(--surface); border-color: var(--primary); color: var(--ink); }
+  .lchip .live { width: 8px; height: 8px; border-radius: 50%; background: #3ad07c; box-shadow: 0 0 0 3px rgba(58, 208, 124, .28); display: none; }
+  .lchip[aria-pressed="true"] .live { display: inline-block; }
+  .lchip.focus-chip { gap: 8px; color: var(--ink); padding-left: 6px; }
+  .lchip.focus-chip .code-badge { min-width: 30px; height: 24px; font-size: 11px; border-width: 2px; }
+  .controls { position: fixed; z-index: 5; right: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: stretch; width: 46px; }
+  .north { align-self: center; margin-bottom: 8px; font-size: 11px; font-weight: 900; color: var(--muted); display: flex; flex-direction: column; align-items: center; line-height: 1; gap: 2px; background: var(--surface); border-radius: 999px; padding: 6px 7px; border: 1px solid var(--line); box-shadow: var(--shadow-1); }
+  .north::before { content: ''; border: 5px solid transparent; border-bottom: 8px solid #e5483d; border-top: 0; }
+  .ctl-group { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-1); overflow: hidden; }
+  .ctl { width: 46px; height: 46px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--ink); }
+  .ctl + .ctl { border-top: 1px solid var(--line); }
+  .ctl:hover { background: var(--surface-2); }
+  .statusbar { position: fixed; z-index: 5; left: calc(var(--sb-w) + 16px); bottom: 16px; display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(6px); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; transition: left .3s var(--ease); }
+  body.sb-collapsed .statusbar { left: 16px; }
+  #scaleLine { height: 6px; border: 2px solid var(--ink); border-top: 0; margin: 0 auto 2px; width: 100px; }
+  #scaleBar { text-align: center; }
+  #scaleText { white-space: nowrap; }
+  #coord { min-width: 8.5em; }
+  #coord:empty::before { content: 'X – Z –'; color: var(--faint); }
+  #drop { position: fixed; inset: 0; z-index: 50; background: rgba(47, 107, 255, .10); border: 3px dashed var(--focus);
+    display: none; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: var(--focus); pointer-events: none; }
+  .toast { position: fixed; z-index: 60; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; padding: 10px 16px; border-radius: 10px; background: var(--primary); color: var(--on-primary);
+    font-weight: 700; font-size: 13px; transition: opacity .2s, transform .2s var(--ease); pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* 列車の詳細カード(列車アイコンの近くに出る) */
+  .train-card { position: fixed; z-index: 5; width: 220px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-1); }
+  .train-card-bar { height: 6px; background: var(--primary); }
+  .train-card-body { padding: 10px 14px 12px; position: relative; }
+  .train-card-body .close { position: absolute; top: 4px; right: 6px; width: 32px; height: 32px; border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; border-radius: 8px; }
+  .train-card-body .close:hover { background: var(--surface-2); }
+  .train-card-title { font-size: 18px; font-weight: 900; margin: 0 28px 6px 0; }
+  .train-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 12.5px; }
   .train-card dt { color: var(--muted); }
   .train-card dd { margin: 0; overflow-wrap: anywhere; }
-  button { font: inherit; }
-  input[type="file"] { display: none; }
-  input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
-  input[type="text"] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); font: inherit; width: 100%; }
 
-  /* サイドバー(検索とメニュー) */
-  .sidebar { top: 12px; left: 12px; width: 380px; max-height: calc(100vh - 24px); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar.collapsed { width: auto; }
-  .sidebar.collapsed .tabs, .sidebar.collapsed .pane { display: none; }
-  .sb-head { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px 0 16px; flex: none; }
-  .brand { flex: 1; display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 500; }
-  .brand-logo { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex;
-    align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
-  .icon-btn { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; padding: 0; flex: none; }
-  .icon-btn:hover { background: var(--chip); }
-  .icon-btn svg, .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .tabs { display: flex; border-bottom: 1px solid var(--line); flex: none; }
-  .tab { flex: 1; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 500; position: relative; }
-  .tab:hover { background: var(--chip); }
-  .tab.active { color: var(--accent); }
-  .tab.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
-  .pane { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; }
-  .section-title { font-size: 13px; font-weight: 500; color: var(--muted); margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
-  .pane > .section-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-
-  /* 入力・ボタン・チップ */
-  .field { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; }
-  .field:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  .route-form { display: grid; grid-template-columns: 22px 1fr 40px; grid-template-rows: auto auto; gap: 8px; align-items: center; }
-  .route-form .field { min-width: 0; }
-  .end-dot { width: 12px; height: 12px; justify-self: center; }
-  .end-dot.start { border-radius: 50%; border: 3px solid #34a853; }
-  .end-dot.goal { border-radius: 2px; background: #ea4335; }
-  #fareSwap { grid-column: 3; grid-row: 1 / span 2; }
-  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--accent); border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; font-weight: 500; }
-  .btn:hover { background: var(--accent-soft); }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
-  .btn.wide { width: 100%; padding: 10px; margin-top: 12px; }
-  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
-  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--accent); border-radius: 16px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 500; }
-  .chip:hover { background: var(--accent-soft); }
-  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
-  .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
-  label.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; margin: 6px 0; }
-  .meta { color: var(--muted); line-height: 1.6; font-size: 13px; }
-  .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; }
-
-  /* 結果 */
-  .fare-total { font-size: 28px; font-weight: 400; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
-  .timeline { list-style: none; margin: 12px 0; padding: 0; }
-  .timeline li { display: flex; gap: 12px; padding: 6px 0; }
-  .tl-bar { flex: none; width: 6px; border-radius: 3px; background: var(--line); align-self: stretch; }
-  .timeline .stop .tl-bar, .timeline .transfer .tl-bar { align-self: auto; width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; background: var(--muted); }
-  .timeline .ride .tl-bar { min-height: 44px; }
-  .tl-title { font-weight: 500; }
-  details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 8px; }
-
-  /* 地図の上に浮かぶもの */
-  #info { top: 12px; right: 72px; width: 320px; display: none; padding: 0; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
-  .info-bar { height: 6px; background: var(--accent); }
-  #info .inner { padding: 14px 16px 16px; }
-  h1 { font-size: 18px; margin: 0 0 10px; font-weight: 500; }
-  dl { display: grid; grid-template-columns: 84px 1fr; gap: 6px 10px; margin: 0; font-size: 13px; }
-  dt { color: var(--muted); }
-  dd { margin: 0; font-variant-numeric: tabular-nums; word-break: break-all; }
-  #info .close { float: right; border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 0 0 8px; }
-  #info .close:hover { color: var(--ink); }
-  .controls { position: fixed; right: 16px; bottom: 48px; display: flex; flex-direction: column; gap: 8px; }
-  .ctl, .compass { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--panel); color: var(--ink);
-    box-shadow: var(--shadow); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; padding: 0; }
-  .ctl:hover { background: var(--chip); }
-  .compass { flex-direction: column; font-size: 10px; font-weight: 700; line-height: 1; cursor: default; }
-  .compass .arrow { color: #ea4335; font-size: 11px; }
-  #scaleBar { bottom: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px 4px; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
-  #scaleLine { height: 6px; border: 2px solid var(--ink); border-top: 0; margin: 0 auto 3px; width: 100px; }
-  #scaleText { white-space: nowrap; }
-  #coord { bottom: 12px; right: 16px; color: var(--muted); padding: 4px 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
-  #coord:empty { display: none; }
-  #drop { position: fixed; inset: 0; background: rgba(26,115,232,.10); border: 3px dashed var(--accent);
-    display: none; align-items: center; justify-content: center; font-size: 20px; color: var(--accent); pointer-events: none; z-index: 10; }
-
-  /* 駅の詳細: 上に並べる主要な4項目 */
-  .info-logos { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; }
-  .info-logos img { height: 40px; width: auto; max-width: 120px; object-fit: contain; }
-  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 2px 0 12px; }
-  .stat { background: var(--chip); border-radius: 8px; padding: 8px 10px; min-width: 0; }
-  .stat.wide { grid-column: 1 / -1; }
-  .stat-label { font-size: 12px; color: var(--muted); }
-  .stat-value { font-size: 16px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; word-break: break-all; }
-  .stat.wide .stat-value { font-size: 22px; }
-  .code-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-  .code-badge { display: inline-block; padding: 1px 7px; border-radius: 6px; border: 2px solid var(--muted);
-    font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--ink); background: var(--panel); }
-
-  /* 停車する種別(color.txt の色) */
-  .types { margin: 0 0 12px; }
-  .type-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
-  .type-chip { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; background: var(--chip); color: var(--ink); }
-  .type-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-  .line-head { font-size: 12px; color: var(--muted); margin-top: 8px; }
-  .line-block { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 4px; }
-  .line-block .line-head { margin-top: 0; }
-  .line-head-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
-  .line-name { font-size: 13px; font-weight: 600; }
-  .type-list .type-row { margin: 0; }
-  .type-list .type-chip { flex: 0 0 52px; width: 52px; box-sizing: border-box; padding: 6px 0; border-radius: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; }
-  .dep-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; }
-  .dep-row .type-chip { flex: 0 0 52px; width: 52px; box-sizing: border-box; padding: 6px 0; border-radius: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; }
-  .dep-time { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3.4em; }
-  .dep-dest { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dep-note { font-size: 12px; opacity: .75; }
-  .dep-subdir { font-size: 12px; font-weight: 600; margin: 8px 0 2px; opacity: .85; }
-
-  /* 設定の中の凡例 */
-  .legend-box { font-size: 13px; }
-  .legend-box .row { margin: 4px 0; }
-  .sw { display: inline-block; width: 44px; border-radius: 4px; flex: none; }
-  .lanes-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
-  .lanes-row span.lbl { width: 58px; color: var(--muted); }
-
-  @media (max-width: 640px) {
-    .sidebar { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 56vh; border-radius: 16px 16px 0 0; }
-    .sidebar.collapsed { max-height: none; }
-    #info { top: 12px; left: 12px; right: 72px; width: auto; max-height: calc(100vh - 24px); }
-    .controls { top: 12px; right: 12px; bottom: auto; }
-    #scaleBar { display: none; }
+  /* ---------- スマホ: 下から出るシート ---------- */
+  @media (max-width: 760px) {
+    :root { --sb-w: 0px; }
+    .sidebar { top: auto; right: 0; width: auto; height: var(--sheet-h, 54dvh); border-right: 0; border-radius: 20px 20px 0 0;
+      box-shadow: 0 -10px 34px rgba(16, 24, 40, .18); padding-bottom: env(safe-area-inset-bottom); transition: height .3s var(--ease); }
+    .sidebar[data-sheet="peek"] { --sheet-h: 132px; }
+    .sidebar[data-sheet="half"] { --sheet-h: 54dvh; }
+    .sidebar[data-sheet="full"] { --sheet-h: 92dvh; }
+    .sidebar[data-sheet="peek"] .body { visibility: hidden; }
+    .sheet-handle { display: grid; place-items: center; height: 26px; border: 0; background: transparent; cursor: grab; flex: none; width: 100%; touch-action: none; }
+    .sheet-handle span { width: 40px; height: 5px; border-radius: 3px; background: var(--line-strong); }
+    .sb-head, .sb-open { display: none !important; }
+    .omni { padding-bottom: 10px; }
+    .suggest { left: 16px; right: 16px; }
+    .mapbar { left: 12px; right: 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .mapbar::-webkit-scrollbar { display: none; }
+    .lchip { flex: none; }
+    .controls { top: 62px; bottom: auto; right: 12px; }
+    .north { display: none; }
+    .statusbar { display: none; }
+    .train-card { width: 200px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0s !important; animation-duration: 0s !important; }
   }
 </style>
 </head>
 <body>
-<canvas id="map"></canvas>
+<canvas id="map" aria-label="星陽の地図"></canvas>
 <div id="drop">JSONまたは地図画像をドロップして読み込む</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<aside id="top" class="sidebar panel">
+<!-- 地図の上: 表示する情報をすぐ切り替える -->
+<div id="mapbar" class="mapbar" role="toolbar" aria-label="地図に表示する情報">
+  <button type="button" class="lchip" data-layer="rail" aria-pressed="true">
+    <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".6"/><circle cx="15" cy="14" r=".6"/></svg>鉄道</button>
+  <button type="button" class="lchip" data-layer="road" aria-pressed="true">
+    <svg class="i" viewBox="0 0 24 24"><path d="M8 3 4 21M16 3l4 18M12 4v3M12 11v3M12 18v3"/></svg>道路</button>
+  <button type="button" class="lchip" data-layer="bg" aria-pressed="true">
+    <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.3"/></svg>背景地図</button>
+  <button type="button" class="lchip" data-layer="train" aria-pressed="false">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/></svg>列車の位置<span class="live"></span></button>
+  <button type="button" class="lchip focus-chip" id="focusChip" hidden aria-label="路線の強調を解除"></button>
+</div>
+
+<button type="button" class="sb-open" id="openTop" aria-label="サイドバーを開く">
+  <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"/></svg></span>星陽マップ
+</button>
+
+<aside id="top" class="sidebar" data-sheet="half" aria-label="検索とメニュー">
+  <button type="button" class="sheet-handle" id="sheetHandle" aria-label="パネルの高さを切り替え"><span></span></button>
   <header class="sb-head">
-    <div class="brand"><span class="brand-logo">星</span><span>星陽マップ</span></div>
-    <button class="icon-btn" id="toggleTop" type="button" aria-label="メニューを開閉" title="メニューを開閉">
-      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
-  </header>
-  <nav class="tabs" role="tablist">
-    <button class="tab active" id="tab-rail" type="button" role="tab" aria-selected="true">
-      <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
-      <span>鉄道経路</span>
-    </button>
-    <button class="tab" id="tab-car" type="button" role="tab" aria-selected="false">
-      <svg viewBox="0 0 24 24"><path d="M4 16v-5l2-5h12l2 5v5M3 16h18M7 16v2M17 16v2"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/></svg>
-      <span>車経路</span>
-    </button>
-    <button class="tab" id="tab-settings" type="button" role="tab" aria-selected="false">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>
-      <span>設定</span>
-    </button>
-  </nav>
-
-  <!-- 鉄道経路: 乗換案内と運賃 -->
-  <section class="pane" id="pane-rail">
-    <input type="text" id="stationFilter" class="field" placeholder="駅名・読み・駅番号で絞り込み" style="margin-bottom:10px">
-    <div class="route-form">
-      <span class="end-dot start"></span>
-      <select id="fareFrom" class="field" aria-label="乗る駅"></select>
-      <button class="icon-btn small" id="fareSwap" type="button" aria-label="乗る駅と降りる駅を入れ替え" title="入れ替え">
-        <svg viewBox="0 0 24 24"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"/></svg></span>
+      <span>星陽マップ</span>
+    </div>
+    <div class="sb-actions">
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="明るさを切り替え" title="ライト / ダークを切り替え">
+        <svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
       </button>
-      <span class="end-dot goal"></span>
-      <select id="fareTo" class="field" aria-label="降りる駅"></select>
+      <button class="icon-btn" id="toggleTop" type="button" aria-label="サイドバーを閉じる" title="サイドバーを閉じる">
+        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15.5 10l-2 2 2 2"/></svg>
+      </button>
     </div>
-    <button class="btn primary wide" id="fareRun" type="button">経路を検索</button>
-    <div id="fareStatus" class="meta" style="margin-top:8px">運賃データを読み込んでいます…</div>
-    <div id="fareResult" style="margin-top:8px"></div>
-  </section>
+  </header>
 
-  <!-- 車経路: ピンと道路の経路 -->
-  <section class="pane" id="pane-car" hidden>
-    <div class="chip-row">
-      <button class="chip" id="pinStart" type="button">出発地点にピン</button>
-      <button class="chip" id="pinGoal" type="button">到着地点にピン</button>
-      <button class="chip" id="pinClear" type="button">ピンを消す</button>
+  <div class="omni">
+    <div class="omni-field">
+      <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+      <input id="omniInput" type="search" role="combobox" aria-expanded="false" aria-controls="omniList" aria-label="駅・路線・座標を検索" autocomplete="off" spellcheck="false" placeholder="駅・路線・座標を検索">
+      <button class="omni-clear" id="omniClear" type="button" aria-label="入力を消す" hidden><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <label class="toggle" style="margin-top:6px"><input type="checkbox" id="showWalk"> 徒歩の時刻も表示(時速15km・歩道のある道を優先・高速道路を除く)</label>
-    <div id="routeStatus" class="meta" style="margin-top:6px"></div>
-    <div id="routeResult" style="margin-top:8px"></div>
-  </section>
+    <div class="suggest" id="omniList" role="listbox" hidden></div>
+  </div>
 
-  <!-- 設定: データ・表示・凡例 -->
-  <section class="pane" id="pane-settings" hidden>
-    <h3 class="section-title">ファイル</h3>
-    <div class="row">
-      <label class="btn" for="file">JSONを開く</label>
-      <span id="fileName" class="fname"></span>
+  <div class="body" id="sbBody">
+    <nav class="tabs" role="tablist" aria-label="メニュー">
+      <button class="tab" id="tab-explore" type="button" role="tab" aria-selected="true" aria-controls="pane-explore">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>探す</button>
+      <button class="tab" id="tab-route" type="button" role="tab" aria-selected="false" aria-controls="pane-route">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>経路</button>
+      <button class="tab" id="tab-map" type="button" role="tab" aria-selected="false" aria-controls="pane-map">
+        <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>地図</button>
+    </nav>
+
+    <div class="panes" id="panes">
+      <!-- 探す: 路線と駅の一覧 -->
+      <section class="pane" id="pane-explore" role="tabpanel" aria-labelledby="tab-explore">
+        <div id="dataNotice" class="notice danger" hidden>
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+          <div>データを自動で読めませんでした。このHTMLを直接開いている場合は、「地図」タブの「データの読み込み」で、HTMLと同じフォルダを選んでください。</div>
+        </div>
+        <div id="exploreEmpty" class="hint">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M12 11v5"/></svg>
+          <div>鉄道データを読み込んでいます…</div>
+        </div>
+        <div id="exploreBody" hidden>
+          <h2 class="sec-h">路線<span class="count" id="lineCount"></span></h2>
+          <div id="lineList"></div>
+          <h2 class="sec-h">利用者の多い駅</h2>
+          <div id="majorList"></div>
+        </div>
+      </section>
+
+      <!-- 経路: 電車(乗換案内・運賃)と車 -->
+      <section class="pane" id="pane-route" role="tabpanel" aria-labelledby="tab-route" hidden>
+        <div class="seg" role="tablist" aria-label="移動手段">
+          <button type="button" id="seg-rail" role="tab" aria-selected="true">
+            <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/></svg>電車</button>
+          <button type="button" id="seg-car" role="tab" aria-selected="false">
+            <svg class="i" viewBox="0 0 24 24"><path d="M4 16v-5l2-5h12l2 5v5M3 16h18M7 16v2.5M17 16v2.5"/><circle cx="7.5" cy="13" r=".8"/><circle cx="16.5" cy="13" r=".8"/></svg>車</button>
+        </div>
+
+        <div id="sub-rail">
+          <div class="route-form">
+            <div class="route-dots" aria-hidden="true"><span class="end-dot start"></span><span class="route-line"></span><span class="end-dot goal"></span></div>
+            <div class="combo" id="comboFrom">
+              <input class="field" id="fareFromText" type="text" role="combobox" aria-expanded="false" aria-label="出発駅" placeholder="出発駅" autocomplete="off" spellcheck="false">
+              <div class="suggest" role="listbox" hidden></div>
+            </div>
+            <button class="route-swap" id="fareSwap" type="button" aria-label="出発と到着を入れ替え" title="入れ替え">
+              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"/></svg>
+            </button>
+            <div class="combo" id="comboTo">
+              <input class="field" id="fareToText" type="text" role="combobox" aria-expanded="false" aria-label="到着駅" placeholder="到着駅" autocomplete="off" spellcheck="false">
+              <div class="suggest" role="listbox" hidden></div>
+            </div>
+          </div>
+          <select id="fareFrom" hidden aria-hidden="true" tabindex="-1"></select>
+          <select id="fareTo" hidden aria-hidden="true" tabindex="-1"></select>
+          <div id="fareResult" class="result"></div>
+          <div id="fareStatus" class="meta" style="margin-top:18px"></div>
+        </div>
+
+        <div id="sub-car" hidden>
+          <div class="route-form">
+            <div class="route-dots" aria-hidden="true"><span class="end-dot start"></span><span class="route-line"></span><span class="end-dot goal"></span></div>
+            <button class="pin-btn" id="pinStart" type="button"><span class="pin-label" id="pinStartLabel">出発地点を地図で選ぶ</span><span class="pin-act" id="pinStartAct">指定</span></button>
+            <button class="route-swap" id="pinSwap" type="button" aria-label="出発と到着を入れ替え" title="入れ替え">
+              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"/></svg>
+            </button>
+            <button class="pin-btn" id="pinGoal" type="button"><span class="pin-label" id="pinGoalLabel">到着地点を地図で選ぶ</span><span class="pin-act" id="pinGoalAct">指定</span></button>
+          </div>
+          <div class="route-extra">
+            <label class="check-row"><input type="checkbox" id="showWalk"><span>徒歩の時間も表示<span class="meta" style="display:block">時速15km・歩道のある道を優先・高速道路は除く</span></span></label>
+            <button class="btn small" id="pinClear" type="button">クリア</button>
+          </div>
+          <div id="routeStatus" class="meta" style="margin-top:14px"></div>
+          <div id="routeResult" class="result" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- 地図: 表示の設定・凡例・データ -->
+      <section class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map" hidden>
+        <div class="set-group">
+          <h2 class="set-h">鉄道</h2>
+          <label class="set-row"><span>鉄道を表示</span><input type="checkbox" id="showRail" checked></label>
+          <label class="set-row"><span>路線カラーで塗る<span class="sub">路線ごとの色(lines.csv)</span></span><input type="checkbox" id="showLineColor" checked></label>
+          <label class="set-row"><span>系統の色で塗る<span class="sub">通る系統ごとに色の帯を並べる</span></span><input type="checkbox" id="showRouteColor" checked></label>
+          <label class="set-row"><span>似た系統を1本にまとめる<span class="sub">同じ色で経路が近い系統は、停車駅が最も多い1本だけ</span></span><input type="checkbox" id="hideDup" checked></label>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">道路</h2>
+          <label class="set-row"><span>高速道路</span><input type="checkbox" id="showHighway" checked></label>
+          <label class="set-row"><span>国道・県道・一般道路・生活道路</span><input type="checkbox" id="showOther" checked></label>
+          <label class="set-row"><span>未建設の道路も表示</span><input type="checkbox" id="showUnbuilt" checked></label>
+          <label class="set-row"><span>縮尺に応じて細い道路を隠す</span><input type="checkbox" id="zoomFilter" checked></label>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">背景</h2>
+          <label class="set-row"><span>背景の地図</span><input type="checkbox" id="bgShow" checked></label>
+          <div class="range-row"><span>濃さ</span><input id="bgAlpha" type="range" min="10" max="100" value="60" aria-label="背景の地図の濃さ"></div>
+          <label class="set-row"><span>方眼<span class="sub">縮尺に合わせた目安の線</span></span><input type="checkbox" id="showGrid" checked></label>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">明るさ</h2>
+          <div class="theme-seg" role="group" aria-label="明るさ">
+            <button type="button" data-theme-set="auto" aria-pressed="true">自動</button>
+            <button type="button" data-theme-set="light" aria-pressed="false">ライト</button>
+            <button type="button" data-theme-set="dark" aria-pressed="false">ダーク</button>
+          </div>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">列車</h2>
+          <label class="set-row"><span>列車の位置を表示<span class="sub">ローカルAPIを起動している時だけ使えます</span></span><input type="checkbox" id="showTrains"></label>
+          <label class="set-row"><span>発車・所要時間を推定<span class="sub">走っている列車の間隔から、乗換案内に時刻を出します</span></span><input type="checkbox" id="useTimetable"></label>
+          <div class="set-sub">
+            <input id="trainUrl" class="text-input" type="text" placeholder="APIのURL(空欄なら自動で探す)" aria-label="列車APIのURL">
+            <div id="trainStatus" class="meta"></div>
+            <details class="fold"><summary>走行中の列車</summary><div id="trainList" class="meta fold-body"></div></details>
+            <div class="meta">GitHub Pages などネット上の地図からは http://localhost に接続できないため、列車は表示されません。</div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">凡例</h2>
+          <div id="legend" class="legend-grid">
+            <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
+            <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
+            <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
+            <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span>市町村道・私道・一般道路・生活道路</div>
+            <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span>トンネル(縁は破線)</div>
+            <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span>鉄道(路線カラー。白丸は駅)</div>
+          </div>
+          <details class="fold"><summary>道路の太さ(車線数と幅)</summary>
+            <div class="fold-body"><div id="lanesLegend"></div>
+              <div class="meta">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。未建設の道路は半透明で描きます。北は上です。</div></div></details>
+          <details class="fold"><summary>経路案内の速さ</summary>
+            <div class="fold-body meta">高速道路 100km/h・2車線以上の一般道路・生活道路 60km/h・1車線 30km/h(1ブロック = 1m とみなします)</div></details>
+        </div>
+        <div class="set-group">
+          <h2 class="set-h">データの読み込み</h2>
+          <details class="fold" id="dataFold"><summary>ファイルを手動で読み込む</summary>
+            <div class="fold-body data-tools">
+              <div id="autoStatus" class="meta">rail.json・train.json・road.json を読み込んでいます…</div>
+              <div class="row"><label class="btn small" for="dataDir">データフォルダから読む</label></div>
+              <input id="dataDir" type="file" webkitdirectory multiple>
+              <div class="row"><label class="btn small" for="file">道路JSON</label><span id="fileName" class="fname"></span></div>
+              <input id="file" type="file" accept=".json,application/json">
+              <div id="summary" class="meta"></div>
+              <div class="row"><label class="btn small" for="railFile">鉄道JSON</label><span id="railName" class="fname"></span></div>
+              <input id="railFile" type="file" accept=".json,application/json">
+              <div id="railSummary" class="meta"></div>
+              <div class="row"><label class="btn small" for="routeFile">系統JSON</label><span id="routeName" class="fname"></span></div>
+              <input id="routeFile" type="file" accept=".json,application/json">
+              <div id="routeSummary" class="meta"></div>
+              <div class="row">
+                <label class="btn small" for="bgDir">地図フォルダ</label>
+                <label class="btn small" for="bgFiles">画像を選ぶ</label>
+                <button class="btn small" id="bgClear" type="button">背景を消す</button>
+              </div>
+              <input id="bgDir" type="file" webkitdirectory multiple>
+              <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+              <div id="bgStatus" class="meta">背景の地図を読み込んでいます…</div>
+              <div id="error" class="error"></div>
+            </div>
+          </details>
+        </div>
+      </section>
     </div>
-    <input id="file" type="file" accept=".json,application/json">
-    <div id="summary" class="meta"></div>
 
-    <h3 class="section-title">データフォルダ(HTML と同じフォルダを自動で読みます)</h3>
-    <div class="row"><label class="btn" for="dataDir">データフォルダから読む</label></div>
-    <input id="dataDir" type="file" webkitdirectory multiple>
-    <div id="autoStatus" class="meta">rail.json・train.json・road.json を読み込んでいます…</div>
-
-    <h3 class="section-title">背景の地図(地図画像 9 枚)</h3>
-    <div class="row">
-      <label class="btn" for="bgDir">地図フォルダ</label>
-      <label class="btn" for="bgFiles">画像を選ぶ</label>
-    </div>
-    <input id="bgDir" type="file" webkitdirectory multiple>
-    <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
-    <div id="bgStatus" class="meta">背景の地図を読み込んでいます…</div>
-    <label class="toggle"><input type="checkbox" id="bgShow" checked> 背景の地図を表示</label>
-    <div class="row"><span class="meta" style="width:40px">濃さ</span>
-      <input id="bgAlpha" type="range" min="10" max="100" value="60" style="flex:1"></div>
-    <div class="row"><button class="btn" id="bgClear" type="button">背景を消す</button></div>
-
-    <h3 class="section-title">表示</h3>
-    <label class="toggle"><input type="checkbox" id="showHighway" checked> 高速道路</label>
-    <label class="toggle"><input type="checkbox" id="showOther" checked> 国道・県道・一般道路・生活道路</label>
-    <label class="toggle"><input type="checkbox" id="showUnbuilt" checked> 未建設の道路も表示</label>
-    <label class="toggle"><input type="checkbox" id="zoomFilter" checked> 縮尺に応じて細い道路を隠す</label>
-
-    <h3 class="section-title">列車</h3>
-    <label class="toggle"><input type="checkbox" id="showTrains"> 列車の位置を表示(ローカルAPI)</label>
-    <div class="meta">※ ローカル専用です。このPCでAPIを起動した時だけ使えます。GitHub Pages などネット上の地図からは http://localhost に接続できないため、表示されません。</div>
-    <input id="trainUrl" type="text" placeholder="APIのURL(空欄なら自動で探す)" style="margin-top:6px">
-    <div id="trainStatus" class="meta" style="margin-top:4px"></div>
-    <div id="trainList" class="meta"></div>
-    <label class="toggle"><input type="checkbox" id="useTimetable"> 列車から発車・所要時間を推定して乗換案内に表示</label>
-    <div class="meta">※ 走っている列車の間隔から運行間隔を推定します。列車が1本しか見えない系統や、走っていない系統より先の区間は時刻を表示しません。</div>
-
-    <h3 class="section-title">鉄道データ</h3>
-    <div class="row">
-      <label class="btn" for="railFile">鉄道JSON</label>
-      <span id="railName" class="fname"></span>
-    </div>
-    <input id="railFile" type="file" accept=".json,application/json">
-    <div id="railSummary" class="meta"></div>
-    <label class="toggle"><input type="checkbox" id="showRail" checked> 鉄道を表示</label>
-    <div class="row">
-      <label class="btn" for="routeFile">系統JSON</label>
-      <span id="routeName" class="fname"></span>
-    </div>
-    <input id="routeFile" type="file" accept=".json,application/json">
-    <div id="routeSummary" class="meta"></div>
-    <label class="toggle"><input type="checkbox" id="showLineColor" checked> 路線カラーで線路を塗る(lines.csv)</label>
-    <label class="toggle"><input type="checkbox" id="showRouteColor" checked> 系統の色で線路を塗る</label>
-    <label class="toggle"><input type="checkbox" id="hideDup" checked> 同じ色で経路が似た系統は、停車駅が最も多い1本だけ表示</label>
-    <div id="error" class="error"></div>
-
-    <h3 class="section-title">凡例</h3>
-    <div id="legend" class="legend-box">
-      <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span> 高速道路</div>
-      <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span> 国道</div>
-      <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span> 県道(都道府県道)</div>
-      <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span> 市町村道・私道・一般道路・生活道路</div>
-      <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span> トンネル(グレーを混ぜた色・縁は破線)</div>
-      <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span> 鉄道(路線カラー。白丸は駅)</div>
-      <h3 class="section-title">太さ(車線数と幅)</h3>
-      <div id="lanesLegend"></div>
-      <div class="meta" style="margin-top:6px">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。</div>
-      <div class="meta" style="margin-top:6px">未建設の道路は半透明で描きます。北は上です。</div>
-      <div class="meta" style="margin-top:6px">経路案内の速さ: 高速道路 100km/h・2車線以上の一般道路・生活道路 60km/h・1車線 30km/h(1ブロック = 1m とみなします)</div>
-    </div>
-  </section>
+    <!-- 詳細(駅・道路・鉄道区間): 選ぶとサイドバーの上に重なる -->
+    <section id="info" class="detail" aria-label="詳細">
+      <div class="detail-bar">
+        <button type="button" class="back-btn" id="closeInfo" aria-label="詳細を閉じる">
+          <svg class="i" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>戻る</button>
+        <button type="button" class="icon-btn" id="shareBtn" aria-label="この場所のリンクをコピー" title="この場所のリンクをコピー">
+          <svg class="i" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+        </button>
+      </div>
+      <div class="detail-scroll" id="infoScroll">
+        <div id="infoSign"></div>
+        <div id="infoActions" class="act-row" hidden>
+          <button type="button" class="btn" id="actFrom"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="12" cy="12" r="5.5"/></svg>ここから</button>
+          <button type="button" class="btn" id="actTo"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>ここまで</button>
+        </div>
+        <div id="infoTypes" class="lines-at" hidden></div>
+        <dl id="infoBody" class="facts"></dl>
+      </div>
+    </section>
+  </div>
 </aside>
 
-<div id="trainCard" class="panel train-card" hidden>
+<div id="trainCard" class="train-card" hidden>
   <div class="train-card-bar" id="trainCardBar"></div>
   <div class="train-card-body">
     <button class="close" id="closeTrainCard" aria-label="閉じる">×</button>
@@ -315,29 +644,21 @@
     <dl id="trainCardRows"></dl>
   </div>
 </div>
-<div id="info" class="panel">
-  <div class="info-bar" id="infoBar"></div>
-  <div class="inner">
-    <button class="close" id="closeInfo" aria-label="閉じる">×</button>
-    <div id="infoLogos" class="info-logos" hidden></div>
-    <h1 id="infoTitle"></h1>
-    <div id="infoHero" class="hero" hidden></div>
-    <div id="infoTypes" class="types" hidden></div>
-    <dl id="infoBody"></dl>
+
+<div id="controls" class="controls">
+  <div class="north" aria-label="北は上">N</div>
+  <div class="ctl-group">
+    <button class="ctl" id="zoomIn" type="button" aria-label="拡大" title="拡大"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="ctl" id="zoomOut" type="button" aria-label="縮小" title="縮小"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="ctl" id="fitBtn" type="button" aria-label="全体を表示" title="全体を表示"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ctl" id="originBtn" type="button" aria-label="原点(0, 0)へ" title="原点(0, 0)へ"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></button>
   </div>
 </div>
 
-<div id="controls" class="controls">
-  <div class="compass" title="北は上"><span class="arrow">▲</span>N</div>
-  <button class="ctl" id="zoomIn" type="button" aria-label="拡大" title="拡大">+</button>
-  <button class="ctl" id="zoomOut" type="button" aria-label="縮小" title="縮小">−</button>
-  <button class="ctl" id="fitBtn" type="button" aria-label="全体を表示" title="全体を表示">⤢</button>
-  <button class="ctl" id="originBtn" type="button" aria-label="原点へ" title="原点(0, 0)へ">◎</button>
+<div class="statusbar" id="statusbar">
+  <div id="scaleBar"><div id="scaleLine"></div><span id="scaleText"></span></div>
+  <div id="coord" aria-live="off"></div>
 </div>
-
-<div id="scaleBar" class="panel"><div id="scaleLine"></div><span id="scaleText"></span></div>
-
-<div id="coord" class="panel"></div>
 
 <script>
 (() => {
@@ -346,7 +667,10 @@
   const GRAY_HEX = '#8a939b';          // トンネルに混ぜるグレー
   const TUNNEL_TINT = 0.45;            // トンネルのグレーの割合
   const LANE_SAMPLES = [1, 2, 4, 6, 8];
-  const ACCENT = '#1a73e8';
+  let ACCENT = '#172a52';              // 選んだものの強調色(テーマに合わせて readTheme が差し替える)
+  const ROUTE_COLOR = '#2f6bff';       // 車の経路の線の色
+  // 地図(キャンバス)の文字。CSS の --font と同じ並び
+  const FONT = '"Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", system-ui, sans-serif';
 
   // 道路の色(面と縁)。地図アプリのように、縁取りで道路を見分けやすくする
   const ROAD_STYLE = {
@@ -383,14 +707,69 @@
   const $ = (id) => document.getElementById(id);
 
   // 描画に使う色(テーマに合わせて CSS から読む)
-  const T = { mapBg: '#f2efe9', halo: '#ffffff', ink: '#202124', railCasing: '#ffffff' };
+  const T = { mapBg: '#e9edf2', halo: '#ffffff', ink: '#172033', railCasing: '#ffffff', sel: '#172a52', selHalo: '#ffffff', grid: 'rgba(23,32,51,.07)', veil: 'rgba(0,0,0,0)' };
   function readTheme() {
     const cs = getComputedStyle(document.documentElement);
     const g = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
-    T.mapBg = g('--map-bg', '#f2efe9');
+    T.mapBg = g('--bg-map', '#e9edf2');
     T.halo = g('--halo', '#ffffff');
-    T.ink = g('--ink', '#202124');
+    T.ink = g('--ink', '#172033');
     T.railCasing = g('--rail-casing', '#ffffff');
+    T.sel = g('--sel', '#172a52');
+    T.selHalo = g('--sel-halo', '#ffffff');
+    T.grid = g('--grid', 'rgba(23,32,51,.07)');
+    T.veil = g('--tile-veil', 'rgba(0,0,0,0)');
+    ACCENT = T.sel;
+  }
+
+  // ---- 画面の見えている部分(サイドバー・シートに隠れない所)と、そこへ寄せる動き ----
+  const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
+  const SHEET_H = { peek: () => 132, half: () => Math.round(innerHeight * 0.54), full: () => Math.round(innerHeight * 0.92) };
+  function visibleRect() {
+    const sb = $('top');
+    const TOP = 56;   // 上の表示切り替えバーの分
+    if (isMobile()) {
+      const h = (SHEET_H[sb.dataset.sheet] || SHEET_H.half)();
+      return { l: 0, t: TOP, r: innerWidth, b: Math.max(TOP + 140, innerHeight - h) };
+    }
+    return { l: sb.classList.contains('collapsed') ? 0 : sb.offsetWidth, t: TOP, r: innerWidth, b: innerHeight };
+  }
+  // 見えている部分の中心に、ワールドの点 (x, z) を置く時の view
+  function centerFor(x, z, scale) {
+    const v = visibleRect();
+    const sx = (v.l + v.r) / 2, sy = (v.t + v.b) / 2;
+    return { cx: x - (sx - innerWidth / 2) / scale, cz: z - (sy - innerHeight / 2) / scale, scale };
+  }
+  let anim = null;
+  function flyTo(t, animate = true) {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!animate || reduce) {
+      view.cx = t.cx; view.cz = t.cz; view.scale = t.scale; anim = null; needsDraw = true;
+      return;
+    }
+    const from = { cx: view.cx, cz: view.cz, scale: view.scale };
+    const dist = Math.hypot((t.cx - from.cx) * from.scale, (t.cz - from.cz) * from.scale);
+    const dur = Math.min(900, Math.max(320, 320 + Math.log2(1 + dist / 200) * 70 + Math.abs(Math.log2(t.scale / from.scale)) * 55));
+    anim = { t0: performance.now(), dur, from, to: t };
+  }
+  function stepAnim(now) {
+    if (!anim) return;
+    const k = Math.min(1, Math.max(0, (now - anim.t0) / anim.dur));
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    const { from, to } = anim;
+    view.scale = Math.exp(Math.log(from.scale) + (Math.log(to.scale) - Math.log(from.scale)) * e);
+    view.cx = from.cx + (to.cx - from.cx) * e;
+    view.cz = from.cz + (to.cz - from.cz) * e;
+    needsDraw = true;
+    if (k >= 1) anim = null;
+  }
+  function fitBox(minX, maxX, minZ, maxZ, { animate = true, pad = 56, maxScale = MAX_SCALE } = {}) {
+    const v = visibleRect();
+    const w = Math.max(maxX - minX, 20), h = Math.max(maxZ - minZ, 20);
+    const aw = Math.max(80, v.r - v.l - pad * 2 - (isMobile() ? 0 : 56));
+    const ah = Math.max(80, v.b - v.t - pad * 2);
+    const scale = Math.min(maxScale, Math.max(MIN_SCALE, Math.min(aw / w, ah / h)));
+    flyTo(centerFor((minX + maxX) / 2, (minZ + maxZ) / 2, scale), animate);
   }
 
   const view = { cx: 0, cz: 0, scale: 4 };
@@ -402,6 +781,11 @@
   let selected = null;
   let hover = null;
   let needsDraw = true;
+  let pendingHash = null;                  // 共有リンク(#...)の内容。読み込みが終わるまで保持する
+  let hashView = null;                     // 共有リンクの位置(自分で動かすまで、全体表示より優先する)
+  let hashReady = true;                    // false の間は、リンクを書き換えない
+  let userMoved = false;                   // 自分で地図を動かしたら、リンクの位置で上書きしない
+  let focusedLine = '';                    // 強調している路線コード('' なら無し)
   let fileName = '';
   let frameNo = 0;
   let tileGen = 0;
@@ -593,8 +977,8 @@
       .filter((r) => r && r.from && r.to)
       .map(normalize);
     fileName = name;
-    selected = null;
-    showInfo(null);
+    // 道路を選んでいた時だけ解除する(共有リンクで開いた駅の詳細などは、道路の読み込みで閉じない)
+    if (selected) { selected = null; showInfo(null); }
     updateSummary(data);
     fitView();
     updateRoute();
@@ -613,7 +997,7 @@
   }
 
   // 道路があれば道路に合わせ、道路がなければ読み込んだ地図に合わせる
-  function fitView() {
+  function fitView(animate = false) {
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     const grow = (x0, z0, x1, z1) => {
       minX = Math.min(minX, x0); maxX = Math.max(maxX, x1);
@@ -624,11 +1008,10 @@
     if (!roads.length && !rail) {
       for (const t of tiles.values()) grow(t.origin.x, t.origin.z, t.origin.x + TILE_W, t.origin.z + TILE_H);
     }
-    if (!Number.isFinite(minX)) { view.cx = 0; view.cz = 0; view.scale = 4; return; }
-    const w = Math.max(maxX - minX, 20), h = Math.max(maxZ - minZ, 20);
-    view.scale = clamp(Math.min((innerWidth * 0.8) / w, (innerHeight * 0.8) / h), MIN_SCALE, MAX_SCALE);
-    view.cx = (minX + maxX) / 2;
-    view.cz = (minZ + maxZ) / 2;
+    if (!Number.isFinite(minX)) { flyTo(centerFor(0, 0, 4), false); return; }
+    // 共有リンクで開いた時は、リンクの位置を優先する(自分で動かすまで)
+    if (hashView && !userMoved && !animate) { flyTo(hashView, false); return; }
+    fitBox(minX, maxX, minZ, maxZ, { animate, pad: 40 });
   }
 
   // 縮尺バーの長さに使う、切りのよい距離(ブロック)
@@ -1292,7 +1675,7 @@
 
   function drawTrains() {
     ctx.save();
-    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.font = `700 12px ${FONT}`;
     ctx.textBaseline = 'middle';
     for (const t of trains) {
       if (!Number.isFinite(t.x) || !Number.isFinite(t.z)) continue;
@@ -1357,16 +1740,45 @@
     ctx.restore();
   }
 
+  // 方眼(縮尺に合わせた目安の線)。空白の所でも位置の感覚がつかめるように、ごく薄く引く
+  function drawGrid() {
+    if (!$('showGrid').checked) return;
+    const step = niceStep(130 / view.scale);
+    const [wx0, wz0] = toWorld(0, 0);
+    const [wx1, wz1] = toWorld(innerWidth, innerHeight);
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = T.grid;
+    ctx.beginPath();
+    for (let x = Math.ceil(wx0 / step) * step; x <= wx1; x += step) {
+      const px = Math.round(toScreen(x, 0)[0]) + 0.5;
+      ctx.moveTo(px, 0); ctx.lineTo(px, innerHeight);
+    }
+    for (let z = Math.ceil(wz0 / step) * step; z <= wz1; z += step) {
+      const py = Math.round(toScreen(0, z)[1]) + 0.5;
+      ctx.moveTo(0, py); ctx.lineTo(innerWidth, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function draw() {
     ctx.fillStyle = T.mapBg;
     ctx.fillRect(0, 0, innerWidth, innerHeight);
     drawMap();
+    if (tiles.size && $('bgShow').checked && T.veil !== 'rgba(0, 0, 0, 0)') {
+      // 暗い画面では、明るい背景の地図画像を少し沈める
+      ctx.fillStyle = T.veil;
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+    }
+    drawGrid();
     drawOrigin();
     if (roads.length) drawRoads();
     if (railOn()) drawRail();
     if (trainOn() && trains.length) drawTrains();
     drawRoute();
     drawPins();
+    drawProbe();
     updateScale();
   }
 
@@ -1398,19 +1810,65 @@
     return best;
   }
 
+  // ---- 画面部品の小さな道具 ----
+  function mk(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null && text !== '') e.textContent = text;
+    return e;
+  }
+  const ICON = {
+    left: '<svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="m14 6-6 6 6 6"/></svg>',
+    right: '<svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="m10 6 6 6-6 6"/></svg>',
+    chev: '<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m9.5 6 6 6-6 6"/></svg>',
+    pin: '<svg class="i" viewBox="0 0 24 24"><path d="M12 21s6.5-5.6 6.5-11a6.5 6.5 0 0 0-13 0c0 5.4 6.5 11 6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+    cross: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>',
+    info: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M12 11v5"/></svg>',
+  };
+  // 駅番号・路線コードのバッジ(形と色は lines.csv の指定に従う)
+  function codeBadge(code, large = false) {
+    const b = mk('span', 'code-badge' + (large ? ' lg' : ''), String(code).replace(/-$/, ''));
+    applyCodeShape(b, code);
+    return b;
+  }
+
   function addRow(dl, label, value) {
     const dt = document.createElement('dt'); dt.textContent = label;
     const dd = document.createElement('dd'); dd.textContent = value;
     dl.append(dt, dd);
   }
+  function addRowNode(dl, label, node) {
+    const dt = document.createElement('dt'); dt.textContent = label;
+    const dd = document.createElement('dd'); dd.append(node);
+    dl.append(dt, dd);
+  }
+
+  // 詳細パネルを開く・閉じる(PC はサイドバーを開き、スマホはシートを持ち上げる)
+  function openDetail() {
+    $('info').style.display = 'flex';
+    if (isMobile()) { if ($('top').dataset.sheet === 'peek') setSheet('half'); }
+    else setSidebarCollapsed(false);
+  }
+  function closeDetail() { $('info').style.display = 'none'; }
 
   function showInfo(r) {
-    const box = $('info');
-    $('infoLogos').replaceChildren();
-    $('infoLogos').hidden = true;
-    if (!r) { selectedRail = null; syncBoardPolling(); box.style.display = 'none'; return; }
-    $('infoBar').style.background = styleOf(r).casing;
-    $('infoTitle').textContent = `${TYPE_LABEL[r.type] || r.type} #${r.id}`;
+    $('infoActions').hidden = true;
+    $('infoTypes').hidden = true;
+    $('infoTypes').replaceChildren();
+    if (!r) { selectedRail = null; syncBoardPolling(); closeDetail(); scheduleHash(); return; }
+    // 見出し: 道路標識のような札(色は地図の道路の色と同じ)
+    const s = styleOf(r);
+    const sign = mk('div', 'sign');
+    const plate = mk('div', 'plate');
+    const chip = mk('span', 'plate-chip', r.routeNumber || (r.highway ? '高速' : '道路'));
+    chip.style.background = s.fill;
+    chip.style.borderColor = s.casing;
+    const text = mk('div');
+    text.append(mk('h1', '', r.routeName || TYPE_LABEL[r.type] || r.type),
+      mk('small', '', `${TYPE_LABEL[r.type] || r.type} #${r.id}・${r.lanes} 車線`));
+    plate.append(chip, text);
+    sign.append(plate);
+    $('infoSign').replaceChildren(sign);
     const dl = $('infoBody');
     dl.textContent = '';
     if (!r.highway) addRow(dl, '区分', CATEGORY_LABEL[r.category] || '未設定');
@@ -1427,7 +1885,8 @@
     addRow(dl, '終点', `${r.to.x}, ${r.to.y}, ${r.to.z}`);
     if (r.yMin !== null) addRow(dl, '高さ', `${r.yMin} 〜 ${r.yMax}`);
     addRow(dl, 'ディメンション', r.dimension || '-');
-    box.style.display = 'block';
+    openDetail();
+    $('infoScroll').scrollTop = 0;
   }
 
   function buildLanesLegend() {
@@ -1518,6 +1977,8 @@
     $('showRail').checked = true;
     fillFareSelects();
     fitView();
+    scheduleExplore();
+    applyPendingHash();
     needsDraw = true;
   }
 
@@ -1548,6 +2009,7 @@
   function loadRouteData(data, name) {
     routeData = { routes: data.routes, stations: data.stations || {}, positions: data.positions || {}, name };
     buildStopTypes();
+    scheduleExplore();
     $('routeName').textContent = name;
     if (!rail) {
       $('routeSummary').textContent = '系統データを読み込みました。先に鉄道JSONを開くと、線路に色を付けます。';
@@ -2015,7 +2477,7 @@
     const NEAR = 160;      // 同じ路線の別の表示がこの距離内なら、並行線の重複として省く(画面px)
     const placed = new Map();   // 路線コード -> 表示済みの位置の配列
     ctx.save();
-    ctx.font = '700 15px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
+    ctx.font = `900 15px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
@@ -2103,18 +2565,29 @@
     ctx.save();
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
+    // 強調している路線: その下に太い光の帯を敷き、ほかの路線は薄くする
+    const dimA = (sec) => (focusedLine && lineOfSection(sec) !== focusedLine ? 0.28 : 1);
+    if (focusedLine) {
+      for (const sec of list) {
+        if (lineOfSection(sec) === focusedLine) strokeLine(sec.pts, (colored ? sectionBandWidth(sec) : 3) + 16, ACCENT, 0.22);
+      }
+    }
     // 1) 白い縁(線路を地図から浮かせて見やすくする)
     for (const sec of list) {
-      strokeLine(sec.pts, colored ? sectionBandWidth(sec) + 3 : 5, T.railCasing, 1);
+      strokeLine(sec.pts, colored ? sectionBandWidth(sec) + 3 : 5, T.railCasing, dimA(sec));
     }
     // 2) 線路本体
     if (colored) {
-      for (const sec of list) drawSectionColored(sec);
+      for (const sec of list) {
+        ctx.globalAlpha = dimA(sec);
+        drawSectionColored(sec);
+        ctx.globalAlpha = 1;
+      }
     } else {
-      for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, 1);
+      for (const sec of list) strokeLine(sec.pts, 2.5, lineColorOn() ? lineColorOf(lineOfSection(sec)) : RAIL_COLOR, dimA(sec));
     }
     drawLineNames(list);
-    if (hiSec) strokeLine(hiSec.pts, 9, ACCENT, 0.5);
+    if (hiSec) strokeLine(hiSec.pts, 11, ACCENT, 0.35);
     drawPlatforms();
     // ホーム(赤い四角形)の中心: 駅ごとに、ホームの中心の平均。ホームが描かれる縮尺の時だけ使う
     const platOn = view.scale >= PLATFORM_SCALE;
@@ -2131,13 +2604,26 @@
     for (const st of rail.stations.values()) {
       if (st !== hiSt && platOn && platC.has(st.id) && logosOf(st).length) continue;
       const [sx, sy] = toScreen(st.x, st.z);
+      if (sx < -20 || sy < -20 || sx > innerWidth + 20 || sy > innerHeight + 20) continue;
+      if (st === hiSt) {
+        // 選んだ駅: 外側の輪と中の点で、どの線路の上でも見分けがつくようにする
+        ctx.beginPath(); ctx.arc(sx, sy, 13, 0, Math.PI * 2);
+        ctx.fillStyle = T.selHalo; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(sx, sy, 9.5, 0, Math.PI * 2);
+        ctx.fillStyle = T.sel; ctx.fill();
+        ctx.beginPath(); ctx.arc(sx, sy, 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = T.selHalo; ctx.fill();
+        continue;
+      }
+      if (focusedLine && !(st.codes || []).some((c) => lineCodeOf(c) === focusedLine)) ctx.globalAlpha = 0.35;
       ctx.beginPath();
-      ctx.arc(sx, sy, st === hiSt ? 6.5 : 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = st === hiSt ? ACCENT : '#ffffff';
+      ctx.arc(sx, sy, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = T.halo;
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = st === hiSt ? '#ffffff' : T.ink;
+      ctx.strokeStyle = T.ink;
       ctx.stroke();
+      ctx.globalAlpha = 1;
     }
     // 駅名(白や黒の縁取りで、地図の上でも読めるようにする)
     {
@@ -2146,9 +2632,9 @@
       const labelOn = (grade) => grade <= 1 || (grade <= 3 && barBlocks <= 10000) ||
         (grade === 4 && barBlocks <= 5000) || (grade >= 5 && view.scale >= RAIL_LABEL_SCALE);
       // 主要駅の強調: 4級は1.2倍、3級以上は1.5倍+太字
-      const FONT_FAMILY = 'system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif';
-      const labelFontOf = (grade) => grade <= 3 ? `700 18px ${FONT_FAMILY}`
-        : grade === 4 ? `600 14.4px ${FONT_FAMILY}` : `600 12px ${FONT_FAMILY}`;
+      const FONT_FAMILY = FONT;
+      const labelFontOf = (grade) => grade <= 3 ? `900 18px ${FONT_FAMILY}`
+        : grade === 4 ? `700 14.4px ${FONT_FAMILY}` : `700 12px ${FONT_FAMILY}`;
       ctx.lineJoin = 'round';
       ctx.lineWidth = 4;
       ctx.strokeStyle = T.halo;
@@ -2156,7 +2642,10 @@
       for (const st of rail.stations.values()) {
         const row = stationRowOf(st);
         const grade = row ? row.grade : 5;
-        if (!labelOn(grade)) continue;
+        // 強調している路線の駅は、縮尺に関わらず駅名を出す
+        const onFocus = focusedLine && (st.codes || []).some((c) => lineCodeOf(c) === focusedLine);
+        if (!labelOn(grade) && !onFocus) continue;
+        ctx.globalAlpha = focusedLine && !onFocus ? 0.4 : 1;
         ctx.font = labelFontOf(grade);
         const label = st.ja || st.en;
         const logos = logosOf(st);
@@ -2179,6 +2668,7 @@
         ctx.strokeText(label, tx, ay + 4);
         ctx.fillText(label, tx, ay + 4);
       }
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
@@ -2390,94 +2880,101 @@
     return best;
   }
 
-  // 駅の詳細の上の4項目(利用者数・駅番号・都道府県)のカード
-  function statCard(label, valueNodes, wide = false) {
-    const card = document.createElement('div');
-    card.className = wide ? 'stat wide' : 'stat';
-    const lab = document.createElement('div');
-    lab.className = 'stat-label';
-    lab.textContent = label;
-    const val = document.createElement('div');
-    val.className = 'stat-value';
-    val.append(...valueNodes);
-    card.append(lab, val);
-    return card;
+  // ---- 駅の詳細: 駅名標(前の駅・次の駅つき)→ 路線ごとのカード → 基本情報 ----
+  const uniqueLineCodes = (st) => {
+    const out = [];
+    for (const c of st.codes || []) { const l = lineCodeOf(c); if (l && !out.includes(l)) out.push(l); }
+    return out;
+  };
+  const codeOnLine = (st, line) => (st.codes || []).find((c) => lineCodeOf(c) === line) || '';
+  const numOf = (code) => { const m = /(\d+)$/.exec(code || ''); return m ? Number(m[1]) : null; };
+  const lineColorSafe = (line) => (lineColorOn() ? lineColorOf(line) : RAIL_COLOR);
+
+  function stationSign(st, srow) {
+    const lines = uniqueLineCodes(st);
+    const colors = lines.length ? lines.map(lineColorSafe) : [RAIL_COLOR];
+    const band = (thin) => {
+      const b = mk('div', 'sign-band' + (thin ? ' thin' : ''));
+      for (const c of colors) { const i = document.createElement('i'); i.style.background = c; b.append(i); }
+      return b;
+    };
+    const sign = mk('div', 'sign');
+    sign.append(band(false));
+    const main = mk('div', 'sign-main');
+    if (st.codes.length) {
+      const badges = mk('div', 'sign-badges');
+      if (st.codes.length > 3) { badges.style.display = 'grid'; badges.style.gridTemplateColumns = 'repeat(2, auto)'; }
+      for (const code of st.codes) badges.append(codeBadge(code, true));
+      main.append(badges);
+    }
+    const text = mk('div', 'sign-text');
+    text.append(mk('div', 'sign-kana', srow && srow.reading ? srow.reading : ''));
+    const name = mk('h1', 'sign-name', stationName(st));
+    const len = [...stationName(st)].length;
+    name.style.fontSize = (len <= 3 ? 38 : len <= 4 ? 33 : len <= 6 ? 28 : len <= 8 ? 24 : 20) + 'px';
+    text.append(name);
+    if (st.en) text.append(mk('div', 'sign-en', st.en));
+    main.append(text);
+    sign.append(main);
+    // 乗り入れ会社のロゴ(読み込めたものだけ)
+    const logos = mk('div', 'sign-logos');
+    logos.hidden = true;
+    for (const id of companyIdsOf(st)) {
+      const img = document.createElement('img');
+      img.alt = companyJa(id);
+      img.src = logoBlobUrls.get(id) || `logos/${encodeURIComponent(id)}.png`;
+      img.onerror = () => { img.remove(); if (!logos.children.length) logos.hidden = true; };
+      img.onload = () => { logos.hidden = false; };
+      logos.append(img);
+    }
+    sign.append(logos, band(true));
+    return sign;
   }
+
   function showRailInfo(item) {
     syncBoardPolling();
-    const box = $('info');
     const dl = $('infoBody');
-    const hero = $('infoHero');
-    // 駅の詳細: 駅名の上に、乗入会社のロゴを大きく並べる(ロゴが無い会社は飛ばす)
-    const logoBox = $('infoLogos');
-    logoBox.replaceChildren();
-    logoBox.hidden = true;
-    if (item.type === 'station') {
-      for (const id of companyIdsOf(item.st)) {
-        const img = document.createElement('img');
-        img.alt = id;
-        img.src = logoBlobUrls.get(id) || `logos/${encodeURIComponent(id)}.png`;
-        img.onerror = () => img.remove();
-        img.onload = () => { logoBox.hidden = false; };
-        logoBox.append(img);
-      }
-    }
     dl.textContent = '';
-    hero.replaceChildren();
-    hero.hidden = true;
     $('infoTypes').hidden = true;
-    $('infoBar').style.background = RAIL_COLOR;
     if (item.type === 'station') {
       const st = item.st;
       const srow = stationRowOf(st);
-      const firstLine = st.codes.length ? lineCodeOf(st.codes[0]) : '';
-      $('infoBar').style.background = lineColorOn() && firstLine ? lineColorOf(firstLine) : RAIL_COLOR;
-      $('infoTitle').textContent = `${stationName(st)} 駅`;
-
-      // 上に並べる: 利用者数・駅番号・都道府県
-      const ridership = srow && srow.ridership ? srow.ridership.toLocaleString('ja-JP') + ' 人' : '-';
-      const badges = st.codes.length
-        ? st.codes.map((code) => {
-            const span = document.createElement('span');
-            span.className = 'code-badge';
-            span.textContent = code;
-            applyCodeShape(span, code);
-            return span;
-          })
-        : [document.createTextNode('-')];
-      const codeList = document.createElement('div');
-      codeList.className = 'code-list';
-      codeList.append(...badges);
-      hero.append(
-        statCard('👥 利用者数', [document.createTextNode(ridership)], true),
-        statCard('🔢 駅番号', [codeList]),
-        statCard('🌏 都道府県', [document.createTextNode(srow && srow.pref ? srow.pref : '-')]),
-      );
-      hero.hidden = false;
+      $('infoSign').replaceChildren(stationSign(st, srow));
+      $('infoActions').hidden = false;
       renderStopTypes(st);
-
-      // 下の一覧: 残りの項目
-      addRow(dl, '英語名', st.en || '-');
-      addRow(dl, '座標', `X ${Math.round(st.x)}, Z ${Math.round(st.z)}`);
-      addRow(dl, '接続', `${st.neighbors.length} 方面`);
-      addRow(dl, '系統', st.lines.length ? st.lines.map((l) => l.name).join(' ・ ') : '-');
-      if (srow) {
-        addRow(dl, '読み', srow.reading || '-');
-        addRow(dl, '乗り入れ', srow.companies.length ? srow.companies.join(' ・ ') : '-');
-      }
-      for (const nb of st.neighbors) {
-        addRow(dl, '隣の駅', `${stationName(rail.stations.get(nb.id))}(${Math.round(nb.distance)} ブロック)`);
-      }
+      if (srow && srow.ridership) addRow(dl, '利用者数', srow.ridership.toLocaleString('ja-JP') + ' 人');
+      if (srow && srow.pref) addRow(dl, '都道府県', srow.pref);
+      if (srow && srow.companies.length) addRow(dl, '乗り入れ', srow.companies.join(' ・ '));
+      if (srow && srow.st) addRow(dl, '整備度', srow.st);
+      const copy = mk('button', 'copy', `X ${Math.round(st.x)}, Z ${Math.round(st.z)}`);
+      copy.type = 'button';
+      copy.title = 'クリックでコピー';
+      copy.addEventListener('click', () => copyText(`${Math.round(st.x)} ${Math.round(st.z)}`, '座標をコピーしました'));
+      addRowNode(dl, '座標', copy);
+      if (st.lines.length) addRow(dl, '通る系統', st.lines.map((l) => l.name).join(' ・ '));
     } else {
       const sec = item.sec;
-      $('infoTitle').textContent = '鉄道区間';
-      addRow(dl, '区間', `${stationName(rail.stations.get(sec.fromId))} ⇔ ${stationName(rail.stations.get(sec.toId))}`);
-      addRow(dl, '距離', `${Math.round(sec.distance)} ブロック`);
+      const code = lineOfSection(sec);
+      const color = lineInfo.has(code) ? lineColorSafe(code) : RAIL_COLOR;
+      const sign = mk('div', 'sign');
+      const band = mk('div', 'sign-band thin'); const bi = document.createElement('i'); bi.style.background = color; band.append(bi);
+      const plate = mk('div', 'plate');
+      if (lineInfo.has(code)) plate.append(codeBadge(code, true));
+      const text = mk('div');
+      text.append(mk('h1', '', `${stationName(rail.stations.get(sec.fromId))} ⇔ ${stationName(rail.stations.get(sec.toId))}`),
+        mk('small', '', lineInfo.has(code) ? `${lineNameOf(code)} の区間` : '鉄道区間'));
+      plate.append(text);
+      sign.append(band, plate);
+      $('infoSign').replaceChildren(sign);
+      $('infoActions').hidden = true;
+      addRow(dl, '距離', `${(sec.distance / 1000).toFixed(2)} km(${Math.round(sec.distance)} ブロック)`);
       addRow(dl, '計測', sec.measured ? '計測済み' : '未計測');
       const names = sec.names || [];
       addRow(dl, '通る系統', names.length ? names.join(' ・ ') : '推定なし');
     }
-    box.style.display = 'block';
+    openDetail();
+    $('infoScroll').scrollTop = 0;
+    scheduleHash();
   }
 
   // ---- 起動時の自動読み込み(HTML と同じフォルダの rail.json・train.json・road.json) ----
@@ -2521,6 +3018,7 @@
     }
     if (blocked) {
       lines.push('このHTMLを直接開いているため、自動では読めません。「データフォルダから読む」で、HTMLと同じフォルダを選んでください。');
+      if (!rail) { $('dataNotice').hidden = false; $('exploreEmpty').hidden = true; }
       setAutoStatus(lines, true);
     } else {
       setAutoStatus(lines);
@@ -2661,7 +3159,7 @@
       el.style.background = col || 'var(--muted)';
       el.style.color = '#fff';
     } else {
-      el.style.background = '#fff';
+      el.style.background = 'var(--surface)';
       el.style.color = 'var(--ink)';
     }
   }
@@ -2680,6 +3178,7 @@
       if (r['会社txt']) lineToCompany.set(code, r['会社txt']);
     }
     needsDraw = true;   // 路線の色が変わるので、線路を描き直す(読み込みの順番に左右されないように)
+    scheduleExplore();
   }
   // linedata.txt(lines.csv が無い時): 路線コードと会社の運賃ファイル名だけ
   function applyLinedata(text) {
@@ -2705,6 +3204,7 @@
       for (const c of codes) stationByCode.set(c, row);
       if (codes.length >= 2) interchangeGroups.push(codes);
     }
+    scheduleExplore();
   }
   // 路線の色・名前・会社名(表示用)
   const lineColorOf = (code) => (lineInfo.get(code) && lineInfo.get(code).color) || lineColor(code);
@@ -2737,8 +3237,9 @@
   }
   function setFareStatus(text, isError = false) {
     const box = $('fareStatus');
-    box.style.color = isError ? 'var(--danger)' : '';
-    box.textContent = text;
+    box.className = isError ? 'notice' : 'meta';
+    box.textContent = isError ? text : '';
+    box.hidden = !isError;
   }
   function updateFareStatus() {
     if (!lineToCompany.size) {
@@ -2748,10 +3249,10 @@
     const companies = [...new Set(lineToCompany.values())];
     const missing = companies.filter((c) => !fareTables.has(c));
     if (missing.length) {
-      setFareStatus(`運賃表が見つかりません: ${missing.join(', ')}(fare フォルダを確認してください)`, true);
+      setFareStatus(`運賃表がない会社: ${missing.map(companyJa).join('、')}。その会社の区間は運賃を計算できません(fare フォルダに ${missing.map((c) => c + '.txt').join(', ')} を置くと計算できます)。`, true);
       return;
     }
-    setFareStatus(`運賃データ: ${companies.length} 社・路線 ${lineToCompany.size} 本を読み込みました`);
+    setFareStatus('');
   }
 
   // HTML と同じフォルダから自動で読む(Web サーバー経由)
@@ -2833,25 +3334,9 @@
     }
     from.value = keepFrom;
     to.value = keepTo;
-    filterFareOptions($('stationFilter').value);
+    searchIndex = null;
   }
 
-  // 駅名・読み・駅番号で、駅の選択肢を絞り込む
-  function filterFareOptions(text) {
-    const key = String(text || '').trim().toLowerCase();
-    for (const sel of [$('fareFrom'), $('fareTo')]) {
-      for (const og of sel.querySelectorAll('optgroup')) {
-        let any = false;
-        for (const opt of og.children) {
-          const ok = !key || (opt.dataset.q || '').toLowerCase().includes(key);
-          opt.hidden = !ok;
-          any = any || ok;
-        }
-        og.hidden = !any;
-      }
-    }
-  }
-  $('stationFilter').addEventListener('input', (e) => filterFareOptions(e.target.value));
   $('showLineColor').addEventListener('change', () => { needsDraw = true; });
 
   // ---- 停車する種別(train.json の系統 と color.txt の色) ----
@@ -2918,11 +3403,11 @@
   };
   // ---- 駅の発車予定(列車位置のAPIから、方面(行先)ごとに4本まで。停車種別の路線タブの中に出す) ----
   const DEP_PER_DIRECTION = 4;
-  const CHIP_PX = 13;   // 種別の図形の文字の大きさ(px)。図形の幅は全角4文字ぶん(52px)
+  const CHIP_PX = 12.5;   // 種別の図形の文字の大きさ(px)。図形の幅は全角4文字ぶん(52px)
   // 5文字以上の種別は、全角4文字の幅に収まるように文字を小さくする
   const chipFontPx = (text) => {
     const n = [...String(text)].length;
-    return n > 4 ? Math.floor(CHIP_PX * 4 / n * 10) / 10 : CHIP_PX;
+    return n > 4 ? Math.floor(CHIP_PX * 4.4 / n * 10) / 10 : CHIP_PX;
   };
   // その駅に停まる種別の列車を、行先ごとにまとめる(停車種別に入らない種別・当駅止まりは出さない)
   // 路線は、その種別を停車させる路線のうち、列車の走っている路線を選ぶ
@@ -3046,30 +3531,49 @@
     row.append(chip, time, dest, num);
     return row;
   }
-  // 駅の詳細: 路線ごとに見出しを付け、停車する種別を横に並べ、その路線の発車予定を下に出す
+  // 隣の駅(その路線の駅番号の小さい方を「前」、大きい方を「次」にする。番号が無ければ区別しない)
+  function adjacentOf(st, line) {
+    const myNum = numOf(codeOnLine(st, line));
+    const prev = [], next = [], other = [];
+    for (const nb of st.neighbors) {
+      const ns = rail.stations.get(nb.id);
+      if (!ns) continue;
+      const nc = codeOnLine(ns, line);
+      if (!nc) continue;
+      const item = { st: ns, dist: nb.distance, code: nc };
+      const n = numOf(nc);
+      if (myNum !== null && n !== null) (n < myNum ? prev : next).push(item);
+      else other.push(item);
+    }
+    const by = (a, b) => a.dist - b.dist;   // 近い駅から
+    prev.sort(by); next.sort(by);
+    return { prev, next, other };
+  }
+  function adjButton(it, dir) {
+    const b = mk('button', 'adj-btn' + (dir === 'next' ? ' next' : ''));
+    b.type = 'button';
+    b.innerHTML = dir === 'next' ? ICON.right : dir === 'prev' ? ICON.left : '';
+    const t = mk('span', 't');
+    t.append(mk('b', '', stationName(it.st)), mk('small', '', `${it.code} ・ ${(it.dist / 1000).toFixed(1)} km`));
+    b.append(t);
+    b.addEventListener('click', () => selectStation(it.st, { fly: true }));
+    return b;
+  }
+
+  // 駅の詳細: 駅が通る路線ごとにカードを作り、前の駅・次の駅、停車する種別、発車予定を出す
   function renderStopTypes(st) {
     const box = $('infoTypes');
     box.replaceChildren();
-    const id = String(st.id);
-    const list = stopTypes.get(id) || [];
-    box.hidden = !list.length;
-    if (!list.length) return;
-    const title = document.createElement('div');
-    title.className = 'stat-label';
-    title.textContent = '🚆 停車する種別';
-    const wrap = document.createElement('div');
-    wrap.className = 'type-list';
-    // 発車予定の注意書き(列車データが無い・古い時)
+    const stops = stopTypes.get(String(st.id)) || [];
+    const lines = uniqueLineCodes(st);
+    for (const x of stops) if (x.line && !lines.includes(x.line)) lines.push(x.line);
+    box.hidden = !lines.length;
+    if (!lines.length) return;
     const deps = stationDepartures(st);
-    const depNote = !trains.length ? '列車データを取得しています…'
-      : (Date.now() - trainsAt > TT_STALE_MS ? '列車データが古いため、発車予定を表示できません' : '');
-    const byLine = new Map();
-    for (const x of list) {
-      if (!byLine.has(x.line)) byLine.set(x.line, []);
-      byLine.get(x.line).push(x);
-    }
+    // 発車予定の注意書き。列車APIにつないでいない時は、最後に1行だけ出す
+    const staleNote = trains.length && Date.now() - trainsAt > TT_STALE_MS ? '列車データが古いため、発車予定を表示できません' : '';
     // 種別の並びは color.txt に書かれている順(色の登録順)。登録のない種別は後ろに
-    const rankOf = (line, type) => {
+    const typeRank = (line, type) => {
       const company = lineToCompany.get(line);
       const map = company && typeColors.get(company);
       if (!map) return Infinity;
@@ -3077,77 +3581,71 @@
       for (const k of map.keys()) { if (k === type) return i; i++; }
       return Infinity;
     };
-    for (const items of byLine.values()) {
-      items.sort((a, b) => rankOf(a.line, a.type) - rankOf(b.line, b.type));
-    }
-    const styleOf = (type) => {
-      // 発車予定の図形は、その路線の停車種別と同じ色
-      for (const [line] of byLine) { const s = typeStyleOf(line, type); if (s) return s; }
-      return null;
-    };
-    for (const [line, items] of byLine) {
-      const block = document.createElement('div');
-      block.className = 'line-block';
-      // 見出し: 路線シンボル(路線コード)と路線名
-      const head = document.createElement('div');
-      head.className = 'line-head-row';
-      const badge = document.createElement('span');
-      badge.className = 'code-badge';
-      badge.textContent = line || '-';
-      if (line) applyCodeShape(badge, line);
-      else badge.style.borderColor = 'var(--muted)';
-      const name = document.createElement('span');
-      name.className = 'line-name';
-      name.textContent = lineNameOf(line);
-      head.append(badge, name);
+    for (const line of lines) {
+      const block = mk('section', 'lblock');
+      block.style.setProperty('--lc', lineColorSafe(line));
+      // 見出し: 路線のバッジ・路線名・会社名
+      const head = mk('div', 'lblock-head');
+      head.append(codeBadge(line));
+      const nm = mk('div');
+      nm.append(mk('div', 'lblock-name', lineNameOf(line)));
+      const co = companyJa(lineToCompany.get(line) || '');
+      if (co && co !== lineNameOf(line)) nm.append(mk('div', 'lblock-co', co));
+      head.append(nm);
       block.append(head);
-      // 種別: 見出しの下に、全角4文字ぶんの図形を横に並べる
-      const row = document.createElement('div');
-      row.className = 'type-row';
-      for (const x of items) {
-        const chip = document.createElement('span');
-        chip.className = 'type-chip';
-        chip.textContent = x.type;
-        chip.style.fontSize = chipFontPx(x.type) + 'px';
-        const s = typeStyleOf(x.line, x.type);
-        if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
-        row.append(chip);
+      // 前の駅・次の駅
+      const adj = adjacentOf(st, line);
+      if (adj.prev.length || adj.next.length || adj.other.length) {
+        const row = mk('div', 'adj');
+        if (adj.other.length && !adj.prev.length && !adj.next.length) {
+          for (const it of adj.other) row.append(adjButton(it, ''));
+        } else {
+          const left = mk('div'), right = mk('div');
+          left.style.cssText = right.style.cssText = 'display:grid;gap:6px;align-content:start';
+          if (adj.prev.length) for (const it of adj.prev) left.append(adjButton(it, 'prev')); else left.append(mk('div', 'adj-empty', '終端'));
+          if (adj.next.length) for (const it of adj.next) right.append(adjButton(it, 'next')); else right.append(mk('div', 'adj-empty', '終端'));
+          row.append(left, right);
+        }
+        block.append(row);
       }
-      block.append(row);
-      // この路線の発車予定
+      // 停車する種別
+      const items = stops.filter((x) => x.line === line).sort((a, b) => typeRank(a.line, a.type) - typeRank(b.line, b.type));
+      if (items.length) {
+        block.append(mk('div', 'lb-label', '停車する種別'));
+        const row = mk('div', 'type-row');
+        for (const x of items) {
+          const chip = mk('span', 'type-chip', x.type);
+          chip.style.fontSize = chipFontPx(x.type) + 'px';
+          const s = typeStyleOf(x.line, x.type);
+          if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
+          row.append(chip);
+        }
+        block.append(row);
+      }
+      // この路線の発車予定(方面ごとにまとめる。方面の順は最初の到着順、方面の中は到着順)
       const mine = deps.filter((d) => d.line === line);
-      // 方面ごとにまとめる(方面の順は最初の到着順、方面の中は到着順)
       const firstSec = new Map();
       for (const d of mine) firstSec.set(d.dir, Math.min(firstSec.get(d.dir) ?? Infinity, d.sec));
       mine.sort((a, b) => (firstSec.get(a.dir) - firstSec.get(b.dir)) || (a.sec - b.sec));
-      if (depNote || mine.length) {
-        const dh = document.createElement('div');
-        dh.className = 'dep-dir';
-        dh.textContent = '発車予定(方面ごとに4本)';
-        block.append(dh);
+      if (mine.length || staleNote) {
+        block.append(mk('div', 'lb-label', '発車予定(方面ごとに4本)'));
+        if (staleNote) block.append(mk('div', 'dep-note', staleNote));
       }
-      if (depNote) {
-        const n = document.createElement('div');
-        n.className = 'dep-note';
-        n.textContent = depNote;
-        block.append(n);
-      }
-      // 方面ごとに小見出しを付けて、その中を到着順に並べる(方面の順は最初の到着順)
       let lastDir = null;
       for (const d of mine) {
         if (d.dir !== lastDir) {
           lastDir = d.dir;
-          const sh = document.createElement('div');
-          sh.className = 'dep-subdir';
-          sh.textContent = `${d.dirName || d.dest}方面`;
-          block.append(sh);
+          block.append(mk('div', 'dep-subdir', `${d.dirName || d.dest}方面`));
         }
         block.append(depRowEl(d, (type) => typeStyleOf(line, type)));
       }
-      wrap.append(block);
+      box.append(block);
     }
-    box.append(title, wrap);
+    if (stops.length && !trainsAt) {
+      box.append(mk('div', 'meta', '発車予定は、列車の位置を取得できる環境(ローカルの列車API)で表示されます。'));
+    }
   }
+
   // 停車種別・発車予定を、今の列車データで描き直す(駅を選んでいる時)
   function refreshStationPanel() {
     if (selectedRail && selectedRail.type === 'station') renderStopTypes(selectedRail.st);
@@ -3281,83 +3779,103 @@
     return { items, path, meters, transfers, fares, total, ok };
   }
 
+  // 経路の案内欄。空の時は案内文(hint)、うまくいかない時は理由(notice)を出す
   function showFareMsg(text, isError = false) {
-    const box = $('fareResult');
-    const div = document.createElement('div');
-    div.className = 'meta';
-    div.style.color = isError ? 'var(--danger)' : '';
-    div.textContent = text;
-    box.replaceChildren(div);
+    const box = mk('div', isError ? 'notice danger' : 'hint');
+    box.innerHTML = ICON.info;
+    box.append(mk('div', '', text));
+    $('fareResult').replaceChildren(box);
   }
 
   function renderTransit(r) {
     const stName = (id) => { const s = rail.stations.get(id); return s ? (s.ja || s.en || '-') : '-'; };
     const tt = useTimetableOn() ? timetableFor(r) : null;
     const nodes = [];
-    const head = document.createElement('div');
-    head.className = 'fare-total';
-    head.textContent = r.ok ? `${r.total.toLocaleString('ja-JP')} CP` : '計算できません';
-    if (!r.ok) head.style.color = 'var(--danger)';
-    nodes.push(head, metaLine(`営業キロ ${(r.meters / 1000).toFixed(1)} km・乗換 ${r.transfers} 回`));
 
-    const ol = document.createElement('ol');
-    ol.className = 'timeline';
-    const item = (cls, color, title, sub) => {
-      const li = document.createElement('li');
-      li.className = cls;
-      const bar = document.createElement('span');
-      bar.className = 'tl-bar';
-      if (color) bar.style.background = color;
-      const body = document.createElement('div');
-      const t = document.createElement('div');
-      t.className = 'tl-title';
-      t.textContent = title;
+    // 運賃のカード: 合計 → 距離・乗換 → 会社ごとの内訳
+    const card = mk('div', 'fare-card');
+    const total = mk('div', 'fare-total');
+    if (r.ok) total.append(document.createTextNode(r.total.toLocaleString('ja-JP')), mk('small', '', 'CP'));
+    else { total.textContent = '計算できません'; total.style.color = 'var(--danger)'; total.style.fontSize = '24px'; }
+    card.append(total, mk('div', 'fare-sub', `営業キロ ${(r.meters / 1000).toFixed(1)} km ・ 乗換 ${r.transfers} 回`));
+    if (r.fares.length) {
+      const co = mk('div', 'fare-co');
+      for (const p of r.fares) {
+        const row = mk('div');
+        row.append(mk('span', '', `${companyJa(p.company)}(${p.km} km)`),
+          mk('b', '', p.yen === null ? '運賃表なし' : `${p.yen.toLocaleString('ja-JP')} CP`));
+        co.append(row);
+      }
+      card.append(co);
+    }
+    nodes.push(card);
+
+    // 乗り方のタイムライン: 出発 → 乗車(路線の色の帯)→ 乗換 → … → 到着
+    const ol = mk('ol', 'timeline');
+    const item = (cls, color, titleNodes, subs, timing) => {
+      const li = mk('li', 'tl ' + cls);
+      const rl = mk('div', 'tl-rail');
+      if (color) rl.style.setProperty('--rc', color);
+      const body = mk('div', 'tl-body');
+      const t = mk('div', 'tl-title');
+      t.append(...titleNodes);
       body.append(t);
-      if (sub) for (const line of sub.split('\n')) body.append(metaLine(line));
-      li.append(bar, body);
+      for (const line of subs || []) if (line) body.append(mk('div', 'tl-sub', line));
+      if (timing) body.append(mk('div', 'tl-time' + (timing.off ? ' off' : ''), timing.text));
+      li.append(rl, body);
       ol.append(li);
     };
-    item('stop', null, `出発  ${stName(r.path[0].id)}`, '');
+    item('stop', null, [document.createTextNode(stName(r.path[0].id))], ['出発']);
     r.items.forEach((it, i) => {
       if (it.type === 'ride') {
         const leg = tt ? tt.legs[i] : null;
-        let timing = '';
-        if (leg && leg.cut) timing = `時刻: 表示なし(${leg.cut})`;
+        let timing = null;
+        if (leg && leg.cut) timing = { off: true, text: `時刻: 表示なし(${leg.cut})` };
         else if (leg && leg.sys) {
           const depTxt = leg.deps.map((d) => `${hhmm(d.at)}${d.live ? '' : '(推定)'}`).join(' ・ ');
-          timing = `${leg.sys.number} ${leg.sys.label}・次の発車 ${depTxt}・到着 ${hhmm(leg.arr)}(所要 約${Math.round(leg.dur / 60000)} 分` +
-            (leg.gap ? `・運行間隔 約${Math.round(leg.gap / 60000)} 分` : '') + ')';
+          timing = { text: `${leg.sys.number} ${leg.sys.label}\n次の発車 ${depTxt} → 到着 ${hhmm(leg.arr)}(所要 約${Math.round(leg.dur / 60000)} 分` +
+            (leg.gap ? `・運行間隔 約${Math.round(leg.gap / 60000)} 分` : '') + ')' };
         }
-        item('ride', lineColorOf(it.line), `${it.line}線 ${lineNameOf(it.line)}に乗車`,
-          `${companyJa(it.company)}・${stName(it.fromId)} → ${stName(it.toId)}・${it.stops} 駅・${(it.m / 1000).toFixed(1)} km` +
-          (timing ? `\n${timing}` : ''));
+        const title = [codeBadge(it.line), document.createTextNode(lineNameOf(it.line))];
+        item('ride', lineColorSafe(it.line), title,
+          [`${companyJa(it.company)}`, `${stName(it.fromId)} → ${stName(it.toId)}`, `${it.stops} 駅 ・ ${(it.m / 1000).toFixed(1)} km`], timing);
+        if (timing) { const last = ol.lastChild.querySelector('.tl-time'); last.style.whiteSpace = 'pre-line'; }
       } else {
         const prevRide = r.items.slice(0, i).reverse().find((x) => x.type === 'ride');
         const nextRide = r.items.slice(i + 1).find((x) => x.type === 'ride');
-        item('transfer', null, `${stName(it.id)} で乗り換え`,
-          `${prevRide ? prevRide.line : '-'} → ${nextRide ? nextRide.line : '-'}`);
+        const sub = mk('span');
+        sub.style.cssText = 'display:inline-flex;align-items:center;gap:6px';
+        if (prevRide) sub.append(codeBadge(prevRide.line));
+        sub.append(document.createTextNode('→'));
+        if (nextRide) sub.append(codeBadge(nextRide.line));
+        item('xfer', null, [document.createTextNode(`${stName(it.id)} で乗り換え`)], []);
+        ol.lastChild.querySelector('.tl-body').append(sub);
       }
     });
-    item('stop', null, `到着  ${stName(r.path[r.path.length - 1].id)}`, '');
+    item('stop', null, [document.createTextNode(stName(r.path[r.path.length - 1].id))], ['到着']);
     nodes.push(ol);
 
-    for (const p of r.fares) {
-      nodes.push(metaLine(`${companyJa(p.company)}: ${p.km} km → ` +
-        (p.yen === null ? '運賃表にありません' : `${p.yen.toLocaleString('ja-JP')} CP`)));
-    }
-    const det = document.createElement('details');
-    const sum = document.createElement('summary');
-    sum.textContent = `経過駅(${r.path.length} 駅)`;
-    det.append(sum, metaLine(r.path.map((p) => stName(p.id)).join(' → ')));
+    const det = mk('details', 'fold');
+    det.append(mk('summary', '', `経過駅(${r.path.length} 駅)`), mk('div', 'fold-body meta', r.path.map((p) => stName(p.id)).join(' → ')));
     nodes.push(det);
     $('fareResult').replaceChildren(...nodes);
   }
 
+  // 出発駅・到着駅を入れる(入力欄・状態の保持用の select・結果をそろえる)
+  function setRouteStation(which, st, run = true) {
+    const sel = $(which === 'from' ? 'fareFrom' : 'fareTo');
+    const input = $(which === 'from' ? 'fareFromText' : 'fareToText');
+    sel.value = st ? String(st.id) : '';
+    input.value = st ? stationName(st) : '';
+    if (run) runFare();
+  }
+
   function runFare() {
     const a = $('fareFrom').value, b = $('fareTo').value;
-    if (!rail) return showFareMsg('鉄道JSONを読み込んでから使ってください。');
-    if (!a || !b) return showFareMsg('乗る駅と降りる駅を選んでください。');
-    if (a === b) return showFareMsg('同じ駅です。');
+    lastTransit = null;
+    if (!rail) return showFareMsg('鉄道データを読み込んでいます…');
+    if (!a || !b) return showFareMsg('出発駅と到着駅を選ぶと、運賃と乗換を表示します。');
+    if (a === b) return showFareMsg('出発駅と到着駅が同じです。', true);
     if (!lineToCompany.size) return showFareMsg('路線と会社の対応表(linedata.txt)がありません。', true);
     const r = calcTransit(a, b);
     if (r.error) return showFareMsg(r.error, true);
@@ -3365,24 +3883,10 @@
     renderTransit(r);
   }
 
-  // ---- タブ(鉄道経路 / 車経路 / 設定) ----
-  const TABS = ['rail', 'car', 'settings'];
-  function setTab(name) {
-    for (const t of TABS) {
-      $('tab-' + t).classList.toggle('active', t === name);
-      $('tab-' + t).setAttribute('aria-selected', String(t === name));
-      $('pane-' + t).hidden = t !== name;
-    }
-  }
-  for (const t of TABS) $('tab-' + t).addEventListener('click', () => setTab(t));
-  setTab('rail');
-
-  $('fareRun').addEventListener('click', runFare);
-  $('fareFrom').addEventListener('change', runFare);
-  $('fareTo').addEventListener('change', runFare);
   $('fareSwap').addEventListener('click', () => {
-    const f = $('fareFrom'), t = $('fareTo');
-    [f.value, t.value] = [t.value, f.value];
+    const a = $('fareFrom').value, b = $('fareTo').value;
+    setRouteStation('from', b && rail ? rail.stations.get(b) : null, false);
+    setRouteStation('to', a && rail ? rail.stations.get(a) : null, false);
     runFare();
   });
 
@@ -3731,8 +4235,10 @@
   function setRouteStatus(text, isError = false) {
     if (pinMode) return;   // ピンを打つ指示を優先
     const box = $('routeStatus');
-    box.style.color = isError ? 'var(--danger)' : '';
+    box.className = isError ? 'notice danger' : 'meta';
+    box.style.color = '';
     box.textContent = text;
+    box.hidden = !text;
   }
   function metaLine(text, color) {
     const d = document.createElement('div');
@@ -3746,50 +4252,77 @@
   let walkRoute = null;
   function walkNodes(w) {
     if (!w) return [];
-    if (w.error) return [metaLine(`徒歩: ${w.error}`, 'var(--danger)')];
+    const card = mk('div', 'fare-card');
+    card.style.marginTop = '10px';
+    if (w.error) { card.append(mk('div', 'fare-sub', `徒歩: ${w.error}`)); card.firstChild.style.color = 'var(--danger)'; return [card]; }
     const withSide = w.pieces.filter((p) => p.road.sidewalk > 0).reduce((s, p) => s + p.m, 0);
     const noSide = w.meters - withSide;
-    return [
-      metaLine(`徒歩 約 ${fmtTime(w.seconds)}(道のり ${(w.meters / 1000).toFixed(2)} km・時速 ${WALK_KMH} km)`),
-      metaLine(`うち歩道あり ${(withSide / 1000).toFixed(2)} km ・ 歩道なし ${(noSide / 1000).toFixed(2)} km`),
-    ];
+    const t = mk('div', 'fare-total', `徒歩 約 ${fmtTime(w.seconds)}`);
+    t.style.fontSize = '22px';
+    card.append(t,
+      mk('div', 'fare-sub', `道のり ${(w.meters / 1000).toFixed(2)} km ・ 時速 ${WALK_KMH} km`),
+      mk('div', 'fare-sub', `歩道あり ${(withSide / 1000).toFixed(2)} km ・ 歩道なし ${(noSide / 1000).toFixed(2)} km`));
+    return [card];
   }
 
+  // 速さの区分ごとの色(棒グラフと凡例)
+  const TIER_COLORS = { 100: '#3a9d57', 60: '#e0a526', 30: '#8a939b' };
+
   function renderRoute(r) {
-    const big = document.createElement('div');
-    big.className = 'fare-total';
-    big.textContent = `約 ${fmtTime(r.seconds)}`;
-    const nodes = [big, metaLine(`道のり ${(r.meters / 1000).toFixed(2)} km`)];
+    const card = mk('div', 'fare-card');
+    card.append(mk('div', 'fare-total', `約 ${fmtTime(r.seconds)}`), mk('div', 'fare-sub', `道のり ${(r.meters / 1000).toFixed(2)} km`));
+    // 道の種類ごとの距離の割合
+    const bar = mk('div', 'mix-bar');
+    const rows = [];
     for (const [kmh, name] of TIER_NAMES) {
       const ps = r.pieces.filter((p) => p.kmh === kmh);
       if (!ps.length) continue;
       const m = ps.reduce((s, p) => s + p.m, 0), tt = ps.reduce((s, p) => s + p.tt, 0);
-      nodes.push(metaLine(`${name}(${kmh}km/h): ${(m / 1000).toFixed(2)} km・${fmtTime(tt)}`));
+      const seg = document.createElement('i');
+      seg.style.width = `${(m / Math.max(1, r.meters)) * 100}%`;
+      seg.style.background = TIER_COLORS[kmh];
+      bar.append(seg);
+      const row = mk('div', 'mix-row');
+      const sw = document.createElement('i'); sw.style.background = TIER_COLORS[kmh];
+      row.append(sw, mk('span', '', `${name}(${kmh}km/h)`), mk('span', '', `${(m / 1000).toFixed(2)} km・${fmtTime(tt)}`));
+      rows.push(row);
     }
+    card.append(bar, ...rows);
+    const nodes = [card];
     if (r.startGap > 20 || r.goalGap > 20) {
-      nodes.push(metaLine(`ピンが道路から離れています(出発 約${Math.round(r.startGap)} m / 到着 約${Math.round(r.goalGap)} m)`, 'var(--danger)'));
+      const n = mk('div', 'notice danger');
+      n.style.marginTop = '10px';
+      n.textContent = `ピンが道路から離れています(出発 約${Math.round(r.startGap)} m / 到着 約${Math.round(r.goalGap)} m)`;
+      nodes.push(n);
     }
     nodes.push(...walkNodes(walkRoute));
     const steps = routeSteps(r.pieces);
-    const det = document.createElement('details');
-    det.style.marginTop = '8px';
-    const sum = document.createElement('summary');
-    sum.textContent = `案内(${steps.length} 区間)`;
-    det.append(sum, ...steps.map((s, i) => metaLine(
-      `${i + 1}. ${s.label} を ${(s.m / 1000).toFixed(2)} km(${fmtTime(s.tt)})`)));
+    const det = mk('details', 'fold');
+    const ol = mk('ol', 'steps');
+    for (const s of steps) ol.append(mk('li', '', `${s.label} を ${(s.m / 1000).toFixed(2)} km(${fmtTime(s.tt)})`));
+    det.append(mk('summary', '', `案内(${steps.length} 区間)`), ol);
     nodes.push(det);
     $('routeResult').replaceChildren(...nodes);
   }
 
+  // ピンの欄: 指定済みなら座標、指定中なら案内を出す
   function updatePinUI() {
-    $('pinStart').classList.toggle('active', pinMode === 'start');
-    $('pinGoal').classList.toggle('active', pinMode === 'goal');
+    for (const [k, id, ph] of [['start', 'pinStart', '出発地点を地図で選ぶ'], ['goal', 'pinGoal', '到着地点を地図で選ぶ']]) {
+      const btn = $(id), label = $(id + 'Label'), act = $(id + 'Act'), p = pins[k];
+      btn.classList.toggle('active', pinMode === k);
+      btn.classList.toggle('set', !!p && pinMode !== k);
+      label.textContent = pinMode === k ? '地図をクリックして指定…' : p ? `X ${Math.round(p.x)}  Z ${Math.round(p.z)}` : ph;
+      act.textContent = pinMode === k ? 'やめる' : p ? '変更' : '指定';
+    }
     canvas.style.cursor = pinMode ? 'crosshair' : '';
     if (pinMode) {
       const box = $('routeStatus');
+      box.className = 'meta';
+      box.hidden = false;
       box.style.color = '';
       box.textContent = `地図をクリックして${pinMode === 'start' ? '出発' : '到着'}地点を指定してください(Esc で取消)`;
     }
+    sheetForPin();
   }
   function placePin(kind, x, z) {
     pins[kind] = { x, z };
@@ -3827,7 +4360,7 @@
   function drawRoute() {
     if (!route || route.error) return;
     for (const p of route.pieces) strokeLine(p.pts, 9, '#ffffff', 0.9);
-    for (const p of route.pieces) strokeLine(p.pts, 5, ACCENT, 1);
+    for (const p of route.pieces) strokeLine(p.pts, 5, ROUTE_COLOR, 1);
     // 徒歩の経路は、緑の破線で重ねる
     if (walkRoute && !walkRoute.error) {
       for (const p of walkRoute.pieces) strokeLine(p.pts, 4, '#34a853', 1, [8, 6]);
@@ -3836,7 +4369,7 @@
   // 出発(緑)・到着(赤)のピン
   function drawPins() {
     ctx.save();
-    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.font = `700 12px ${FONT}`;
     ctx.textBaseline = 'middle';
     for (const [k, label, color] of [['start', '出発', '#34a853'], ['goal', '到着', '#ea4335']]) {
       const p = pins[k];
@@ -3861,6 +4394,7 @@
   $('pinStart').addEventListener('click', () => { pinMode = pinMode === 'start' ? null : 'start'; updatePinUI(); updateRoute(); });
   $('pinGoal').addEventListener('click', () => { pinMode = pinMode === 'goal' ? null : 'goal'; updatePinUI(); updateRoute(); });
   $('pinClear').addEventListener('click', () => { pins = { start: null, goal: null }; pinMode = null; updatePinUI(); updateRoute(); });
+  $('pinSwap').addEventListener('click', () => { pins = { start: pins.goal, goal: pins.start }; pinMode = null; updatePinUI(); updateRoute(); });
 
   // 入力
   $('file').addEventListener('change', (e) => readFile(e.target.files[0]));
@@ -3897,18 +4431,17 @@
   $('closeInfo').addEventListener('click', () => { selected = null; showInfo(null); needsDraw = true; });
   $('closeTrainCard').addEventListener('click', () => { hideTrainCard(); });
 
-  // メニューの開閉
-  $('toggleTop').addEventListener('click', () => { $('top').classList.toggle('collapsed'); });
-
   // 地図の操作ボタン(拡大・縮小は画面の中心を基準にする)
   function zoomBy(f) {
-    view.scale = clamp(view.scale * f, MIN_SCALE, MAX_SCALE);
-    needsDraw = true;
+    userMoved = true;
+    const v = visibleRect();
+    const [wx, wz] = toWorld((v.l + v.r) / 2, (v.t + v.b) / 2);   // 見えている部分の中心を基準にする
+    flyTo(centerFor(wx, wz, clamp((anim ? anim.to.scale : view.scale) * f, MIN_SCALE, MAX_SCALE)), true);
   }
   $('zoomIn').addEventListener('click', () => zoomBy(2));
   $('zoomOut').addEventListener('click', () => zoomBy(0.5));
-  $('fitBtn').addEventListener('click', () => { fitView(); needsDraw = true; });
-  $('originBtn').addEventListener('click', () => { view.cx = 0; view.cz = 0; needsDraw = true; });
+  $('fitBtn').addEventListener('click', () => { userMoved = true; focusedLine = ''; syncFocusChip(); fitView(true); });
+  $('originBtn').addEventListener('click', () => { userMoved = true; flyTo(centerFor(0, 0, view.scale), true); });
 
   let dragCount = 0;
   window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCount++; $('drop').style.display = 'flex'; });
@@ -3926,6 +4459,8 @@
   // 地図の操作
   let drag = null;
   canvas.addEventListener('pointerdown', (e) => {
+    anim = null;
+    userMoved = true;
     drag = { x: e.clientX, y: e.clientY, cx: view.cx, cz: view.cz, moved: false };
     canvas.setPointerCapture(e.pointerId);
     canvas.classList.add('dragging');
@@ -3971,9 +4506,7 @@
         if (pf) st = rail.stations.get(pf.station) || null;
       }
       if (st) {
-        selected = null;
-        selectedRail = { type: 'station', st };
-        showRailInfo(selectedRail);
+        selectStation(st);
       } else {
         selected = pick(e.clientX, e.clientY);
         const sec = !selected && railOn() ? pickRailSection(e.clientX, e.clientY) : null;
@@ -3988,15 +4521,11 @@
     drag = null;
     canvas.classList.remove('dragging');
   });
-  // 凡例の高さを測り、上の読み込みパネルがその上までに収まるようにする
-  const setLegendHeight = () => {
-    document.documentElement.style.setProperty('--legend-h', $('legend').offsetHeight + 'px');
-  };
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setLegendHeight).observe($('legend'));
-  setLegendHeight();
   canvas.addEventListener('pointerleave', () => { $('coord').textContent = ''; });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
+    anim = null;
+    userMoved = true;
     const [wx, wz] = toWorld(e.clientX, e.clientY);
     view.scale = clamp(view.scale * Math.exp(-e.deltaY * 0.0015), MIN_SCALE, MAX_SCALE);
     const [nx, nz] = toWorld(e.clientX, e.clientY);
@@ -4007,10 +4536,535 @@
   window.addEventListener('resize', resize);
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (!$('omniList').hidden) return;   // 検索の候補を開いている時は、候補を閉じるだけ
+      const hadDetail = $('info').style.display === 'flex';
       selected = null; showInfo(null); needsDraw = true;
       if (pinMode) { pinMode = null; updatePinUI(); updateRoute(); }
+      else if (!hadDetail && focusedLine) { focusedLine = ''; syncFocusChip(); needsDraw = true; }
     }
   });
+  // =====================================================================
+  // 画面まわり: 選択・サイドバー/シート・タブ・テーマ・表示切替・検索・一覧・共有リンク
+  // =====================================================================
+
+  // ---- 選択(駅・路線) ----
+  function selectStation(st, { fly = false } = {}) {
+    hideTrainCard();
+    selected = null;
+    probe = null;
+    selectedRail = { type: 'station', st };
+    showRailInfo(selectedRail);
+    syncBoardPolling();
+    if (fly) {
+      userMoved = true;
+      flyTo(centerFor(st.x, st.z, clamp(Math.max(view.scale, 0.9), MIN_SCALE, 3)), true);
+    }
+    needsDraw = true;
+  }
+
+  function markLineItems() {
+    for (const b of document.querySelectorAll('.line-item[data-code]')) b.setAttribute('aria-pressed', String(b.dataset.code === focusedLine));
+  }
+  function syncFocusChip() {
+    const c = $('focusChip');
+    if (!focusedLine) { c.hidden = true; c.replaceChildren(); return; }
+    c.hidden = false;
+    c.setAttribute('aria-label', `${lineNameOf(focusedLine)}の強調を解除`);
+    c.replaceChildren(codeBadge(focusedLine), mk('span', '', lineNameOf(focusedLine)));
+    c.insertAdjacentHTML('beforeend', '<svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M6 6l12 12M18 6 6 18"/></svg>');
+  }
+  function clearFocusLine() { focusedLine = ''; syncFocusChip(); markLineItems(); needsDraw = true; hashDirty(); }
+  $('focusChip').addEventListener('click', clearFocusLine);
+
+  // 路線を強調して、その路線全体が見える所へ動く(同じ路線をもう一度選ぶと解除)
+  function focusLine(code, { toggle = true, fit = true } = {}) {
+    if (toggle && focusedLine === code) { clearFocusLine(); return; }
+    focusedLine = code;
+    if (fit && rail) {
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const sec of rail.sections) {
+        if (lineOfSection(sec) !== code) continue;
+        for (const [x, z] of sec.pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
+      }
+      if (Number.isFinite(minX)) { userMoved = true; fitBox(minX, maxX, minZ, maxZ, { animate: true, pad: 64 }); }
+    }
+    syncFocusChip(); markLineItems(); needsDraw = true; hashDirty();
+  }
+
+  // 検索や座標で飛んだ先の目印
+  let probe = null;
+  function drawProbe() {
+    if (!probe) return;
+    const [sx, sy] = toScreen(probe.x, probe.z);
+    ctx.save();
+    ctx.lineWidth = 3; ctx.strokeStyle = T.selHalo;
+    ctx.beginPath(); ctx.arc(sx, sy, 11, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = T.sel;
+    ctx.beginPath(); ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+    ctx.moveTo(sx - 18, sy); ctx.lineTo(sx - 6, sy); ctx.moveTo(sx + 6, sy); ctx.lineTo(sx + 18, sy);
+    ctx.moveTo(sx, sy - 18); ctx.lineTo(sx, sy - 6); ctx.moveTo(sx, sy + 6); ctx.lineTo(sx, sy + 18);
+    ctx.stroke();
+    ctx.font = `700 12px ${FONT}`; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    const label = `X ${Math.round(probe.x)}  Z ${Math.round(probe.z)}`;
+    ctx.lineWidth = 4; ctx.strokeStyle = T.halo; ctx.strokeText(label, sx + 18, sy - 18);
+    ctx.fillStyle = T.ink; ctx.fillText(label, sx + 18, sy - 18);
+    ctx.restore();
+  }
+
+  // ---- 小さな通知・コピー ----
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+  async function copyText(text, msg = 'コピーしました') {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.append(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e2) { /* 何もしない */ }
+      ta.remove();
+    }
+    toast(msg);
+  }
+
+  // ---- サイドバー(PC)・シート(スマホ) ----
+  function setSidebarCollapsed(c) {
+    if (isMobile()) c = false;
+    $('top').classList.toggle('collapsed', c);
+    $('top').inert = c;
+    document.body.classList.toggle('sb-collapsed', c);
+  }
+  $('toggleTop').addEventListener('click', () => setSidebarCollapsed(true));
+  $('openTop').addEventListener('click', () => setSidebarCollapsed(false));
+
+  function setSheet(state) { $('top').dataset.sheet = state; }
+  (() => {
+    const handle = $('sheetHandle');
+    let g = null;
+    handle.addEventListener('pointerdown', (e) => { g = { y: e.clientY }; handle.setPointerCapture(e.pointerId); });
+    handle.addEventListener('pointerup', (e) => {
+      if (!g) return;
+      const dy = e.clientY - g.y; g = null;
+      const order = ['peek', 'half', 'full'];
+      const i = order.indexOf($('top').dataset.sheet);
+      if (Math.abs(dy) < 8) setSheet(i === 0 ? 'half' : i === 1 ? 'full' : 'half');
+      else setSheet(order[Math.max(0, Math.min(2, i + (dy < 0 ? 1 : -1)))]);
+    });
+    handle.addEventListener('pointercancel', () => { g = null; });
+  })();
+  // 車の経路でピンを打つ間は、スマホでは地図が見えるようにシートを下げる
+  function sheetForPin() {
+    if (!isMobile()) return;
+    if (pinMode) { setSheet('peek'); toast('地図をタップして指定してください'); }
+    else if ($('top').dataset.sheet === 'peek') setSheet('half');
+  }
+  window.addEventListener('resize', () => { if (isMobile()) setSidebarCollapsed(false); });
+
+  // ---- タブ(探す / 経路 / 地図)と、経路の中の電車 / 車 ----
+  const TABS = ['explore', 'route', 'map'];
+  function setTab(name) {
+    for (const t of TABS) {
+      $('tab-' + t).setAttribute('aria-selected', String(t === name));
+      $('pane-' + t).hidden = t !== name;
+    }
+    $('panes').scrollTop = 0;
+  }
+  function setRouteMode(mode) {
+    for (const m of ['rail', 'car']) {
+      $('seg-' + m).setAttribute('aria-selected', String(m === mode));
+      $('sub-' + m).hidden = m !== mode;
+    }
+  }
+  for (const t of TABS) $('tab-' + t).addEventListener('click', () => {
+    if ($('info').style.display === 'flex') { selected = null; showInfo(null); needsDraw = true; }
+    setTab(t);
+  });
+  $('seg-rail').addEventListener('click', () => setRouteMode('rail'));
+  $('seg-car').addEventListener('click', () => { setRouteMode('car'); updateRoute(); });
+  setTab('explore');
+  setRouteMode('rail');
+
+  // ---- 明るさ(自動 / ライト / ダーク) ----
+  const THEME_KEY = 'seiyo-theme';
+  const prefersDark = () => !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const effectiveDark = () => {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === 'dark' : prefersDark();
+  };
+  function applyTheme(mode, save = true) {
+    if (mode === 'light' || mode === 'dark') document.documentElement.dataset.theme = mode;
+    else { mode = 'auto'; delete document.documentElement.dataset.theme; }
+    if (save) { try { localStorage.setItem(THEME_KEY, mode); } catch (e) { /* 保存できなくても動く */ } }
+    for (const b of document.querySelectorAll('[data-theme-set]')) b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode));
+    $('themeBtn').innerHTML = effectiveDark()
+      ? '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.2 5.2 7 7M17 17l1.8 1.8M5.2 18.8 7 17M17 7l1.8-1.8"/></svg>'
+      : '<svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>';
+    readTheme();
+    needsDraw = true;
+  }
+  $('themeBtn').addEventListener('click', () => applyTheme(effectiveDark() ? 'light' : 'dark'));
+  for (const b of document.querySelectorAll('[data-theme-set]')) b.addEventListener('click', () => applyTheme(b.dataset.themeSet));
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', () => applyTheme(document.documentElement.dataset.theme || 'auto', false));
+  }
+  applyTheme((() => { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } })(), false);
+
+  // ---- 地図の上の表示切り替え(「地図」タブのスイッチと同じものを動かす) ----
+  function setCheck(id, v) {
+    const c = $(id);
+    if (c.checked === v) return;
+    c.checked = v;
+    c.dispatchEvent(new Event('input', { bubbles: true }));
+    c.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const LAYERS = {
+    rail: { get: () => $('showRail').checked, set: (v) => setCheck('showRail', v) },
+    road: { get: () => $('showHighway').checked || $('showOther').checked, set: (v) => { setCheck('showHighway', v); setCheck('showOther', v); } },
+    bg: { get: () => $('bgShow').checked, set: (v) => setCheck('bgShow', v) },
+    train: { get: () => $('showTrains').checked, set: (v) => setCheck('showTrains', v) },
+  };
+  function syncChips() {
+    for (const c of document.querySelectorAll('.lchip[data-layer]')) {
+      const on = String(LAYERS[c.dataset.layer].get());
+      if (c.getAttribute('aria-pressed') !== on) c.setAttribute('aria-pressed', on);
+    }
+  }
+  for (const c of document.querySelectorAll('.lchip[data-layer]')) {
+    c.addEventListener('click', () => { const L = LAYERS[c.dataset.layer]; L.set(!L.get()); syncChips(); needsDraw = true; });
+  }
+  $('panes').addEventListener('change', syncChips);
+
+  // ---- 検索(駅・路線・座標) ----
+  const kata2hira = (t) => t.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  const normKey = (t) => kata2hira(String(t || '').normalize('NFKC').toLowerCase()).replace(/[\s・\-]/g, '');
+  const COORD_RE = /^\s*(?:x\s*[:=]?\s*)?(-?\d+(?:\.\d+)?)\s*[,\s、/]\s*(?:z\s*[:=]?\s*)?(-?\d+(?:\.\d+)?)\s*$/i;
+
+  // 路線の一覧(駅数・長さ・範囲つき)。lines.csv にない路線も、駅番号から拾う
+  let lineCache = null;
+  function lineEntries() {
+    if (lineCache) return lineCache;
+    const map = new Map();
+    const ensure = (code) => {
+      if (!map.has(code)) map.set(code, { code, stations: 0, meters: 0 });
+      return map.get(code);
+    };
+    if (rail) {
+      for (const st of rail.stations.values()) for (const c of uniqueLineCodes(st)) ensure(c).stations++;
+      for (const sec of rail.sections) {
+        const c = lineOfSection(sec);
+        if (c && c !== '-') ensure(c).meters += sec.distance;
+      }
+    }
+    const order = [...lineInfo.keys()];
+    const list = [...map.values()].filter((e) => e.stations >= 2);
+    for (const e of list) {
+      const txt = lineToCompany.get(e.code) || (lineInfo.get(e.code) && lineInfo.get(e.code).companyTxt) || '';
+      const known = txt && [...lineInfo.values()].some((li) => li.companyTxt === txt && li.company);
+      e.name = lineNameOf(e.code);
+      e.companyName = known ? companyJa(txt) : 'その他の路線';
+      e.companyTxt = known ? txt : '';
+      const i = order.indexOf(e.code);
+      e.order = i < 0 ? 1e6 : i;
+    }
+    list.sort((a, b) => a.order - b.order || a.code.localeCompare(b.code, 'en', { numeric: true }));
+    return (lineCache = list);
+  }
+
+  let searchIndex = null;
+  function getIndex() {
+    if (searchIndex) return searchIndex;
+    const list = [];
+    if (rail) {
+      for (const st of rail.stations.values()) {
+        const row = stationRowOf(st);
+        list.push({
+          kind: 'station', st, row, grade: row ? row.grade : 5, ridership: row ? row.ridership : 0,
+          fields: [st.ja, row && row.reading, st.en, ...(st.codes || [])].map(normKey).filter(Boolean),
+        });
+      }
+      for (const L of lineEntries()) list.push({ kind: 'line', L, fields: [L.name, L.code, L.companyName].map(normKey).filter(Boolean) });
+    }
+    return (searchIndex = list);
+  }
+  function searchAll(q, kinds) {
+    const k = normKey(q);
+    if (!k) return [];
+    const out = [];
+    for (const it of getIndex()) {
+      if (!kinds.includes(it.kind)) continue;
+      let best = Infinity;
+      for (const f of it.fields) {
+        const i = f.indexOf(k);
+        if (i === 0) best = Math.min(best, f === k ? 0 : 1);
+        else if (i > 0) best = Math.min(best, 2 + i * 0.01);
+      }
+      if (best !== Infinity) out.push({ it, score: best + (it.kind === 'station' ? it.grade * 0.05 : 0) });
+    }
+    out.sort((a, b) => a.score - b.score);
+    return out.slice(0, 8).map((x) => x.it);
+  }
+  // 利用者数の多い駅(同じ駅名は1つにまとめる)
+  function majorStations(n) {
+    const seen = new Set();
+    const out = [];
+    for (const it of getIndex().filter((x) => x.kind === 'station' && x.ridership > 0).sort((a, b) => b.ridership - a.ridership)) {
+      if (seen.has(it.st.ja)) continue;
+      seen.add(it.st.ja);
+      out.push(it);
+      if (out.length >= n) break;
+    }
+    return out;
+  }
+  const fmtRidership = (n) => (n >= 10000 ? `${Math.round(n / 10000).toLocaleString('ja-JP')}万人` : `${n}人`);
+
+  function suggestRow(it) {
+    const b = mk('button', 'suggest-row');
+    b.type = 'button';
+    b.setAttribute('role', 'option');
+    const lead = mk('span', 'lead');
+    const main = mk('span', 'main');
+    let kind = '';
+    if (it.kind === 'station') {
+      if (it.st.codes.length) lead.append(codeBadge(it.st.codes[0]));
+      else lead.innerHTML = ICON.pin;
+      main.append(mk('div', 'name', stationName(it.st)));
+      const sub = [it.row && it.row.reading ? it.row.reading : it.st.en, it.row && it.row.pref].filter(Boolean).join(' ・ ');
+      const more = it.st.codes.slice(1).join(' ');
+      main.append(mk('div', 'sub', [sub, more].filter(Boolean).join('  ')));
+      kind = '駅';
+    } else if (it.kind === 'line') {
+      lead.append(codeBadge(it.L.code));
+      main.append(mk('div', 'name', it.L.name), mk('div', 'sub', it.L.companyName));
+      kind = '路線';
+    } else {
+      lead.innerHTML = ICON.cross;
+      main.append(mk('div', 'name', `座標 X ${Math.round(it.x)}  Z ${Math.round(it.z)} へ移動`));
+    }
+    b.append(lead, main, mk('span', 'kind', kind));
+    return b;
+  }
+
+  // 入力欄の下に候補を出す共通の部品(検索窓と、経路の出発・到着の欄で使う)
+  function attachSuggest(input, list, { kinds, onPick, coord = false, emptyList = null }) {
+    let items = [], active = -1;
+    const rows = () => [...list.querySelectorAll('.suggest-row')];
+    const open = () => { list.hidden = false; input.setAttribute('aria-expanded', 'true'); };
+    const close = () => { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; };
+    const mark = () => rows().forEach((r, i) => { r.classList.toggle('active', i === active); if (i === active) r.scrollIntoView({ block: 'nearest' }); });
+    function update() {
+      const q = input.value;
+      items = q.trim() ? searchAll(q, kinds) : (emptyList ? emptyList() : []);
+      if (coord) { const m = COORD_RE.exec(q); if (m) items.unshift({ kind: 'coord', x: Number(m[1]), z: Number(m[2]) }); }
+      active = items.length ? 0 : -1;
+      list.replaceChildren();
+      if (!items.length) {
+        if (!q.trim()) { close(); return; }
+        list.append(mk('div', 'suggest-empty', coord ? '見つかりません。駅名・読み・駅番号・路線名、または「X Z」の座標で探せます。' : '見つかりません。駅名・読み・駅番号で探せます。'));
+      }
+      items.forEach((it, i) => {
+        const r = suggestRow(it);
+        r.addEventListener('click', () => { close(); onPick(it); });
+        r.addEventListener('pointermove', () => { active = i; mark(); });
+        list.append(r);
+      });
+      open();
+      mark();
+    }
+    input.addEventListener('input', update);
+    input.addEventListener('focus', update);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (list.hidden) { update(); e.preventDefault(); return; }
+        if (!items.length) return;
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        mark(); e.preventDefault();
+      } else if (e.key === 'Enter') {
+        if (!list.hidden && items[active]) { e.preventDefault(); const it = items[active]; close(); onPick(it); }
+      } else if (e.key === 'Escape') {
+        if (!list.hidden) { close(); e.stopPropagation(); }
+      } else if (e.key === 'Tab') close();
+    });
+    list.addEventListener('mousedown', (e) => e.preventDefault());   // 候補を押しても、入力欄から外れないように
+    document.addEventListener('pointerdown', (e) => { if (!list.hidden && !list.contains(e.target) && e.target !== input) close(); });
+    return { close, update };
+  }
+
+  // 検索窓
+  const omniInput = $('omniInput');
+  function pickOmni(it) {
+    omniInput.value = ''; $('omniClear').hidden = true;
+    omniInput.blur();
+    if (isMobile()) setSheet('half');
+    if (it.kind === 'station') selectStation(it.st, { fly: true });
+    else if (it.kind === 'line') { selected = null; showInfo(null); setTab('explore'); focusLine(it.L.code, { toggle: false }); }
+    else {
+      selected = null; showInfo(null);
+      probe = { x: it.x, z: it.z };
+      userMoved = true;
+      flyTo(centerFor(it.x, it.z, clamp(Math.max(view.scale, 1), MIN_SCALE, 3)), true);
+      needsDraw = true;
+    }
+  }
+  attachSuggest(omniInput, $('omniList'), { kinds: ['station', 'line'], onPick: pickOmni, coord: true });
+  omniInput.addEventListener('input', () => { $('omniClear').hidden = !omniInput.value; });
+  omniInput.addEventListener('focus', () => { if (isMobile()) setSheet('full'); });
+  $('omniClear').addEventListener('click', () => { omniInput.value = ''; $('omniClear').hidden = true; $('omniList').hidden = true; omniInput.focus(); });
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    e.preventDefault();
+    setSidebarCollapsed(false);
+    omniInput.focus();
+  });
+
+  // 経路の出発・到着の欄
+  for (const which of ['from', 'to']) {
+    const input = $(which === 'from' ? 'fareFromText' : 'fareToText');
+    const list = input.parentElement.querySelector('.suggest');
+    attachSuggest(input, list, {
+      kinds: ['station'],
+      emptyList: () => majorStations(8),
+      onPick: (it) => { setRouteStation(which, it.st); input.blur(); },
+    });
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('blur', () => {
+      const id = $(which === 'from' ? 'fareFrom' : 'fareTo').value;
+      const st = id && rail ? rail.stations.get(id) : null;
+      if (!input.value.trim() && id) setRouteStation(which, null);
+      else input.value = st ? stationName(st) : '';
+    });
+  }
+  $('actFrom').addEventListener('click', () => routeFromSelected('from'));
+  $('actTo').addEventListener('click', () => routeFromSelected('to'));
+  function routeFromSelected(which) {
+    if (!selectedRail || selectedRail.type !== 'station') return;
+    const st = selectedRail.st;
+    setRouteStation(which, st);
+    setTab('route'); setRouteMode('rail');
+    selected = null; showInfo(null); needsDraw = true;
+  }
+
+  // ---- 「探す」タブ: 路線の一覧と、利用者の多い駅 ----
+  let exploreTimer = 0;
+  function scheduleExplore() {
+    lineCache = null; searchIndex = null;
+    if (exploreTimer) return;
+    exploreTimer = setTimeout(() => { exploreTimer = 0; refreshExplore(); }, 80);
+  }
+  function stationItem(it) {
+    const b = mk('button', 'stn-item');
+    b.type = 'button';
+    const badges = mk('span', 'badges');
+    for (const c of it.st.codes.slice(0, 3)) badges.append(codeBadge(c));
+    const main = mk('span', 'li-main');
+    main.append(mk('div', 'li-name', stationName(it.st)), mk('div', 'li-sub', it.row && it.row.pref ? it.row.pref : ''));
+    b.append(badges, main, mk('span', 'stn-num', fmtRidership(it.ridership)));
+    b.addEventListener('click', () => selectStation(it.st, { fly: true }));
+    return b;
+  }
+  function refreshExplore() {
+    const ready = !!rail;
+    $('exploreEmpty').hidden = ready;
+    $('exploreBody').hidden = !ready;
+    if (ready) $('dataNotice').hidden = true;
+    if (!ready) return;
+    const lines = lineEntries();
+    $('lineCount').textContent = `${lines.length} 路線`;
+    const groups = new Map();
+    for (const L of lines) {
+      if (!groups.has(L.companyName)) groups.set(L.companyName, { txt: L.companyTxt, list: [] });
+      groups.get(L.companyName).list.push(L);
+    }
+    const box = $('lineList');
+    box.replaceChildren();
+    for (const [name, g] of groups) {
+      const head = mk('div', 'co-head');
+      if (g.txt) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = logoBlobUrls.get(g.txt) || `logos/${encodeURIComponent(g.txt)}.png`;
+        img.onerror = () => img.remove();
+        head.append(img);
+      }
+      head.append(mk('span', '', name));
+      box.append(head);
+      for (const L of g.list) {
+        const b = mk('button', 'line-item');
+        b.type = 'button';
+        b.dataset.code = L.code;
+        b.setAttribute('aria-pressed', String(L.code === focusedLine));
+        const main = mk('span', 'li-main');
+        main.append(mk('div', 'li-name', L.name), mk('div', 'li-sub', `${L.stations} 駅` + (L.meters ? ` ・ ${(L.meters / 1000).toFixed(1)} km` : '')));
+        const end = mk('span', 'li-end'); end.innerHTML = ICON.chev;
+        b.append(codeBadge(L.code, true), main, end);
+        b.addEventListener('click', () => focusLine(L.code));
+        box.append(b);
+      }
+    }
+    const major = $('majorList');
+    major.replaceChildren(...majorStations(8).map(stationItem));
+    major.parentElement.querySelectorAll('.sec-h').forEach((h, i) => { if (i === 1) h.hidden = !major.children.length; });
+  }
+
+  // ---- 共有リンク(#v=中心X,中心Z,拡大率&s=駅&l=路線) ----
+  let hashTimer = 0, lastHash = '';
+  function currentHash() {
+    const p = [`v=${Math.round(view.cx)},${Math.round(view.cz)},${view.scale.toFixed(4)}`];
+    if (selectedRail && selectedRail.type === 'station') p.push('s=' + encodeURIComponent(selectedRail.st.id));
+    if (focusedLine) p.push('l=' + encodeURIComponent(focusedLine));
+    return '#' + p.join('&');
+  }
+  function writeHash() {
+    if (!hashReady) return;
+    const h = currentHash();
+    if (h === lastHash) return;
+    lastHash = h;
+    try { history.replaceState(null, '', h); } catch (e) { /* file:// などでは更新しない */ }
+  }
+  function hashDirty() { clearTimeout(hashTimer); hashTimer = setTimeout(writeHash, 400); }
+  function scheduleHash() { hashDirty(); }
+  function parseHash() {
+    const h = location.hash.replace(/^#/, '');
+    if (!h) return null;
+    const q = new URLSearchParams(h);
+    const out = { v: null, s: q.get('s') || '', l: q.get('l') || '' };
+    const v = (q.get('v') || '').split(',').map(Number);
+    if (v.length === 3 && v.every(Number.isFinite) && v[2] > 0) out.v = { cx: v[0], cz: v[1], scale: clamp(v[2], MIN_SCALE, MAX_SCALE) };
+    return out.v || out.s || out.l ? out : null;
+  }
+  function applyPendingHash() {
+    if (!pendingHash || !rail) return;
+    const h = pendingHash;
+    pendingHash = null;
+    hashReady = true;
+    if (h.l) { focusedLine = h.l; syncFocusChip(); markLineItems(); }
+    if (h.s && rail.stations.has(h.s)) selectStation(rail.stations.get(h.s), { fly: !h.v });
+    needsDraw = true;
+  }
+  $('shareBtn').addEventListener('click', () => {
+    copyText(location.href.split('#')[0] + currentHash(), 'リンクをコピーしました');
+  });
+  pendingHash = parseHash();
+  hashView = pendingHash && pendingHash.v;
+  hashReady = !pendingHash;
+
+  // ---- 文字・初期化 ----
+  if (document.fonts && document.fonts.load) {
+    Promise.all(['700 14px "Zen Kaku Gothic New"', '900 18px "Zen Kaku Gothic New"']
+      .map((f) => document.fonts.load(f, '星陽駅線')))
+      .then(() => { needsDraw = true; }, () => {});
+  }
+  syncChips();
+  updatePinUI();
+  setSidebarCollapsed(false);
+
   // OS の明るさを切り替えたら、地図の色も合わせる
   const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', () => { readTheme(); needsDraw = true; });
@@ -4019,8 +5073,9 @@
   resize();
   buildLanesLegend();
   $('tunnelSwatch').style.background = mixHex(ROAD_STYLE.general.fill, GRAY_HEX, TUNNEL_TINT);
-  function frame() {
-    if (needsDraw) { draw(); needsDraw = false; }
+  function frame(now) {
+    stepAnim(now);
+    if (needsDraw) { draw(); needsDraw = false; hashDirty(); syncChips(); }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -4030,6 +5085,9 @@
   // テストやデバッグ用に、読み込み関数を公開する
   window.roadMap = {
     loadText, loadTileFiles, pick, view, autoLoadData, loadDataFolder,
+    selectStation, focusLine, flyTo, setTab, setRouteMode, setRouteStation, setSheet, applyTheme,
+    get rail() { return rail; },
+    get lines() { return lineEntries(); },
     get roads() { return roads; },
     get tiles() {
       return [...tiles.values()].map((t) => ({
