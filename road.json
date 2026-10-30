@@ -1,7 +1,7 @@
 {
   "format": "car_input.roads",
   "version": 2,
-  "exported_at": "2026-10-24T13:14:47.372367200Z",
+  "exported_at": "2026-10-30T12:24:32.344216800Z",
   "roads": [
     {
       "id": 1,
@@ -2945,6 +2945,2954 @@
         "category": "",
         "number": "",
         "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 72,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47355,
+        "y": 65,
+        "z": -31728
+      },
+      "to": {
+        "x": -47355,
+        "y": 65,
+        "z": -31228
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 500,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 73,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47399,
+        "y": 65,
+        "z": -31409
+      },
+      "to": {
+        "x": -47344,
+        "y": 65,
+        "z": -31409
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 55,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 74,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19695,
+        "y": 65,
+        "z": 29049
+      },
+      "to": {
+        "x": 19618,
+        "y": 65,
+        "z": 29048
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 77,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.1675652194301382,
+        "lead": 0.0,
+        "r1": 1482.4999999999861,
+        "bridge": 0.0,
+        "r2": 1482.4999999999861,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 75,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19695,
+        "y": 65,
+        "z": 29048
+      },
+      "to": {
+        "x": 19618,
+        "y": 65,
+        "z": 29048
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 77,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 76,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19695,
+        "y": 65,
+        "z": 29048
+      },
+      "to": {
+        "x": 19618,
+        "y": 65,
+        "z": 29048
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 77,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 77,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19779,
+        "y": 65,
+        "z": 29013
+      },
+      "to": {
+        "x": 19696,
+        "y": 65,
+        "z": 29048
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 93,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 1,
+        "end_dir": 2,
+        "mid_angle": 2.356194490192345,
+        "lead": 1.4974746830583143,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 115.8822509939086,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 78,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19829,
+        "y": 71,
+        "z": 28963
+      },
+      "to": {
+        "x": 19779,
+        "y": 65,
+        "z": 29013
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 50,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 79,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19829,
+        "y": 73,
+        "z": 28963
+      },
+      "to": {
+        "x": 19779,
+        "y": 65,
+        "z": 29013
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 50,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 73
+      }
+    },
+    {
+      "id": 80,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 20233,
+        "y": 65,
+        "z": 31531
+      },
+      "to": {
+        "x": 20298,
+        "y": 65,
+        "z": 31531
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 65,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 81,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47355,
+        "y": 65,
+        "z": -31228
+      },
+      "to": {
+        "x": -47355,
+        "y": 65,
+        "z": -30809
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 419,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 82,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47355,
+        "y": 65,
+        "z": -30809
+      },
+      "to": {
+        "x": -47355,
+        "y": 65,
+        "z": -30209
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 600,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 83,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47355,
+        "y": 65,
+        "z": -30209
+      },
+      "to": {
+        "x": -47355,
+        "y": 65,
+        "z": -29609
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 600,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 84,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29690,
+        "y": 65,
+        "z": 28722
+      },
+      "to": {
+        "x": 29571,
+        "y": 65,
+        "z": 28722
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 119,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "national",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 85,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19625,
+        "y": 65,
+        "z": 28815
+      },
+      "to": {
+        "x": 19625,
+        "y": 65,
+        "z": 26815
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 2000,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 86,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19625,
+        "y": 65,
+        "z": 28815
+      },
+      "to": {
+        "x": 19625,
+        "y": 65,
+        "z": 27315
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 1500,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 87,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19625,
+        "y": 65,
+        "z": 27314
+      },
+      "to": {
+        "x": 19552,
+        "y": 65,
+        "z": 27032
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 294,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": -2.077406057567279,
+        "lead": 0.0,
+        "r1": 290.5924657534246,
+        "bridge": 0.0,
+        "r2": 290.5924657534246,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 88,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19518,
+        "y": 65,
+        "z": 27098
+      },
+      "to": {
+        "x": 19765,
+        "y": 65,
+        "z": 27098
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 247,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 89,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19608,
+        "y": 71,
+        "z": 28764
+      },
+      "to": {
+        "x": 19673,
+        "y": 71,
+        "z": 28764
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 65,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 71,
+        "max": 71
+      }
+    },
+    {
+      "id": 90,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19673,
+        "y": 70,
+        "z": 28755
+      },
+      "to": {
+        "x": 19608,
+        "y": 71,
+        "z": 28755
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 65,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 70,
+        "max": 71
+      }
+    },
+    {
+      "id": 91,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28755
+      },
+      "to": {
+        "x": 19608,
+        "y": 71,
+        "z": 28755
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 65,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 71,
+        "max": 71
+      }
+    },
+    {
+      "id": 92,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28755
+      },
+      "to": {
+        "x": 19754,
+        "y": 65,
+        "z": 28679
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 124,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 4.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 76.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 93,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28764
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28679
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 138,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 3.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 85.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 94,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28759
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28679
+      },
+      "type": "highway",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 135,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 8.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 80.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 95,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28768
+      },
+      "to": {
+        "x": 19631,
+        "y": 65,
+        "z": 28843
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 99,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 42.00000000000001,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 33.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 96,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19639,
+        "y": 65,
+        "z": 28808
+      },
+      "to": {
+        "x": 19673,
+        "y": 71,
+        "z": 28768
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 59,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": -1.5707963267948966,
+        "lead": 5.999999999999993,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 34.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 97,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19639,
+        "y": 65,
+        "z": 28808
+      },
+      "to": {
+        "x": 19673,
+        "y": 71,
+        "z": 28772
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 55,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": -1.5707963267948966,
+        "lead": 1.999999999999993,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 34.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 98,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28771
+      },
+      "to": {
+        "x": 19639,
+        "y": 65,
+        "z": 28808
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 56,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 34.000000000000014,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 2.999999999999986,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 99,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19631,
+        "y": 65,
+        "z": 28838
+      },
+      "to": {
+        "x": 19640,
+        "y": 65,
+        "z": 28808
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 32,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": -0.9878827378391625,
+        "lead": 0.0,
+        "r1": 27.250000000000007,
+        "bridge": 0.0,
+        "r2": 27.250000000000007,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 100,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28747
+      },
+      "to": {
+        "x": 19640,
+        "y": 65,
+        "z": 28705
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 61,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 4,
+        "mid_angle": -1.5707963267948966,
+        "lead": 0.0,
+        "r1": 32.99999999999999,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 9.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 101,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19673,
+        "y": 71,
+        "z": 28748
+      },
+      "to": {
+        "x": 19640,
+        "y": 65,
+        "z": 28705
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 62,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 4,
+        "mid_angle": -1.5707963267948966,
+        "lead": 0.0,
+        "r1": 32.99999999999999,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 10.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 71
+      }
+    },
+    {
+      "id": 102,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19639,
+        "y": 65,
+        "z": 28705
+      },
+      "to": {
+        "x": 19631,
+        "y": 65,
+        "z": 28666
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 40,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": -1.9754395835515042,
+        "lead": 0.0,
+        "r1": 49.531249999999986,
+        "bridge": 0.0,
+        "r2": 49.531249999999986,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 103,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19762,
+        "y": 65,
+        "z": 28617
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28678
+      },
+      "type": "highway",
+      "lanes": 8,
+      "mode": "bridge",
+      "length": 61,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 104,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19846,
+        "y": 65,
+        "z": 28537
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28616
+      },
+      "type": "highway",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 129,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 0,
+        "mid_angle": 3.141592653589793,
+        "lead": 5.000000000000014,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 79.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 105,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19764,
+        "y": 72,
+        "z": 28535
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28616
+      },
+      "type": "highway",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 81,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 1.6201690109060956,
+        "lead": 0.0,
+        "r1": 820.624999999998,
+        "bridge": 0.0,
+        "r2": 820.624999999998,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 72
+      }
+    },
+    {
+      "id": 106,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19763,
+        "y": 65,
+        "z": 28535
+      },
+      "to": {
+        "x": 19762,
+        "y": 65,
+        "z": 28616
+      },
+      "type": "highway",
+      "lanes": 4,
+      "mode": "bridge",
+      "length": 81,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 1.5954864304833456,
+        "lead": 0.0,
+        "r1": 1640.499999999992,
+        "bridge": 0.0,
+        "r2": 1640.499999999992,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 107,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19937,
+        "y": 73,
+        "z": 28456
+      },
+      "to": {
+        "x": 19637,
+        "y": 73,
+        "z": 28456
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 300,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 73,
+        "max": 73
+      }
+    },
+    {
+      "id": 108,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19759,
+        "y": 65,
+        "z": 28535
+      },
+      "to": {
+        "x": 19759,
+        "y": 65,
+        "z": 28434
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 101,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 109,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19760,
+        "y": 65,
+        "z": 28434
+      },
+      "to": {
+        "x": 19760,
+        "y": 65,
+        "z": 28535
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 101,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 110,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19689,
+        "y": 73,
+        "z": 28477
+      },
+      "to": {
+        "x": 19753,
+        "y": 65,
+        "z": 28534
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 97,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 6.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 57.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 73
+      }
+    },
+    {
+      "id": 111,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19689,
+        "y": 73,
+        "z": 28478
+      },
+      "to": {
+        "x": 19753,
+        "y": 65,
+        "z": 28534
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 96,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 7.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 56.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 73
+      }
+    },
+    {
+      "id": 112,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19689,
+        "y": 73,
+        "z": 28478
+      },
+      "to": {
+        "x": 19655,
+        "y": 73,
+        "z": 28469
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 36,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.6591344375171886,
+        "lead": 0.0,
+        "r1": 34.3611111111111,
+        "bridge": 0.0,
+        "r2": 34.3611111111111,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 73,
+        "max": 73
+      }
+    },
+    {
+      "id": 113,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19768,
+        "y": 65,
+        "z": 28434
+      },
+      "to": {
+        "x": 19768,
+        "y": 65,
+        "z": 28534
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 100,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 114,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19776,
+        "y": 65,
+        "z": 28534
+      },
+      "to": {
+        "x": 19865,
+        "y": 72,
+        "z": 28478
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 121,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 56.00000000000001,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 33.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 72
+      }
+    },
+    {
+      "id": 115,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19716,
+        "y": 69,
+        "z": 28380
+      },
+      "to": {
+        "x": 19760,
+        "y": 65,
+        "z": 28434
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 79,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 44.00000000000001,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 10.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 69
+      }
+    },
+    {
+      "id": 116,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19716,
+        "y": 69,
+        "z": 28380
+      },
+      "to": {
+        "x": 19688,
+        "y": 72,
+        "z": 28411
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 47,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 28.000000000000004,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 2.9999999999999964,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 69,
+        "max": 72
+      }
+    },
+    {
+      "id": 117,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19741,
+        "y": 72,
+        "z": 28434
+      },
+      "to": {
+        "x": 19689,
+        "y": 72,
+        "z": 28411
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 65,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 4,
+        "mid_angle": 3.141592653589793,
+        "lead": 29.000000000000004,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 22.999999999999996,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 72,
+        "max": 72
+      }
+    },
+    {
+      "id": 118,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19741,
+        "y": 72,
+        "z": 28434
+      },
+      "to": {
+        "x": 19771,
+        "y": 73,
+        "z": 28443
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 32,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.5829135889557342,
+        "lead": 0.0,
+        "r1": 27.25,
+        "bridge": 0.0,
+        "r2": 27.25,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 72,
+        "max": 73
+      }
+    },
+    {
+      "id": 119,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19771,
+        "y": 73,
+        "z": 28442
+      },
+      "to": {
+        "x": 19741,
+        "y": 72,
+        "z": 28434
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 31,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.662797437084475,
+        "lead": 0.0,
+        "r1": 30.124999999999986,
+        "bridge": 0.0,
+        "r2": 30.124999999999986,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 72,
+        "max": 73
+      }
+    },
+    {
+      "id": 120,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 19741,
+        "y": 73,
+        "z": 28434
+      },
+      "to": {
+        "x": 19771,
+        "y": 73,
+        "z": 28442
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 31,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.5212047834946819,
+        "lead": 0.0,
+        "r1": 30.125,
+        "bridge": 0.0,
+        "r2": 30.125,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 73,
+        "max": 73
+      }
+    },
+    {
+      "id": 121,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19742,
+        "y": 73,
+        "z": 28434
+      },
+      "to": {
+        "x": 19771,
+        "y": 73,
+        "z": 28442
+      },
+      "type": "highway",
+      "lanes": 1,
+      "mode": "bridge",
+      "length": 30,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.5383349855714009,
+        "lead": 0.0,
+        "r1": 28.28125,
+        "bridge": 0.0,
+        "r2": 28.28125,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 73,
+        "max": 73
+      }
+    },
+    {
+      "id": 122,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 19937,
+        "y": 73,
+        "z": 28456
+      },
+      "to": {
+        "x": 20560,
+        "y": 65,
+        "z": 28634
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 671,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 7,
+        "mid_angle": 0.0,
+        "lead": 193.2699858975891,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 607.730014102411,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 73
+      }
+    },
+    {
+      "id": 123,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 22163,
+        "y": 65,
+        "z": 29169
+      },
+      "to": {
+        "x": 20560,
+        "y": 65,
+        "z": 28634
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 1746,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 3,
+        "mid_angle": 3.141592653589793,
+        "lead": 311.39574413039395,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 1826.6042558696056,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 124,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 22164,
+        "y": 65,
+        "z": 29169
+      },
+      "to": {
+        "x": 23164,
+        "y": 65,
+        "z": 29169
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 1000,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 125,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": -47355,
+        "y": 65,
+        "z": -29609
+      },
+      "to": {
+        "x": -47355,
+        "y": 65,
+        "z": -28909
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 700,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 126,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 23165,
+        "y": 65,
+        "z": 29169
+      },
+      "to": {
+        "x": 25166,
+        "y": 65,
+        "z": 29169
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 2001,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 127,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 25167,
+        "y": 65,
+        "z": 29169
+      },
+      "to": {
+        "x": 26383,
+        "y": 65,
+        "z": 29457
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 1293,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 7,
+        "mid_angle": 0.0,
+        "lead": 520.7064940365486,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 983.2935059634515,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 128,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 26383,
+        "y": 65,
+        "z": 29457
+      },
+      "to": {
+        "x": 27579,
+        "y": 65,
+        "z": 29998
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 1352,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 7,
+        "end_dir": 6,
+        "mid_angle": 0.7853981633974483,
+        "lead": 110.08953724384492,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 1581.309883354377,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 129,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 27580,
+        "y": 65,
+        "z": 29998
+      },
+      "to": {
+        "x": 28780,
+        "y": 72,
+        "z": 29998
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 1200,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 72
+      }
+    },
+    {
+      "id": 130,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 28780,
+        "y": 72,
+        "z": 29998
+      },
+      "to": {
+        "x": 29280,
+        "y": 72,
+        "z": 29998
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 500,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 72,
+        "max": 72
+      }
+    },
+    {
+      "id": 131,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29280,
+        "y": 72,
+        "z": 29998
+      },
+      "to": {
+        "x": 29574,
+        "y": 72,
+        "z": 29995
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "bridge",
+      "length": 294,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.02040745498790847,
+        "lead": 0.0,
+        "r1": 7203.75,
+        "bridge": 0.0,
+        "r2": 7203.75,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 72,
+        "max": 72
+      }
+    },
+    {
+      "id": 132,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29574,
+        "y": 72,
+        "z": 29995
+      },
+      "to": {
+        "x": 29889,
+        "y": 65,
+        "z": 29995
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 315,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 72
+      }
+    },
+    {
+      "id": 133,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29890,
+        "y": 65,
+        "z": 29995
+      },
+      "to": {
+        "x": 30723,
+        "y": 65,
+        "z": 30443
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 979,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 7,
+        "mid_angle": 0.7853981633974483,
+        "lead": 0.0,
+        "r1": 929.4722215136417,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 248.56767594314664,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": "白風高速道路"
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 134,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29843,
+        "y": 65,
+        "z": 29977
+      },
+      "to": {
+        "x": 29843,
+        "y": 65,
+        "z": 29856
+      },
+      "type": "general",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 121,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 135,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29881,
+        "y": 65,
+        "z": 29817
+      },
+      "to": {
+        "x": 29843,
+        "y": 65,
+        "z": 29856
+      },
+      "type": "general",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 61,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 38.000000000000014,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.9999999999999858,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 136,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29884,
+        "y": 65,
+        "z": 29832
+      },
+      "to": {
+        "x": 29884,
+        "y": 65,
+        "z": 28831
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 1001,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "prefectural",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 137,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29884,
+        "y": 65,
+        "z": 28830
+      },
+      "to": {
+        "x": 29884,
+        "y": 65,
+        "z": 28648
+      },
+      "type": "general",
+      "lanes": 4,
+      "mode": "earthwork",
+      "length": 182,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:polished_diorite",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "prefectural",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 65,
+        "max": 65
+      }
+    },
+    {
+      "id": 138,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 29691,
+        "y": 65,
+        "z": 28722
+      },
+      "to": {
+        "x": 30009,
+        "y": 65,
+        "z": 28722
+      },
+      "type": "general",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 318,
+      "sidewalk_width": 3,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "national",
+        "number": "",
+        "name": "長海街道"
       },
       "height": {
         "min": 65,
