@@ -1447,22 +1447,31 @@
   // 系統の名前から、末尾の路線コード(例: (NN)・(NNM-))を外す。直通の違いで同じ系統が別名になるため
   const sysKeyOf = (name) => String(name || '').replace(/\([^()]*\)\s*$/, '').trim();
   // 系統(routeName)ごとに、列車の各駅の到着・発車時刻(ms)をまとめる
+  // 通過ごとに、その通過の系統(eta の routeName)に入れる。折返し前と後で系統が違うので、時刻が混ざらない
+  // 同じ系統で同じ駅を2回通る時は、最初の通過を使う
   function liveIndex() {
     const idx = new Map();
     for (const t of trains) {
-      const name = sysKeyOf(t.routeName);
-      if (!name) continue;
-      const arr = new Map();
+      const byKey = new Map();   // 系統 -> (駅 -> ms)
+      const put = (key, sid, ms) => {
+        if (!key) return;
+        if (!byKey.has(key)) byKey.set(key, new Map());
+        const m = byKey.get(key);
+        if (!m.has(sid)) m.set(sid, ms);
+      };
+      // 停車中の列車は、停車している駅からの発車時刻を使う(通過の時刻より優先)
+      if (t.currentStationId && t.dwelling) {
+        put(sysKeyOf(t.routeName), String(t.currentStationId), trainsAt + (Number(t.dwellRemainSec) || 0) * 1000);
+      }
       for (const e of t.etas || []) {
         const sec = Number(e.sec);
-        if (e.stationId != null && Number.isFinite(sec)) arr.set(String(e.stationId), trainsAt + sec * 1000);
+        if (e.stationId == null || !Number.isFinite(sec)) continue;
+        put(sysKeyOf(e.routeName || t.routeName), String(e.stationId), trainsAt + sec * 1000);
       }
-      // 停車中の列車は、停車している駅からの発車時刻を使う
-      if (t.currentStationId && t.dwelling) {
-        arr.set(String(t.currentStationId), trainsAt + (Number(t.dwellRemainSec) || 0) * 1000);
+      for (const [key, arr] of byKey) {
+        if (!idx.has(key)) idx.set(key, []);
+        idx.get(key).push(arr);
       }
-      if (!idx.has(name)) idx.set(name, []);
-      idx.get(name).push(arr);
     }
     return idx;
   }
@@ -3479,30 +3488,91 @@
     }
     return best ? name(best.id) : '';
   }
+  // 系統の名前(sysKey)から、その系統の時刻表(routeData の系統)を探す。無ければ null
+  let routeByKeyCache = null;
+  function routeByKey(key) {
+    if (!routeData) return null;
+    if (!routeByKeyCache || routeByKeyCache.src !== routeData) {
+      const m = new Map();
+      for (const r of routeData.routes || []) m.set(sysKeyOf(r.name), r);
+      routeByKeyCache = { src: routeData, m };
+    }
+    return routeByKeyCache.m.get(key) || null;
+  }
+  // 通過ごとの系統の、この駅から終点までの区間。この駅が系統に無い・終点なら null
+  // 戻り値は { line: 乗る路線(候補にあるもの), path: 駅の並び(地図で分かる駅まで), dest: 終点の名前 }
+  function routeHop(sid, route, candidates) {
+    if (!rail || !rail.stations.has(sid)) return null;
+    const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
+    const i = ids.indexOf(sid);
+    if (i < 0 || i >= ids.length - 1) return null;
+    const seg = ids.slice(i);
+    // 地図に無い駅の先は使わない(路線の判定と方面の名前は、地図で分かる駅だけで決める)
+    let n = 1;
+    while (n < seg.length && rail.stations.has(seg[n])) n++;
+    const path = seg.slice(0, n).map((id) => ({ id, kind: 'ride' }));
+    const endId = seg[seg.length - 1];
+    const endRow = routeData && routeData.stations && routeData.stations[endId];
+    const dest = parseStationName(endRow && endRow.name).ja || (rail.stations.get(endId) || {}).ja || '';
+    const line = path.length >= 2 ? sectionLineOf(path[0].id, path[1].id) : '';
+    return { line: candidates.includes(line) ? line : candidates[0], path: path.length >= 2 ? path : null, dest };
+  }
   function stationDepartures(st) {
     const sid = String(st.id);
     const stopLines = stopTypes.get(sid) || [];
     // 方面は、表示名(方面の駅の名前)でまとめる。次の停車駅が違っても、同じ名前の方面は1つの欄にする
     const byDir = new Map();
-    for (const t of trains) {
-      const dest = parseStationName(t.destination).ja || '-';
-      const type = jaName(t.routeNumber);
-      const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
-      if (!candidates.length) continue;
-      if (st.ja && dest === st.ja) continue;
-      const title = t.title || t.formation || '';
-      let row = null;
-      if (t.dwelling && String(t.currentStationId) === sid) {
-        row = { sec: Number(t.dwellRemainSec) || 0, stopping: true };
-      } else {
-        const e = (t.etas || []).find((x) => String(x.stationId) === sid);
-        if (e && Number.isFinite(Number(e.sec)) && Number(e.sec) >= 0) row = { sec: Number(e.sec), stopping: false };
-      }
-      if (!row) continue;
-      const hop = departHop(sid, t, candidates);
-      const dirName = (hop.path && dirLabelName(hop.path)) || dest;
+    const add = (row, dirName) => {
       if (!byDir.has(dirName)) byDir.set(dirName, []);
-      byDir.get(dirName).push({ ...row, type, dest, title, line: hop.line, dir: dirName, dirName });
+      byDir.get(dirName).push({ ...row, dir: dirName, dirName });
+    };
+    for (const t of trains) {
+      const title = t.title || t.formation || '';
+      const topKey = sysKeyOf(t.routeName);
+      const dwellHere = !!t.dwelling && String(t.currentStationId) === sid;
+      const dwellSec = Number(t.dwellRemainSec) || 0;
+      // 1) 停車中の列車: 今の系統で、この駅からの発車
+      if (dwellHere) {
+        const type = jaName(t.routeNumber);
+        const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+        const dest = parseStationName(t.destination).ja || '-';
+        if (candidates.length && !(st.ja && dest === st.ja)) {
+          const hop = departHop(sid, t, candidates);
+          const dirName = (hop.path && dirLabelName(hop.path)) || dest;
+          add({ sec: dwellSec, stopping: true, type, dest, title, line: hop.line }, dirName);
+        }
+      }
+      // 2) この駅を通る通過(折返し前も、折返し後も)。通過ごとに、その通過の系統で種別・行先・路線を決める
+      for (const e of t.etas || []) {
+        if (String(e.stationId) !== sid) continue;
+        const sec = Number(e.sec);
+        if (!Number.isFinite(sec) || sec < 0) continue;
+        if (dwellHere && sec <= dwellSec + 1) continue;   // 停車中の発車と同じ通過は出さない
+        const key = sysKeyOf(e.routeName || t.routeName);
+        const route = key === topKey ? null : routeByKey(key);
+        let type, dest, hop, dirName;
+        if (!route) {
+          // 今の系統(折返し前)の通過
+          type = jaName(t.routeNumber);
+          const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+          if (!candidates.length) continue;
+          dest = parseStationName(t.destination).ja || '-';
+          if (st.ja && dest === st.ja) continue;
+          hop = departHop(sid, t, candidates);
+          dirName = (hop.path && dirLabelName(hop.path)) || dest;
+        } else {
+          // 折返し後など、別の系統の通過: 系統の種別・終点・路線で出す
+          type = String(route.number || '').split('|')[0].trim() || '-';
+          const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+          if (!candidates.length) continue;
+          hop = routeHop(sid, route, candidates);
+          if (!hop) continue;
+          dest = hop.dest || '-';
+          if (st.ja && dest === st.ja) continue;
+          dirName = (hop.path && dirLabelName(hop.path)) || dest;
+        }
+        add({ sec, stopping: false, type, dest, title, line: hop.line }, dirName);
+      }
     }
     // 方面ごとに4本まで(到着の早い順)。方面の中は到着順、方面どうしは最初の到着順で並べる
     const out = [];
