@@ -3515,17 +3515,15 @@
     const endRow = routeData && routeData.stations && routeData.stations[endId];
     const dest = parseStationName(endRow && endRow.name).ja || (rail.stations.get(endId) || {}).ja || '';
     const line = path.length >= 2 ? sectionLineOf(path[0].id, path[1].id) : '';
-    return { line: candidates.includes(line) ? line : candidates[0], path: path.length >= 2 ? path : null, dest };
+    return { line: candidates.includes(line) ? line : candidates[0], path: path.length >= 2 ? path : null, dest, endId };
   }
   function stationDepartures(st) {
     const sid = String(st.id);
     const stopLines = stopTypes.get(sid) || [];
-    // 方面は、表示名(方面の駅の名前)でまとめる。次の停車駅が違っても、同じ名前の方面は1つの欄にする
-    const byDir = new Map();
-    const add = (row, dirName) => {
-      if (!byDir.has(dirName)) byDir.set(dirName, []);
-      byDir.get(dirName).push({ ...row, dir: dirName, dirName });
-    };
+    // 行は一旦ためて、最後に方面ごとにまとめる(下の「方面の名前」を参照)
+    const entries = [];
+    // target: この通過の行き先の駅(地図上の方向を決めるため)
+    const add = (row, hop, fallback, target) => entries.push({ row, hop: hop || {}, fallback, target });
     for (const t of trains) {
       const title = t.title || t.formation || '';
       const topKey = sysKeyOf(t.routeName);
@@ -3538,8 +3536,7 @@
         const dest = parseStationName(t.destination).ja || '-';
         if (candidates.length && !(st.ja && dest === st.ja)) {
           const hop = departHop(sid, t, candidates);
-          const dirName = (hop.path && dirLabelName(hop.path)) || dest;
-          add({ sec: dwellSec, stopping: true, type, dest, title, line: hop.line }, dirName);
+          add({ sec: dwellSec, stopping: true, type, dest, title, line: hop.line }, hop, dest, t.destStationId);
         }
       }
       // 2) この駅を通る通過(折返し前も、折返し後も)。通過ごとに、その通過の系統で種別・行先・路線を決める
@@ -3559,7 +3556,7 @@
           dest = parseStationName(t.destination).ja || '-';
           if (st.ja && dest === st.ja) continue;
           hop = departHop(sid, t, candidates);
-          dirName = (hop.path && dirLabelName(hop.path)) || dest;
+          dirName = dest;
         } else {
           // 折返し後など、別の系統の通過: 系統の種別・終点・路線で出す
           type = String(route.number || '').split('|')[0].trim() || '-';
@@ -3569,10 +3566,49 @@
           if (!hop) continue;
           dest = hop.dest || '-';
           if (st.ja && dest === st.ja) continue;
-          dirName = (hop.path && dirLabelName(hop.path)) || dest;
+          dirName = dest;
         }
-        add({ sec, stopping: false, type, dest, title, line: hop.line }, dirName);
+        add({ sec, stopping: false, type, dest, title, line: hop.line }, hop, dirName, hop.endId || t.destStationId);
       }
+    }
+    // 方面: 同じ方向(この駅を出て最初に乗る区間の行き先が同じ)の列車は1つの方面にまとめる。
+    // 経路は地図上の最短経路で決める(急行など途中駅を通過する系統も、各駅停車と同じ方向になる)。
+    // 方面の名前は、その方向で一番遠くまで行く列車の経路から決める
+    const pathLen = (path) => {
+      let d = 0;
+      for (let i = 1; i < path.length; i++) {
+        const a = rail && rail.stations.get(path[i - 1].id);
+        const nb = a && a.neighbors.find((n) => n.id === path[i].id);
+        d += nb ? nb.distance : 0;
+      }
+      return d;
+    };
+    const firstRideOf = (path) => {
+      for (let i = 1; i < path.length; i++) if (path[i].kind === 'ride') return path[i].id;
+      return null;
+    };
+    for (const en of entries) {
+      en.path = (en.target && rail && rail.stations.has(en.target) && rail.stations.has(sid) && en.target !== sid)
+        ? railPath(sid, String(en.target)) : null;
+      if (!en.path && en.hop.path && en.hop.path.length >= 2) en.path = en.hop.path;
+      en.key = (en.path && firstRideOf(en.path)) || en.hop.next || en.fallback;
+    }
+    const groups = new Map();
+    for (const en of entries) {
+      if (!groups.has(en.key)) groups.set(en.key, []);
+      groups.get(en.key).push(en);
+    }
+    const byDir = new Map();
+    for (const list of groups.values()) {
+      let far = null, farLen = -1;
+      for (const en of list) {
+        if (!en.path || en.path.length < 2) continue;
+        const len = pathLen(en.path);
+        if (len > farLen) { far = en; farLen = len; }
+      }
+      const dirName = (far && dirLabelName(far.path)) || list[0].fallback;
+      if (!byDir.has(dirName)) byDir.set(dirName, []);
+      for (const en of list) byDir.get(dirName).push({ ...en.row, dir: dirName, dirName });
     }
     // 方面ごとに4本まで(到着の早い順)。方面の中は到着順、方面どうしは最初の到着順で並べる
     const out = [];
