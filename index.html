@@ -3350,6 +3350,21 @@
 
   // ---- 停車する種別(train.json の系統 と color.txt の色) ----
   let typeColors = new Map();   // 会社txt -> Map(種別名 -> { bg, fg })
+  // ---- 種別の略称: 系統名の中の略(各停・快急・区急・通急)と、種別の正式名(各駅停車 など)を同じ種別として扱う ----
+  const TYPE_ALIASES = [['各停', '各駅停車'], ['快急', '快速急行'], ['区急', '区間急行'], ['通急', '通勤急行']];
+  const canonType = (word) => { const w = String(word || '').trim(); const hit = TYPE_ALIASES.find(([ab]) => ab === w); return hit ? hit[1] : w; };
+  const sameType = (a, b) => !!a && !!b && canonType(a) === canonType(b);
+  // 系統名の種別の語: 「会社||各停 青前→天夜町(AM)」→「各停」、「会社||各停上り(NS)」→「各停」。無ければ ''
+  const typeWordOf = (name) => { const m = /\|\|\s*([^\s上下(（→]+)/.exec(String(name || '')); return m ? m[1] : ''; };
+  // 種別の当てはめ: 種別の番号(正式名)で探し、無ければ系統名の語で探す。見つからなければ type は ''
+  function typeMatch(stopLines, numberType, nameWord) {
+    for (const raw of [numberType, nameWord]) {
+      if (!raw || raw === '-') continue;
+      const cands = stopLines.filter((x) => sameType(x.type, raw)).map((x) => x.line);
+      if (cands.length) return { type: canonType(raw), cands };
+    }
+    return { type: '', cands: [] };
+  }
   let stopTypes = new Map();    // 駅 id -> [{ line, type }]
   // color.txt: 「(c)会社txt」の下に、「種別名・背景色・文字色」の3行が1組で並ぶ
   function applyTypeColors(text) {
@@ -3380,7 +3395,7 @@
       return [...head.matchAll(/\[([^\]]+)\]/g)].map((m) => lineCodeOf(m[1]));
     };
     for (const route of routeData.routes || []) {
-      const type = String(route.number || '').split('|')[0].trim() || '-';
+      const type = canonType(String(route.number || '').split('|')[0].trim() || typeWordOf(route.name) || '-');
       const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
       const votes = new Map();
       for (const id of ids) for (const l of linesOfStation(id)) votes.set(l, (votes.get(l) || 0) + 1);
@@ -3408,7 +3423,10 @@
   const typeStyleOf = (line, type) => {
     const company = lineToCompany.get(line);
     const map = company && typeColors.get(company);
-    return (map && map.get(type)) || null;
+    if (!map) return null;
+    if (map.get(type)) return map.get(type);
+    for (const [k, v] of map) if (sameType(k, type)) return v;
+    return null;
   };
   // ---- 駅の発車予定(列車位置のAPIから、方面(行先)ごとに4本まで。停車種別の路線タブの中に出す) ----
   const DEP_PER_DIRECTION = 4;
@@ -3531,8 +3549,7 @@
       const dwellSec = Number(t.dwellRemainSec) || 0;
       // 1) 停車中の列車: 今の系統で、この駅からの発車
       if (dwellHere) {
-        const type = jaName(t.routeNumber);
-        const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+        const { type, cands: candidates } = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName));
         const dest = parseStationName(t.destination).ja || '-';
         if (candidates.length && !(st.ja && dest === st.ja)) {
           const hop = departHop(sid, t, candidates);
@@ -3550,8 +3567,9 @@
         let type, dest, hop, dirName;
         if (!route) {
           // 今の系統(折返し前)の通過
-          type = jaName(t.routeNumber);
-          const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+          const m = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName));
+          type = m.type;
+          const candidates = m.cands;
           if (!candidates.length) continue;
           dest = parseStationName(t.destination).ja || '-';
           if (st.ja && dest === st.ja) continue;
@@ -3559,8 +3577,9 @@
           dirName = dest;
         } else {
           // 折返し後など、別の系統の通過: 系統の種別・終点・路線で出す
-          type = String(route.number || '').split('|')[0].trim() || '-';
-          const candidates = stopLines.filter((x) => x.type === type).map((x) => x.line);
+          const m = typeMatch(stopLines, String(route.number || '').split('|')[0].trim(), typeWordOf(route.name));
+          type = m.type;
+          const candidates = m.cands;
           if (!candidates.length) continue;
           hop = routeHop(sid, route, candidates);
           if (!hop) continue;
@@ -3684,7 +3703,7 @@
       const map = company && typeColors.get(company);
       if (!map) return Infinity;
       let i = 0;
-      for (const k of map.keys()) { if (k === type) return i; i++; }
+      for (const k of map.keys()) { if (sameType(k, type)) return i; i++; }
       return Infinity;
     };
     for (const line of lines) {
