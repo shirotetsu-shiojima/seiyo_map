@@ -1307,7 +1307,7 @@
       const dest = parseStationName(t.destination).ja || '-';
       const next = parseStationName(t.nextStation).ja || '-';
       const delay = t.delaySec > 0 ? `・遅れ ${Math.round(t.delaySec)} 秒` : '';
-      div.textContent = `${t.title || t.formation} ${jaName(t.routeNumber)} → ${dest}(次 ${next}${delay})`;
+      div.textContent = `${t.title || t.formation} ${txtTypeName(trainRunCode(t), jaName(t.routeNumber))} → ${dest}(次 ${next}${delay})`;
       return div;
     }));
   }
@@ -1647,7 +1647,7 @@
     const dl = $('trainCardRows');
     dl.textContent = '';
     addRow(dl, '車番', num);
-    addRow(dl, '種別', jaName(t.routeNumber));
+    addRow(dl, '種別', txtTypeName(trainRunCode(t), jaName(t.routeNumber)));
     addRow(dl, '行き先', parseStationName(t.destination).ja || '-');
     addRow(dl, '位置', trainPosition(t));
     card.hidden = false;
@@ -3420,6 +3420,15 @@
     }
   }
   // 路線(会社)と種別から、color.txt の色を探す
+  // 表示する種別名: color.txt の表記に合わせる(その路線の会社の登録名。登録が無ければ、そのままの名前)
+  const txtTypeName = (line, type) => {
+    const company = line && lineToCompany.get(line);
+    const map = company && typeColors.get(company);
+    if (!map || !type) return type;
+    if (map.has(type)) return type;
+    for (const k of map.keys()) if (sameType(k, type)) return k;
+    return type;
+  };
   const typeStyleOf = (line, type) => {
     const company = lineToCompany.get(line);
     const map = company && typeColors.get(company);
@@ -3541,7 +3550,7 @@
     // 行は一旦ためて、最後に方面ごとにまとめる(下の「方面の名前」を参照)
     const entries = [];
     // target: この通過の行き先の駅(地図上の方向を決めるため)
-    const add = (row, hop, fallback, target) => entries.push({ row, hop: hop || {}, fallback, target });
+    const add = (row, hop, fallback, target) => entries.push({ row: { ...row, type: txtTypeName(row.line, row.type) }, hop: hop || {}, fallback, target });
     for (const t of trains) {
       const title = t.title || t.formation || '';
       const topKey = sysKeyOf(t.routeName);
@@ -3739,8 +3748,9 @@
         block.append(mk('div', 'lb-label', '停車する種別'));
         const row = mk('div', 'type-row');
         for (const x of items) {
-          const chip = mk('span', 'type-chip', x.type);
-          chip.style.fontSize = chipFontPx(x.type) + 'px';
+          const label = txtTypeName(x.line, x.type);
+          const chip = mk('span', 'type-chip', label);
+          chip.style.fontSize = chipFontPx(label) + 'px';
           const s = typeStyleOf(x.line, x.type);
           if (s) { chip.style.background = s.bg; chip.style.color = s.fg; }
           row.append(chip);
