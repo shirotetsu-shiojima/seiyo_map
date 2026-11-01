@@ -1,0 +1,18 @@
+{
+  "_comment": "owner / repo / branch を空のままにすると、ビルド時に GitHub Actions(または git の remote)から自動で入ります。手元で試すときや、別のリポジトリを参照したいときだけ書いてください。",
+  "owner": "",
+  "repo": "",
+  "branch": "",
+  "publicUrl": "",
+  "ignore": [
+    ".github/",
+    "desktop/",
+    ".git/",
+    ".gitignore",
+    ".gitattributes",
+    ".DS_Store",
+    "README.md",
+    "index_original_backup.html"
+  ],
+  "maxFileMB": 100
+}

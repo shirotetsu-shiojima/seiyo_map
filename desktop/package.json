@@ -1,0 +1,61 @@
+{
+  "name": "seiyo-map",
+  "productName": "星陽マップ",
+  "version": "1.0.0",
+  "description": "星陽マップ デスクトップ版(Windows / macOS)",
+  "author": "seiyo-map",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-content": "node scripts/prepare-content.js",
+    "start": "npm run prepare-content && electron .",
+    "test": "node --test",
+    "dist": "npm run prepare-content && electron-builder --publish never",
+    "dist:win": "npm run prepare-content && electron-builder --win --publish never",
+    "dist:mac": "npm run prepare-content && electron-builder --mac --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.github.seiyomap.desktop",
+    "productName": "星陽マップ",
+    "copyright": "星陽マップ",
+    "artifactName": "SeiyoMap-${version}-${os}-${arch}.${ext}",
+    "electronLanguages": ["ja", "en-US"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "app-config.json",
+      "build-info.json",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "content", "to": "content" }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "星陽マップ",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.navigation",
+      "icon": "build/icon.png"
+    }
+  }
+}
