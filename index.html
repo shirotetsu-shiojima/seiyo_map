@@ -559,7 +559,7 @@
         <div class="set-group">
           <h2 class="set-h">列車</h2>
           <label class="set-row"><span>列車の位置を表示<span class="sub">ローカルAPIを起動している時だけ使えます</span></span><input type="checkbox" id="showTrains"></label>
-          <label class="set-row"><span>発車・所要時間を推定<span class="sub">走っている列車の間隔から、乗換案内に時刻を出します</span></span><input type="checkbox" id="useTimetable"></label>
+          <label class="set-row"><span>時刻表で乗換時刻を出す<span class="sub">時刻表API(2時間先まで)から、乗換案内に今からの発車・到着時刻を出します</span></span><input type="checkbox" id="useTimetable" checked></label>
           <div class="set-sub">
             <input id="trainUrl" class="text-input" type="text" placeholder="APIのURL(空欄なら自動で探す)" aria-label="列車APIのURL">
             <div id="trainStatus" class="meta"></div>
@@ -1297,7 +1297,7 @@
   const trainOn = () => $('showTrains').checked;
   const useTimetableOn = () => $('useTimetable').checked;
   let boardPolling = false;     // 駅を選んでいる間(発車予定のため)
-  const trainPollOn = () => $('showTrains').checked || $('useTimetable').checked || boardPolling;
+  const trainPollOn = () => $('showTrains').checked || boardPolling;
   let trainsAt = 0;             // 列車データを取得した時刻(ms)
 
   function renderTrainList() {
@@ -1428,124 +1428,248 @@
     trainTimer = setInterval(pollTrains, TRAIN_POLL_MS);
   }
   $('showTrains').addEventListener('change', () => { updateTrainPolling(); needsDraw = true; });
-  $('useTimetable').addEventListener('change', () => { updateTrainPolling(); refreshTransit(); });
+  $('useTimetable').addEventListener('change', () => { updateTrainPolling(); runFare(); });
 
-  // ---- 列車から時刻を推定する(系統の運行間隔・発車時刻・所要時間) ----
-  const TT_HORIZON_MS = 2 * 60 * 60 * 1000;   // 推定する先の範囲
-  const TT_MIN_GAP_MS = 60 * 1000;            // 運行間隔の下限・上限(これ以外は推定しない)
-  const TT_MAX_GAP_MS = 60 * 60 * 1000;
-  const TT_STALE_MS = 30 * 1000;              // これより古い列車データは使わない
+  // ---- 時刻表による乗換案内 ----
+  // 区間の所要時間は times.json(停車を含む見込み)。駅ごとの発車は時刻表API(英名で指定、今から2時間ぶん)
+  // 2時間より先の時刻表は取っていないので、そこから先の時刻は「不明」と出す
+  const TT_STALE_MS = 30 * 1000;              // これより古い列車データは使わない(発車予定)
+  const SCHEDULE_TTL_MS = 30 * 1000;          // 時刻表は30秒まで使い回す
+  const MIN_TRANSFER_MS = 60 * 1000;          // 降りてから次の列車に乗るまでの最短時間
   let lastTransit = null;                     // 最後に表示した乗換案内の結果
+  let travelTimes = new Map();                // 駅 -> Map(次の駅 -> 所要秒)
+  let secPerM = null;                         // 所要時間が無い区間の見積もり(秒/m)。times.json と駅の距離から決める
+  const scheduleCache = new Map();            // 駅 id -> { at, windowEnd, deps, error }
+  const segCache = new Map();                 // 駅の組 -> 物理経路の所要秒(列車の途中の区間)
 
-  const median = (arr) => {
-    const s = [...arr].sort((a, b) => a - b);
-    const m = s.length >> 1;
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-  };
   const hhmm = (ms) => new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-
   // 系統の名前から、末尾の路線コード(例: (NN)・(NNM-))を外す。直通の違いで同じ系統が別名になるため
   const sysKeyOf = (name) => String(name || '').replace(/\([^()]*\)\s*$/, '').trim();
-  // 系統(routeName)ごとに、列車の各駅の到着・発車時刻(ms)をまとめる
-  // 通過ごとに、その通過の系統(eta の routeName)に入れる。折返し前と後で系統が違うので、時刻が混ざらない
-  // 同じ系統で同じ駅を2回通る時は、最初の通過を使う
-  function liveIndex() {
-    const idx = new Map();
-    for (const t of trains) {
-      const byKey = new Map();   // 系統 -> (駅 -> ms)
-      const put = (key, sid, ms) => {
-        if (!key) return;
-        if (!byKey.has(key)) byKey.set(key, new Map());
-        const m = byKey.get(key);
-        if (!m.has(sid)) m.set(sid, ms);
-      };
-      // 停車中の列車は、停車している駅からの発車時刻を使う(通過の時刻より優先)
-      if (t.currentStationId && t.dwelling) {
-        put(sysKeyOf(t.routeName), String(t.currentStationId), trainsAt + (Number(t.dwellRemainSec) || 0) * 1000);
-      }
-      for (const e of t.etas || []) {
-        const sec = Number(e.sec);
-        if (e.stationId == null || !Number.isFinite(sec)) continue;
-        put(sysKeyOf(e.routeName || t.routeName), String(e.stationId), trainsAt + sec * 1000);
-      }
-      for (const [key, arr] of byKey) {
-        if (!idx.has(key)) idx.set(key, []);
-        idx.get(key).push(arr);
-      }
+
+  // times.json: 区間ごとの所要秒(travelSec)
+  function loadTimesText(text) {
+    let body;
+    try { body = JSON.parse(text); } catch (e) { travelTimes = new Map(); return; }
+    const m = new Map();
+    for (const s of body.sections || []) {
+      const sec = Number(s.travelSec);
+      if (!s.fromStationId || !s.toStationId || !Number.isFinite(sec)) continue;
+      const a = String(s.fromStationId), b = String(s.toStationId);
+      if (!m.has(a)) m.set(a, new Map());
+      m.get(a).set(b, sec);
     }
-    return idx;
+    travelTimes = m;
+    secPerM = null;
+    segCache.clear();
   }
-  // 運行間隔: その駅に来る列車の時刻の差の中央値。列車が2本未満なら推定しない
-  function headwayMs(live, sid) {
-    const times = live.map((a) => a.get(sid)).filter(Number.isFinite).sort((a, b) => a - b);
-    const gaps = [];
-    for (let i = 1; i < times.length; i++) if (times[i] > times[i - 1]) gaps.push(times[i] - times[i - 1]);
-    if (!gaps.length) return null;
-    const m = median(gaps);
-    return m >= TT_MIN_GAP_MS && m <= TT_MAX_GAP_MS ? m : null;
+  // 区間の所要秒: times.json の値。無ければ距離から見積もる(times.json と駅の距離の比)
+  function edgeSec(a, b, m) {
+    const t = travelTimes.get(a) && travelTimes.get(a).get(b);
+    if (Number.isFinite(t)) return t;
+    if (secPerM === null) {
+      let sec = 0, dist = 0;
+      for (const [x, nbs] of travelTimes) {
+        const sx = rail && rail.stations.get(x);
+        if (!sx) continue;
+        for (const [y, s] of nbs) {
+          const nb = sx.neighbors.find((n) => n.id === y);
+          if (nb && nb.distance > 0) { sec += s; dist += nb.distance; }
+        }
+      }
+      secPerM = dist > 0 ? sec / dist : 0.1;
+    }
+    return (Number(m) || 0) * secPerM;
   }
-  // 乗る駅から降りる駅までの所要時間: 両方の駅を通る列車の差の中央値
-  function rideMs(live, a, b) {
-    const d = [];
-    for (const arr of live) {
-      const ta = arr.get(a), tb = arr.get(b);
-      if (Number.isFinite(ta) && Number.isFinite(tb) && tb > ta) d.push(tb - ta);
+  // 列車が a から b まで(物理経路で)走る秒。乗換は含めない。経路が無ければ null
+  function segSec(a, b) {
+    const key = a + '>' + b;
+    if (segCache.has(key)) return segCache.get(key);
+    const path = railPath(a, b);
+    let sec = null;
+    if (path) {
+      sec = 0;
+      for (let i = 1; i < path.length; i++) {
+        if (path[i].kind === 'transfer') continue;
+        const nb = rail.stations.get(path[i - 1].id).neighbors.find((n) => n.id === path[i].id);
+        sec += edgeSec(path[i - 1].id, path[i].id, nb ? nb.distance : 0);
+      }
     }
-    return d.length ? median(d) : null;
-  }
-  // 発車予定: 実測の列車を基準に、運行間隔で前後へ広げる。実測のものは「実測」と分かるようにする
-  function nextDepartures(live, sid, fromMs, count = 3) {
-    const gap = headwayMs(live, sid);
-    if (!gap) return null;
-    const real = live.map((a) => a.get(sid)).filter(Number.isFinite).sort((a, b) => a - b);
-    let t = real.find((x) => x >= fromMs);
-    if (t === undefined) {
-      if (!real.length) return null;
-      t = real[real.length - 1];
-      while (t < fromMs) t += gap;
-    } else {
-      while (t - gap >= fromMs) t -= gap;
-    }
-    const out = [];
-    for (; out.length < count && t <= fromMs + TT_HORIZON_MS; t += gap) {
-      out.push({ at: t, live: real.some((r) => Math.abs(r - t) < 1000) });
-    }
-    return out.length ? out : null;
+    segCache.set(key, sec);
+    return sec;
   }
 
-  // 乗換案内の各区間(乗車区間)について、乗れる系統と発車・到着の時刻を決める。
-  // 系統が走っていない・1本だけで間隔が取れない場合は、その区間から先の時刻を出さない
-  function timetableFor(r) {
-    if (!routeData || !trains.length) return { legs: r.items.map((it) => (it.type === 'ride' ? { cut: '列車データがありません' } : null)) };
-    if (Date.now() - trainsAt > TT_STALE_MS) return { legs: r.items.map((it) => (it.type === 'ride' ? { cut: '列車データが古いため' } : null)) };
-    const live = liveIndex();
-    const systems = (routeData.routes || []).map((rt) => ({
-      key: sysKeyOf(rt.name),
-      label: jaName(rt.name),
-      number: String(rt.number || '').split('|')[0].trim() || '-',
-      stops: (rt.stations || []).map((s) => String(s).split('_')[0]),
-    }));
-    let ready = Date.now();
-    let cut = null;
-    const legs = r.items.map((it) => {
-      if (it.type !== 'ride') return null;
-      if (cut) return { cut };
-      let best = null;
-      for (const sys of systems) {
-        const i = sys.stops.indexOf(it.fromId), j = sys.stops.indexOf(it.toId);
-        if (i < 0 || j <= i) continue;
-        const lv = live.get(sys.key) || [];
-        const deps = nextDepartures(lv, it.fromId, ready);
-        const dur = rideMs(lv, it.fromId, it.toId);
-        if (!deps || !dur) continue;
-        const cand = { sys, deps, dep: deps[0], dur, arr: deps[0].at + dur, gap: headwayMs(lv, it.fromId) };
-        if (!best || cand.arr < best.arr) best = cand;
+  // 時刻表API の場所: 列車APIと同じ場所の /api/schedule/
+  function scheduleBase() {
+    const manual = $('trainUrl').value.trim();
+    if (manual && manual.includes('/api/')) return manual.replace(/\/api\/.*$/, '/api/schedule/');
+    return TRAIN_CANDIDATES[0].replace(/\/api\/trains.*$/, '/api/schedule/');
+  }
+  // 駅の英名(小文字・空白は -)で指定する
+  const slugOf = (st) => String(st.en || '').trim().toLowerCase().replace(/\s+/g, '-');
+  // 駅の時刻表を取る(30秒まで使い回す)。取れない時は error に理由を入れる
+  async function fetchSchedule(st) {
+    const key = String(st.id);
+    const c = scheduleCache.get(key);
+    if (c && Date.now() - c.at < SCHEDULE_TTL_MS) return c;
+    let entry;
+    try {
+      const slug = slugOf(st);
+      if (!slug) throw new Error('英名がないため、時刻表を指定できません');
+      const res = await fetch(scheduleBase() + encodeURIComponent(slug), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`時刻表の取得に失敗しました(HTTP ${res.status})`);
+      const body = await res.json();
+      if (body.ok === false) throw new Error(body.error || '時刻表がありません');
+      const now = Number.isFinite(Number(body.now)) ? Number(body.now) : Date.now();
+      const deps = (body.departures || [])
+        .map((d) => ({ ...d, departureMillis: Number(d.departureMillis) }))
+        .filter((d) => Number.isFinite(d.departureMillis));
+      entry = { at: Date.now(), windowEnd: now + (Number(body.hours) || 2) * 3600000, deps, error: '' };
+    } catch (e) {
+      entry = { at: Date.now(), windowEnd: 0, deps: [], error: e.message || '時刻表を取得できません' };
+    }
+    scheduleCache.set(key, entry);
+    return entry;
+  }
+
+  // 所要時間の最短経路(時刻を使わない)。src からの距離(秒)と、戻るための prev を返す
+  const walkSecPerM = () => 3.6 / WALK_KMH;
+  function staticSearch(src) {
+    const g = buildRailGraph();
+    const dist = new Map([[src, 0]]), prev = new Map(), done = new Set();
+    for (;;) {
+      let u = null, best = Infinity;
+      for (const [id, d] of dist) if (!done.has(id) && d < best) { best = d; u = id; }
+      if (u === null) break;
+      done.add(u);
+      const relax = (v, nd, kind, m) => {
+        if (done.has(v)) return;
+        if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, { from: u, kind, m }); }
+      };
+      for (const nb of rail.stations.get(u).neighbors) relax(nb.id, best + edgeSec(u, nb.id, nb.distance), 'ride', nb.distance);
+      for (const v of g.transfers.get(u) || []) relax(v, best + TRANSFER_COST_M * walkSecPerM(), 'transfer', 0);
+    }
+    return { dist, prev };
+  }
+
+  // 列車の情報(乗換案内の区間に付ける)
+  const tripOf = (d) => ({
+    key: `${d.routeId}|${d.departureMillis}`,
+    routeName: d.routeName || '',
+    routeNumber: d.routeNumber || '',
+    destination: d.destination || '',
+    planned: d.kind === 'planned',
+  });
+  // a → b の1区間を、駅ごとの区間(hops)にする。列車に乗る区間は、先頭の区間に出発、末尾の区間に到着の時刻を入れる
+  function hopsOfLink(link, to) {
+    if (link.kind === 'transfer') return [{ from: link.from, to, kind: 'transfer', line: null, m: 0, trip: null, dep: null, arr: null }];
+    const phys = railPath(link.from, to) || [];
+    const hs = [];
+    for (let k = 1; k < phys.length; k++) {
+      const x = phys[k - 1].id, y = phys[k].id, kind = phys[k].kind;
+      const isT = kind === 'transfer';
+      const nb = isT ? null : rail.stations.get(x).neighbors.find((n) => n.id === y);
+      hs.push({ from: x, to: y, kind, line: isT ? null : sectionLineOf(x, y), m: isT ? 0 : (nb ? nb.distance : 0),
+        trip: isT ? null : link.trip, dep: null, arr: null });
+    }
+    // 列車の区間ごとの時刻: 所要時間の比で、出発から到着までを割り振る(末尾は到着時刻に合わせる)
+    if (hs.length && link.trip) {
+      const secs = hs.map((h) => (h.kind === 'transfer' ? 0 : edgeSec(h.from, h.to, h.m)));
+      const total = secs.reduce((x, y) => x + y, 0) || 1;
+      const span = link.arrMs - link.depMs;
+      let t = link.depMs;
+      hs.forEach((h, k) => { h.dep = t; t += span * secs[k] / total; h.arr = t; });
+      hs[hs.length - 1].arr = link.arrMs;
+    }
+    return hs;
+  }
+
+  // 出発時刻(今)から、取得できた時刻表の範囲で最も早く着く経路を探す
+  // 戻り値: { path, hops, complete(到着まで時刻が出た), startMs, apiOk }。経路が無ければ null
+  async function planTransit(fromId, toId) {
+    const startMs = Date.now();
+    const best = new Map([[fromId, { arr: startMs, prev: null }]]);
+    const done = new Set();
+    let fetched = 0, failed = 0;
+    for (;;) {
+      let u = null, bestArr = Infinity;
+      for (const [id, l] of best) if (!done.has(id) && l.arr < bestArr) { bestArr = l.arr; u = id; }
+      if (u === null || u === toId) break;
+      done.add(u);
+      const a = best.get(u).arr;
+      const relax = (v, arr, prev) => {
+        if (done.has(v)) return;
+        const cur = best.get(v);
+        if (!cur || arr < cur.arr) best.set(v, { arr, prev });
+      };
+      const g = buildRailGraph();
+      for (const v of g.transfers.get(u) || []) relax(v, a + TRANSFER_COST_M * walkSecPerM() * 1000, { from: u, kind: 'transfer' });
+      const sc = await fetchSchedule(rail.stations.get(u));
+      fetched++;
+      if (sc.error) { failed++; continue; }
+      const minDep = u === fromId ? startMs : a + MIN_TRANSFER_MS;
+      if (minDep > sc.windowEnd) continue;   // 時刻表の範囲の外: ここからは乗れない
+      for (const d of sc.deps) {
+        const dt = d.departureMillis;
+        if (dt < minDep || dt > sc.windowEnd) continue;
+        const route = routeByKey(sysKeyOf(d.routeName));
+        if (!route) continue;
+        const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
+        const i = ids.indexOf(u);
+        if (i < 0 || i === ids.length - 1) continue;
+        const trip = tripOf(d);
+        let cum = 0;
+        for (let j = i + 1; j < ids.length; j++) {
+          const seg = segSec(ids[j - 1], ids[j]);
+          if (seg === null) break;
+          cum += seg;
+          relax(ids[j], dt + cum * 1000, { from: u, kind: 'ride', trip, depMs: dt, arrMs: dt + cum * 1000 });
+        }
       }
-      if (!best) { cut = '運行間隔が取得できない系統のため'; return { cut }; }
-      ready = best.arr;
-      return best;
-    });
-    return { legs };
+    }
+    // 経路をつなぐ(到着駅から出発駅へ戻る)
+    const chainTo = (v) => {
+      const parts = [];
+      let cur = v;
+      while (cur !== fromId) {
+        const l = best.get(cur);
+        if (!l || !l.prev) break;
+        parts.unshift(hopsOfLink(l.prev, cur));
+        cur = l.prev.from;
+      }
+      return parts.flat();
+    };
+    const apiOk = fetched > failed;
+    if (best.has(toId)) {
+      const hops = chainTo(toId);
+      return { path: pathOfHops(fromId, hops), hops, complete: true, startMs, apiOk };
+    }
+    // 時刻表の範囲の先は、時刻なしで最短の所要時間の経路をつなぐ(そこから先の時刻は不明)
+    const toDist = staticSearch(toId);
+    let bestU = fromId, bestTotal = Infinity;
+    for (const [id, l] of best) {
+      const d = toDist.dist.get(id);
+      if (d === undefined) continue;
+      const total = l.arr + d * 1000;
+      if (total < bestTotal) { bestTotal = total; bestU = id; }
+    }
+    if (!toDist.dist.has(bestU)) return null;
+    const head = bestU === fromId ? [] : chainTo(bestU);
+    const tail = [];
+    let cur = bestU;
+    while (cur !== toId) {
+      const p = toDist.prev.get(cur);
+      if (!p) break;
+      const isT = p.kind === 'transfer';
+      tail.push({ from: cur, to: p.from, kind: p.kind, line: isT ? null : sectionLineOf(cur, p.from),
+        m: isT ? 0 : (p.m || 0), trip: null, dep: null, arr: null });
+      cur = p.from;
+    }
+    const hops = head.concat(tail);
+    return { path: pathOfHops(fromId, hops), hops, complete: false, startMs, apiOk };
+  }
+  // 区間の並び(hops)から、駅の並び(path: railPath と同じ形)を作る
+  function pathOfHops(fromId, hops) {
+    return [{ id: fromId, kind: null }].concat(hops.map((h) => ({ id: h.to, kind: h.kind })));
   }
   function refreshTransit() {
     if (lastTransit) renderTransit(lastTransit);
@@ -2992,11 +3116,13 @@
     { kind: 'rail', name: 'rail.json' },
     { kind: 'train', name: 'train.json' },
     { kind: 'road', name: 'road.json' },
+    { kind: 'times', name: 'times.json' },
   ];
   // 種類に合った読み込み関数へ渡す。読めなかった時のエラーは、それぞれの欄に出る
   function applyData(kind, text, name) {
     if (kind === 'rail') loadRailText(text, name);
     else if (kind === 'train') loadRouteText(text, name);
+    else if (kind === 'times') loadTimesText(text);
     else loadText(text, name);
   }
   function setAutoStatus(lines, isError = false) {
@@ -3788,7 +3914,7 @@
 
   // ---- 鉄道の乗換案内(運賃も同じ経路で計算) ----
   // 同じ駅名で路線が違う駅どうしは、乗換でつなぐ。乗換 1 回は距離 TRANSFER_COST_M ぶんの重みとして、乗換の少ない経路を優先する
-  const TRANSFER_COST_M = 500;
+  const TRANSFER_COST_M = 100;
   let railGraph = null;   // { rail, transfers: Map(駅 id -> 乗換先の駅 id の配列) }
   const lineColor = (code) => {
     let h = 0;
@@ -3874,23 +4000,21 @@
     return common || ca[0] || '-';
   }
   // 乗換案内: 乗る線・乗換・降りる駅と、会社ごとの運賃
-  function calcTransit(fromId, toId) {
-    const path = railPath(fromId, toId);
-    if (!path) return { error: '経路が見つかりません(路線がつながっていません)。' };
-    const st = (id) => rail.stations.get(id);
-    const items = [];   // { type:'ride', line, company, fromId, toId, stops, m } または { type:'transfer', id }
-    for (let i = 1; i < path.length; i++) {
-      const a = path[i - 1].id, b = path[i].id, kind = path[i].kind;
-      if (kind === 'transfer') { items.push({ type: 'transfer', id: a }); continue; }
-      const sa = st(a);
-      const d = sa.neighbors.find((n) => n.id === b).distance;
-      const line = sectionLineOf(a, b);
+  // 区間(hops)から、乗る区間・乗換の並び(items)と運賃を作る。同じ列車の区間はまとめる
+  function finishTransit(path, hops) {
+    const items = [];
+    for (const h of hops) {
+      if (h.kind === 'transfer') { items.push({ type: 'transfer', id: h.from }); continue; }
+      // 同じ列車でも、路線が変わるところ(直通)では別の区間にする
+      const key = h.trip ? h.trip.key + '|' + h.line : 'L:' + h.line;
       const last = items[items.length - 1];
-      if (last && last.type === 'ride' && last.line === line) {
-        last.toId = b; last.stops++; last.m += d;
-      } else {
-        items.push({ type: 'ride', line, company: lineToCompany.get(line) || '不明', fromId: a, toId: b, stops: 1, m: d });
+      if (last && last.type === 'ride' && last.key === key) {
+        last.toId = h.to; last.stops++; last.m += h.m;
+        if (h.arr != null) last.arr = h.arr;
+        continue;
       }
+      items.push({ type: 'ride', key, line: h.line, company: lineToCompany.get(h.line) || '不明',
+        fromId: h.from, toId: h.to, stops: 1, m: h.m, trip: h.trip, dep: h.dep, arr: h.arr });
     }
     // 会社ごとに営業キロ(1km 未満は切り上げ)を求め、運賃表で運賃を出す
     const byCompany = new Map();
@@ -3911,7 +4035,19 @@
       return { company, m, km, yen };
     });
     const transfers = items.filter((it) => it.type === 'transfer').length;
-    return { items, path, meters, transfers, fares, total, ok };
+    return { items, path, meters, transfers, fares, total, ok, timed: false, complete: false, startMs: null, apiOk: true };
+  }
+  // 時刻なしの経路(距離の最短)
+  function calcTransit(fromId, toId) {
+    const path = railPath(fromId, toId);
+    if (!path) return { error: '経路が見つかりません(路線がつながっていません)。' };
+    const hops = path.slice(1).map((p, i) => {
+      const a = path[i].id;
+      const isT = p.kind === 'transfer';
+      const nb = isT ? null : rail.stations.get(a).neighbors.find((n) => n.id === p.id);
+      return { from: a, to: p.id, kind: p.kind, line: isT ? null : sectionLineOf(a, p.id), m: isT ? 0 : (nb ? nb.distance : 0), trip: null, dep: null, arr: null };
+    });
+    return finishTransit(path, hops);
   }
 
   // 経路の案内欄。空の時は案内文(hint)、うまくいかない時は理由(notice)を出す
@@ -3924,8 +4060,12 @@
 
   function renderTransit(r) {
     const stName = (id) => { const s = rail.stations.get(id); return s ? (s.ja || s.en || '-') : '-'; };
-    const tt = useTimetableOn() ? timetableFor(r) : null;
     const nodes = [];
+    // 時刻が出ない理由(時刻表が2時間より先なのか、APIに接続できないのか)
+    const why = r.apiOk ? '2時間より先の時刻表は取得していません' : '時刻表を取得できません';
+    // 最後に着く時刻(時刻が出た時だけ)
+    const lastRide = [...r.items].reverse().find((it) => it.type === 'ride');
+    const arrMs = r.complete && lastRide && lastRide.arr != null ? lastRide.arr : null;
 
     // 運賃のカード: 合計 → 距離・乗換 → 会社ごとの内訳
     const card = mk('div', 'fare-card');
@@ -3933,6 +4073,12 @@
     if (r.ok) total.append(document.createTextNode(r.total.toLocaleString('ja-JP')), mk('small', '', 'CP'));
     else { total.textContent = '計算できません'; total.style.color = 'var(--danger)'; total.style.fontSize = '24px'; }
     card.append(total, mk('div', 'fare-sub', `営業キロ ${(r.meters / 1000).toFixed(1)} km ・ 乗換 ${r.transfers} 回`));
+    if (r.timed) {
+      let txt = `出発 ${hhmm(r.startMs)}`;
+      if (arrMs != null) txt += ` ・ 到着 ${hhmm(arrMs)}(所要 約 ${Math.round((arrMs - r.startMs) / 60000)} 分)`;
+      else txt += ` ・ 到着時刻 不明(${why})`;
+      card.append(mk('div', 'fare-sub', txt));
+    }
     if (r.fares.length) {
       const co = mk('div', 'fare-co');
       for (const p of r.fares) {
@@ -3944,6 +4090,11 @@
       card.append(co);
     }
     nodes.push(card);
+    if (r.timed && !r.apiOk) {
+      const n = mk('div', 'notice danger');
+      n.append(mk('div', '', '時刻表のAPIに接続できません。経路と運賃だけ表示しています。'));
+      nodes.push(n);
+    }
 
     // 乗り方のタイムライン: 出発 → 乗車(路線の色の帯)→ 乗換 → … → 到着
     const ol = mk('ol', 'timeline');
@@ -3960,16 +4111,15 @@
       li.append(rl, body);
       ol.append(li);
     };
-    item('stop', null, [document.createTextNode(stName(r.path[0].id))], ['出発']);
+    item('stop', null, [document.createTextNode(stName(r.path[0].id))], [r.timed ? `出発 ${hhmm(r.startMs)}` : '出発']);
     r.items.forEach((it, i) => {
       if (it.type === 'ride') {
-        const leg = tt ? tt.legs[i] : null;
         let timing = null;
-        if (leg && leg.cut) timing = { off: true, text: `時刻: 表示なし(${leg.cut})` };
-        else if (leg && leg.sys) {
-          const depTxt = leg.deps.map((d) => `${hhmm(d.at)}${d.live ? '' : '(推定)'}`).join(' ・ ');
-          timing = { text: `${leg.sys.number} ${leg.sys.label}\n次の発車 ${depTxt} → 到着 ${hhmm(leg.arr)}(所要 約${Math.round(leg.dur / 60000)} 分` +
-            (leg.gap ? `・運行間隔 約${Math.round(leg.gap / 60000)} 分` : '') + ')' };
+        if (r.timed) {
+          if (it.trip && it.dep != null && it.arr != null) {
+            timing = { text: `${hhmm(it.dep)} 発 → ${hhmm(it.arr)} 着` + (it.trip.planned ? '(予定)' : '') +
+              (it.trip.routeNumber ? `\n${jaName(it.trip.routeNumber)} ・ ${parseStationName(it.trip.destination).ja || ''} 行` : '') };
+          } else timing = { off: true, text: `時刻: 不明(${why})` };
         }
         const title = [codeBadge(it.line), document.createTextNode(lineNameOf(it.line))];
         item('ride', lineColorSafe(it.line), title,
@@ -3978,16 +4128,25 @@
       } else {
         const prevRide = r.items.slice(0, i).reverse().find((x) => x.type === 'ride');
         const nextRide = r.items.slice(i + 1).find((x) => x.type === 'ride');
+        item('xfer', null, [document.createTextNode(`${stName(it.id)} で乗り換え`)], []);
+        const li = ol.lastChild;
         const sub = mk('span');
         sub.style.cssText = 'display:inline-flex;align-items:center;gap:6px';
         if (prevRide) sub.append(codeBadge(prevRide.line));
         sub.append(document.createTextNode('→'));
         if (nextRide) sub.append(codeBadge(nextRide.line));
-        item('xfer', null, [document.createTextNode(`${stName(it.id)} で乗り換え`)], []);
-        ol.lastChild.querySelector('.tl-body').append(sub);
+        li.querySelector('.tl-body').append(sub);
+        if (r.timed) {
+          let wait = '乗換の待ち時間: 不明';
+          if (prevRide && nextRide && prevRide.arr != null && nextRide.dep != null) {
+            wait = `乗換の待ち時間 約 ${Math.max(0, Math.round((nextRide.dep - prevRide.arr) / 60000))} 分`;
+          }
+          li.querySelector('.tl-body').append(mk('div', 'tl-time' + (wait.includes('不明') ? ' off' : ''), wait));
+        }
       }
     });
-    item('stop', null, [document.createTextNode(stName(r.path[r.path.length - 1].id))], ['到着']);
+    item('stop', null, [document.createTextNode(stName(r.path[r.path.length - 1].id))],
+      [r.timed ? (arrMs != null ? `到着 ${hhmm(arrMs)}` : '到着 時刻不明') : '到着']);
     nodes.push(ol);
 
     const det = mk('details', 'fold');
@@ -4005,18 +4164,30 @@
     if (run) runFare();
   }
 
-  function runFare() {
+  // 経路を調べて表示する。時刻表を使う時は、取りに行っている間に別の検索が始まったら結果を捨てる
+  let fareSeq = 0;
+  async function runFare(silent = false) {
     const a = $('fareFrom').value, b = $('fareTo').value;
-    lastTransit = null;
+    const seq = ++fareSeq;
+    if (!silent) lastTransit = null;
     if (!rail) return showFareMsg('鉄道データを読み込んでいます…');
     if (!a || !b) return showFareMsg('出発駅と到着駅を選ぶと、運賃と乗換を表示します。');
     if (a === b) return showFareMsg('出発駅と到着駅が同じです。', true);
     if (!lineToCompany.size) return showFareMsg('路線と会社の対応表(linedata.txt)がありません。', true);
-    const r = calcTransit(a, b);
-    if (r.error) return showFareMsg(r.error, true);
+    const base = calcTransit(a, b);
+    if (base.error) return showFareMsg(base.error, true);
+    if (!useTimetableOn()) { lastTransit = base; renderTransit(base); return; }
+    if (!silent) showFareMsg('時刻表を取得しています…');
+    const plan = await planTransit(a, b);
+    if (seq !== fareSeq) return;
+    if (!plan) return showFareMsg('経路が見つかりません(路線がつながっていません)。', true);
+    const r = finishTransit(plan.path, plan.hops);
+    Object.assign(r, { timed: true, complete: plan.complete, startMs: plan.startMs, apiOk: plan.apiOk });
     lastTransit = r;
     renderTransit(r);
   }
+  // 時刻表を使っている時は、30秒ごとに時刻を取り直す(今からの発車が変わるため)
+  setInterval(() => { if (lastTransit && lastTransit.timed) runFare(true); }, 30000);
 
   $('fareSwap').addEventListener('click', () => {
     const a = $('fareFrom').value, b = $('fareTo').value;
