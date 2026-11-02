@@ -52,7 +52,6 @@
       "deleteAppDataOnUninstall": false
     },
     "mac": {
-      "asar": false,
       "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
       "category": "public.app-category.navigation",
       "icon": "build/icon.png"
