@@ -73,5 +73,5 @@ npm run dist:mac   # Mac 用(Mac 上で)
 ## 知っておくこと
 
 - Google Fonts(Zen Kaku Gothic New)は今までどおりネットから読みます。オフラインでは OS の日本語フォントで表示されます
-- 列車の位置(`http://localhost:8765/api/trains`)は、アプリ版でも同じように取りに行きます。このアプリからの取得で CORS のヘッダーが無い場合は、補うようにしてあります
+- 列車の位置と時刻表(`http://localhost:8765/api/...`)は、アプリ版では Electron のメインプロセス経由で取得します。Chromium の CORS / ローカルネットワーク許可に左右されず、`localhost` の列車 API と時刻表 API だけに接続します
 - アイコンは仮のものです。差し替えるときは `desktop/build/icon.png`(1024×1024 の PNG)を置き換えてください

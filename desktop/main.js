@@ -152,17 +152,25 @@ function installProtocol() {
   });
 }
 
-// 列車の位置を返すローカル API が、CORS のヘッダーを付けない場合の保険。
-// このアプリからの fetch に対してだけ、ヘッダーが無いときに限って付ける(すでにあれば何もしない)
-function installCorsHelper() {
-  session.defaultSession.webRequest.onHeadersReceived({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-    const fromApp = typeof details.referrer === 'string' && details.referrer.startsWith(ORIGIN);
-    if (!fromApp || details.resourceType !== 'xhr') { callback({}); return; }
-    const headers = { ...(details.responseHeaders || {}) };
-    const has = (name) => Object.keys(headers).some((k) => k.toLowerCase() === name);
-    if (!has('access-control-allow-origin')) headers['Access-Control-Allow-Origin'] = ['*'];
-    callback({ responseHeaders: headers });
-  });
+// app:// renderer から localhost へ直接 fetch すると Chromium の CORS / Local
+// Network Access 判定で止まることがある。許可した loopback API だけ main から取得する。
+function isAllowedLocalApi(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+    const apiPath = /^\/api\/(?:trains\/?|schedule\/[a-z0-9-]+\/?$)/i.test(url.pathname);
+    return loopback && url.protocol === 'http:' && apiPath && !url.username && !url.password;
+  } catch { return false; }
+}
+
+async function fetchLocalApi(rawUrl) {
+  if (!isAllowedLocalApi(rawUrl)) throw new Error('接続できるのは localhost の列車 API と時刻表 API だけです');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await net.fetch(rawUrl, { method: 'GET', signal: controller.signal });
+    return { status: response.status, body: await response.text() };
+  } finally { clearTimeout(timer); }
 }
 
 // ---- 更新の確認(地図データ・アプリ本体のお知らせ) ----
@@ -357,6 +365,11 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.on('seiyo:get-info', (event) => {
     event.returnValue = { version: app.getVersion(), publicUrl: cfg.publicUrl };
   });
+  ipcMain.handle('seiyo:fetch-local-api', async (event, url) => {
+    const senderUrl = event.senderFrame?.url || '';
+    if (!senderUrl.startsWith(`${ORIGIN}/`)) throw new Error('許可されていない呼び出し元です');
+    return fetchLocalApi(String(url));
+  });
 
   app.on('web-contents-created', (_event, contents) => {
     contents.on('will-attach-webview', (e) => e.preventDefault());
@@ -364,7 +377,6 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     installProtocol();
-    installCorsHelper();
     buildMenu();
     createWindow();
     // 画面が出て、地図画像の読み込みが落ち着いてから、更新を確認する

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('seiyoDesktop', Object.freeze({
   version: String(info.version || ''),
   platform: process.platform,
   publicUrl: String(info.publicUrl || ''),
+  fetchLocalApi: (url) => ipcRenderer.invoke('seiyo:fetch-local-api', String(url)),
 }));
 
 // 「リンクをコピー」で、app://seiyo/#v=... のような他の人が開けないアドレスがコピーされないよう、
