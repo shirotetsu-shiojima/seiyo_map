@@ -24,7 +24,6 @@
     "productName": "星陽マップ",
     "copyright": "星陽マップ",
     "artifactName": "SeiyoMap-${version}-${os}-${arch}.${ext}",
-    "electronLanguages": ["ja", "en-US"],
     "directories": {
       "output": "dist",
       "buildResources": "build"
