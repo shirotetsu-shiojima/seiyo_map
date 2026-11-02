@@ -292,8 +292,8 @@
   .sign-kana { font-size: 12px; letter-spacing: .32em; color: var(--muted); margin-right: -.32em; min-height: 1.3em; }
   .sign-name { margin: 0; font-weight: 900; line-height: 1.2; letter-spacing: .06em; overflow-wrap: anywhere; }
   .sign-en { font-size: 12.5px; letter-spacing: .08em; color: var(--muted); margin-top: 2px; }
-  .sign-logos { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 0 14px 12px; }
-  .sign-logos img { height: 78px; width: auto; max-width: 288px; object-fit: contain; }
+  .sign-logos { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 14px 12px; }
+  .sign-logos img { height: 65px; width: auto; max-width: 240px; object-fit: contain; }  /* 2.5倍(26px→65px、96px→240px) */
   .plate { display: flex; align-items: center; gap: 12px; padding: 14px; }
   .plate-chip { min-width: 52px; height: 36px; padding: 0 10px; border-radius: 8px; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #1a1a1a; border: 3px solid rgba(0, 0, 0, .25); }
   .plate h1 { margin: 0; font-size: 18px; font-weight: 900; line-height: 1.3; }
@@ -327,7 +327,7 @@
   .facts dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; font-weight: 500; }
   .facts .copy { cursor: pointer; text-decoration: underline dotted var(--faint); text-underline-offset: 3px; background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; }
   .facts .logos { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .facts .logos img { height: 60px; width: auto; max-width: 210px; object-fit: contain; }
+  .facts .logos img { height: 20px; width: auto; max-width: 70px; object-fit: contain; }
 
   /* ---------- 地図の上に浮かぶもの ---------- */
   .mapbar { position: fixed; z-index: 5; top: 12px; left: calc(var(--sb-w) + 16px); right: 16px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; transition: left .3s var(--ease); }
@@ -1320,7 +1320,7 @@
       timer = setTimeout(() => reject(new Error('timeout')), TRAIN_TIMEOUT_MS);
     });
     try {
-      const res = await Promise.race([fetch(url, { method: 'GET', mode: 'cors' }), timeout]);
+      const res = await Promise.race([desktopApiFetch(url), timeout]);
       try {
         return { status: res.status, body: await res.json() };
       } catch (e) {
@@ -1332,6 +1332,13 @@
     } finally {
       clearTimeout(timer);
     }
+  }
+  async function desktopApiFetch(url) {
+    if (window.seiyoDesktop && typeof window.seiyoDesktop.fetchLocalApi === 'function') {
+      const result = await window.seiyoDesktop.fetchLocalApi(url);
+      return { status: result.status, ok: result.status >= 200 && result.status < 300, json: async () => JSON.parse(result.body) };
+    }
+    return fetch(url, { method: 'GET', mode: 'cors' });
   }
   // 応答の中の列車の一覧を探す。配列そのもの、または trains などの中の配列を使う。無ければ空
   function trainsFrom(body) {
@@ -1351,7 +1358,11 @@
   // 失敗の理由を言葉にする。no-cors で届けば、サーバーは起動している(CORS か、ローカルネットワークの許可の問題)
   async function diagnoseTrainUrl(url) {
     try {
-      await fetch(url, { method: 'GET', mode: 'no-cors' });
+      if (window.seiyoDesktop && typeof window.seiyoDesktop.fetchLocalApi === 'function') {
+        await window.seiyoDesktop.fetchLocalApi(url);
+      } else {
+        await fetch(url, { method: 'GET', mode: 'no-cors' });
+      }
       return 'サーバーには届きますが、CORS またはローカルネットワークの許可の応答がありません';
     } catch (e) {
       return 'サーバーに届きません(起動していない、またはポートが違う、もしくはブラウザが通信を止めています)';
@@ -1515,7 +1526,7 @@
     try {
       const slug = slugOf(st);
       if (!slug) throw new Error('英名がないため、時刻表を指定できません');
-      const res = await fetch(scheduleBase() + encodeURIComponent(slug), { cache: 'no-store' });
+      const res = await desktopApiFetch(scheduleBase() + encodeURIComponent(slug));
       if (!res.ok) throw new Error(`時刻表の取得に失敗しました(HTTP ${res.status})`);
       const body = await res.json();
       if (body.ok === false) throw new Error(body.error || '時刻表がありません');
