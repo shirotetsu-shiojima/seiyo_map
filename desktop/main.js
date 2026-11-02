@@ -379,11 +379,8 @@ if (!app.requestSingleInstanceLock()) {
     installProtocol();
     buildMenu();
     createWindow();
-    // macOS 26 系では起動直後の Electron ネットワーク処理で SIGTRAP になる報告がある。
-    // Mac は起動時の自動更新通信を避け、必要なときにメニューから確認する。
-    if (!isMac) {
-      setTimeout(() => { checkForUpdates({ manual: false }).catch((e) => console.warn('[update]', e)); }, 4000);
-    }
+    // 画面が出て、地図画像の読み込みが落ち着いてから、更新を確認する
+    setTimeout(() => { checkForUpdates({ manual: false }).catch((e) => console.warn('[update]', e)); }, 4000);
 
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
