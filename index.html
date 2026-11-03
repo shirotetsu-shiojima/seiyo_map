@@ -209,28 +209,45 @@
   .check-row input { margin-top: 3px; accent-color: var(--primary); width: 16px; height: 16px; flex: none; }
 
   .result { margin-top: 18px; }
-  .fare-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--surface); }
-  .fare-total { font-size: 36px; font-weight: 900; line-height: 1.1; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-  .fare-total small { font-size: 15px; font-weight: 700; color: var(--muted); margin-left: 4px; }
-  .fare-sub { margin-top: 4px; color: var(--muted); font-size: 13px; }
+  .fare-card { border: 2px solid var(--line-strong); border-radius: 14px; padding: 16px 18px; background: var(--surface); }
+  .fare-label { font-size: 12.5px; font-weight: 700; color: var(--muted); letter-spacing: .06em; margin-bottom: 2px; }
+  .fare-total { font-size: 44px; font-weight: 900; line-height: 1.1; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+  .fare-total small { font-size: 16px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+  .fare-sub { margin-top: 6px; color: var(--ink); font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+  .fare-note { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); color: var(--ink); font-size: 13px; line-height: 1.6; }
+  .fare-rides { margin-top: 12px; display: grid; gap: 8px; }
+  .fare-ride { display: grid; grid-template-columns: 28px 1fr auto; gap: 2px 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-2); }
+  .fare-ride .no { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-weight: 900; font-size: 14px; }
+  .fare-ride .rt { font-weight: 700; font-size: 14.5px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .fare-ride .rs { grid-column: 2; font-size: 13px; color: var(--muted); }
+  .fare-ride .yen { grid-column: 3; grid-row: 1 / span 2; font-size: 20px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .fare-ride .yen small { font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 2px; }
   .fare-co { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
   .fare-co div { display: flex; justify-content: space-between; gap: 10px; }
   .fare-co b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .timeline { list-style: none; margin: 16px 0 6px; padding: 0; }
-  .tl { display: grid; grid-template-columns: 18px 1fr; gap: 0 12px; position: relative; }
+  .tl { display: grid; grid-template-columns: 20px 1fr; gap: 0 14px; position: relative; }
   .tl-rail { position: relative; display: flex; justify-content: center; align-items: flex-start; }
-  .tl-rail::before { content: ''; position: absolute; top: 0; bottom: 0; width: 6px; border-radius: 3px; background: var(--rc, var(--line-strong)); }
+  .tl-rail::before { content: ''; position: absolute; top: 0; bottom: 0; width: 8px; border-radius: 4px; background: var(--rc, var(--line-strong)); }
   .tl.stop .tl-rail::before, .tl.xfer .tl-rail::before { display: none; }
-  .tl.stop .tl-rail::after { content: ''; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 4px solid var(--ink); background: var(--surface); margin-top: 3px; position: relative; z-index: 1; }
-  .tl.xfer .tl-rail::after { content: ''; flex: none; width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--muted); background: var(--surface); margin-top: 6px; }
+  .tl.stop .tl-rail::after { content: ''; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 5px solid var(--ink); background: var(--surface); margin-top: 2px; position: relative; z-index: 1; }
+  .tl.xfer .tl-rail::after { content: ''; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 4px solid var(--muted); background: var(--surface); margin-top: 8px; }
   .tl-body { padding: 0 0 14px; min-width: 0; }
   .tl.stop .tl-body { padding-bottom: 6px; }
   .tl.ride .tl-body { padding: 8px 0 18px; }
-  .tl-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .tl.stop .tl-title { font-size: 16px; font-weight: 900; }
-  .tl-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-  .tl-time { margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+  .tl-title { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tl.stop .tl-title { font-size: 18px; font-weight: 900; }
+  .tl.xfer .tl-title { font-size: 15px; }
+  .tl.xfer .tl-body { margin: 2px 0 14px; padding: 8px 12px; border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--surface-2); }
+  .tl-sub { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+  .tl-time { margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); border-left: 4px solid var(--rc, var(--line-strong)); font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+  .tl.xfer .tl-time { background: transparent; border-left: 0; padding: 4px 0 0; }
   .tl-time.off { color: var(--muted); }
+  .tl-time-main { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .tl-time-sub { font-size: 13.5px; color: var(--muted); }
+  .tl-fare { margin-top: 8px; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tl-fare small { font-size: 12px; font-weight: 600; opacity: .85; }
+  .tl-fare.through { background: var(--surface-2); color: var(--muted); font-weight: 600; border: 1px solid var(--line-strong); }
   details.fold { margin-top: 10px; }
   details.fold > summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 700; padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
   details.fold > summary::-webkit-details-marker { display: none; }
@@ -4066,26 +4083,46 @@
       items.push({ type: 'ride', key, line: h.line, company: lineToCompany.get(h.line) || '不明',
         fromId: h.from, toId: h.to, stops: 1, m: h.m, trip: h.trip, dep: h.dep, arr: h.arr });
     }
-    // 会社ごとに営業キロ(1km 未満は切り上げ)を求め、運賃表で運賃を出す
-    const byCompany = new Map();
+    // 運賃は降りたときに請求される。乗換や、別の列車に乗り継ぐところで運賃を打ち切り、次の乗車は 0 から測る。
+    // 同じ列車が路線をまたぐ(直通)ときだけ、降りるまで同じ乗車として続ける
+    const boardings = [];
     let meters = 0;
-    for (const it of items) {
-      if (it.type !== 'ride') continue;
+    let prev = null, cur = null;
+    items.forEach((it, idx) => {
+      if (it.type !== 'ride') { prev = it; return; }
+      const sameVehicle = !!(cur && prev && prev.type === 'ride' &&
+        (it.trip && prev.trip ? it.trip.key === prev.trip.key : (!it.trip && !prev.trip)));
+      if (!sameVehicle) { cur = { idxs: [], byCompany: new Map(), m: 0 }; boardings.push(cur); }
+      it.boarding = boardings.length - 1;
+      cur.idxs.push(idx);
+      cur.m += it.m;
+      cur.byCompany.set(it.company, (cur.byCompany.get(it.company) || 0) + it.m);
       meters += it.m;
-      byCompany.set(it.company, (byCompany.get(it.company) || 0) + it.m);
-    }
+      prev = it;
+    });
+    // 乗車ごと・会社ごとに、営業キロ(1km 未満は切り上げ)を求め、運賃表で運賃を出す
     let total = 0, ok = true;
-    const fares = [...byCompany].map(([company, m]) => {
-      const km = Math.ceil(Math.round(m) / 1000);
-      const table = fareTables.get(company);
-      let yen = null;
-      if (km === 0) yen = 0;
-      else if (table && km <= table.length && Number.isFinite(table[km - 1])) yen = table[km - 1];
-      if (yen === null) ok = false; else total += yen;
-      return { company, m, km, yen };
+    const fares = [];
+    boardings.forEach((b, bi) => {
+      b.yen = 0;
+      b.ok = true;
+      b.parts = [];
+      for (const [company, m] of b.byCompany) {
+        const km = Math.ceil(Math.round(m) / 1000);
+        const table = fareTables.get(company);
+        let yen = null;
+        if (km === 0) yen = 0;
+        else if (table && km <= table.length && Number.isFinite(table[km - 1])) yen = table[km - 1];
+        if (yen === null) { ok = false; b.ok = false; } else { total += yen; b.yen += yen; }
+        const part = { company, m, km, yen, boarding: bi };
+        b.parts.push(part);
+        fares.push(part);
+      }
+      b.fromId = items[b.idxs[0]].fromId;
+      b.toId = items[b.idxs[b.idxs.length - 1]].toId;
     });
     const transfers = items.filter((it) => it.type === 'transfer').length;
-    return { items, path, meters, transfers, fares, total, ok, timed: false, complete: false, startMs: null, apiOk: true };
+    return { items, path, meters, transfers, fares, boardings, total, ok, timed: false, complete: false, startMs: null, apiOk: true };
   }
   // 時刻なしの経路(距離の最短)
   function calcTransit(fromId, toId) {
@@ -4117,27 +4154,39 @@
     const lastRide = [...r.items].reverse().find((it) => it.type === 'ride');
     const arrMs = r.complete && lastRide && lastRide.arr != null ? lastRide.arr : null;
 
-    // 運賃のカード: 合計 → 距離・乗換 → 会社ごとの内訳
+    // 運賃のカード: 合計 → 距離・乗換 → 乗車ごとの運賃
     const card = mk('div', 'fare-card');
+    card.append(mk('div', 'fare-label', '運賃の合計'));
     const total = mk('div', 'fare-total');
     if (r.ok) total.append(document.createTextNode(r.total.toLocaleString('ja-JP')), mk('small', '', 'CP'));
-    else { total.textContent = '計算できません'; total.style.color = 'var(--danger)'; total.style.fontSize = '24px'; }
-    card.append(total, mk('div', 'fare-sub', `営業キロ ${(r.meters / 1000).toFixed(1)} km ・ 乗換 ${r.transfers} 回`));
+    else { total.textContent = '計算できません'; total.style.color = 'var(--danger)'; total.style.fontSize = '26px'; }
+    card.append(total, mk('div', 'fare-sub', `営業キロ ${(r.meters / 1000).toFixed(1)} km ・ 乗換 ${r.transfers} 回 ・ 乗車 ${r.boardings.length} 回`));
     if (r.timed) {
+      const tm = mk('div', 'fare-sub');
       let txt = `出発 ${hhmm(r.startMs)}`;
-      if (arrMs != null) txt += ` ・ 到着 ${hhmm(arrMs)}(所要 約 ${Math.round((arrMs - r.startMs) / 60000)} 分)`;
+      if (arrMs != null) txt += ` → 到着 ${hhmm(arrMs)}(所要 約 ${Math.round((arrMs - r.startMs) / 60000)} 分)`;
       else txt += ` ・ 到着時刻 不明(${why})`;
-      card.append(mk('div', 'fare-sub', txt));
+      tm.textContent = txt;
+      tm.style.fontWeight = '800';
+      card.append(tm);
     }
-    if (r.fares.length) {
-      const co = mk('div', 'fare-co');
-      for (const p of r.fares) {
-        const row = mk('div');
-        row.append(mk('span', '', `${companyJa(p.company)}(${p.km} km)`),
-          mk('b', '', p.yen === null ? '運賃表なし' : `${p.yen.toLocaleString('ja-JP')} CP`));
-        co.append(row);
-      }
-      card.append(co);
+    if (r.boardings.length > 1) {
+      card.append(mk('div', 'fare-note', '運賃は降りたときに請求されます。乗り継ぐたびに精算し、次の乗車は 0 から数えます(下の乗車ごとの合計です)。'));
+    }
+    if (r.boardings.length) {
+      const list = mk('div', 'fare-rides');
+      r.boardings.forEach((b, bi) => {
+        const row = mk('div', 'fare-ride');
+        row.append(mk('span', 'no', String(bi + 1)));
+        row.append(mk('div', 'rt', `${stName(b.fromId)} → ${stName(b.toId)}`));
+        const y = mk('div', 'yen');
+        if (b.ok) y.append(document.createTextNode(b.yen.toLocaleString('ja-JP')), mk('small', '', 'CP'));
+        else { y.textContent = '運賃表なし'; y.style.fontSize = '14px'; y.style.color = 'var(--danger)'; }
+        row.append(y);
+        row.append(mk('div', 'rs', b.parts.map((p) => `${companyJa(p.company)} ${p.km} km`).join(' ・ ')));
+        list.append(row);
+      });
+      card.append(list);
     }
     nodes.push(card);
     if (r.timed && !r.apiOk) {
@@ -4157,7 +4206,12 @@
       t.append(...titleNodes);
       body.append(t);
       for (const line of subs || []) if (line) body.append(mk('div', 'tl-sub', line));
-      if (timing) body.append(mk('div', 'tl-time' + (timing.off ? ' off' : ''), timing.text));
+      if (timing) {
+        const tt = mk('div', 'tl-time' + (timing.off ? ' off' : ''));
+        if (timing.lines) timing.lines.forEach((l, k) => tt.append(mk('div', k === 0 ? 'tl-time-main' : 'tl-time-sub', l)));
+        else tt.textContent = timing.text;
+        body.append(tt);
+      }
       li.append(rl, body);
       ol.append(li);
     };
@@ -4167,14 +4221,23 @@
         let timing = null;
         if (r.timed) {
           if (it.trip && it.dep != null && it.arr != null) {
-            timing = { text: `${hhmm(it.dep)} 発 → ${hhmm(it.arr)} 着` + (it.trip.planned ? '(予定)' : '') +
-              (it.trip.routeNumber ? `\n${jaName(it.trip.routeNumber)} ・ ${parseStationName(it.trip.destination).ja || ''} 行` : '') };
+            timing = { lines: [`${hhmm(it.dep)} 発 → ${hhmm(it.arr)} 着` + (it.trip.planned ? '(予定)' : ''),
+              it.trip.routeNumber ? `${jaName(it.trip.routeNumber)} ・ ${parseStationName(it.trip.destination).ja || ''} 行` : ''].filter(Boolean) };
           } else timing = { off: true, text: `時刻: 不明(${why})` };
         }
         const title = [codeBadge(it.line), document.createTextNode(lineNameOf(it.line))];
         item('ride', lineColorSafe(it.line), title,
           [`${companyJa(it.company)}`, `${stName(it.fromId)} → ${stName(it.toId)}`, `${it.stops} 駅 ・ ${(it.m / 1000).toFixed(1)} km`], timing);
-        if (timing) { const last = ol.lastChild.querySelector('.tl-time'); last.style.whiteSpace = 'pre-line'; }
+        // 降りる駅(乗車の最後の区間)に、その乗車の運賃を出す。直通の途中の区間には、通算の旨だけ出す
+        const bd = r.boardings[it.boarding];
+        if (bd) {
+          const isLast = bd.idxs[bd.idxs.length - 1] === i;
+          const chip = mk('div', 'tl-fare' + (isLast ? '' : ' through'));
+          if (isLast) {
+            chip.append(document.createTextNode(`乗車${it.boarding + 1}・降車で運賃 ${bd.ok ? bd.yen.toLocaleString('ja-JP') : '—'}`), mk('small', '', bd.ok ? 'CP' : '(運賃表なし)'));
+          } else chip.textContent = '直通: 降りるまで運賃を通算';
+          ol.lastChild.querySelector('.tl-body').append(chip);
+        }
       } else {
         const prevRide = r.items.slice(0, i).reverse().find((x) => x.type === 'ride');
         const nextRide = r.items.slice(i + 1).find((x) => x.type === 'ride');
