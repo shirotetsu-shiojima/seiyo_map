@@ -21,7 +21,7 @@
   },
   "build": {
     "appId": "io.github.seiyomap.desktop",
-    "productName": "星陽マップ",
+    "productName": "SeiyoMap",
     "copyright": "星陽マップ",
     "artifactName": "SeiyoMap-${version}-${os}-${arch}.${ext}",
     "directories": {
@@ -75,7 +75,10 @@
       "icon": "build/icon.png",
       "identity": "-",
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "CFBundleDisplayName": "星陽マップ"
+      }
     }
   }
 }
