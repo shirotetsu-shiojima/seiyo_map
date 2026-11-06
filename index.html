@@ -2171,8 +2171,7 @@
     applyRoutes();
     selectedRail = null;
     $('railName').textContent = name;
-    $('railSummary').textContent =
-      `駅 ${stations.size} 駅・区間 ${sections.length} 本・合計 ${Math.round(total)} ブロック`;
+    $('railSummary').textContent = railSummaryText();
     $('showRail').checked = true;
     fillFareSelects();
     fitView();
@@ -2488,10 +2487,69 @@
     return n;
   }
 
+  // 鉄道JSONに無く、系統データの駅座標から補った区間・駅は synthetic の印を付ける(組み直しのときに外す)
+  function dropSyntheticRail() {
+    if (!rail || !rail.syntheticAdded) return;
+    rail.sections = rail.sections.filter((x) => !x.synthetic);
+    for (const [id, st] of [...rail.stations]) if (st.synthetic) rail.stations.delete(id);
+    for (const st of rail.stations.values()) st.neighbors = st.neighbors.filter((n) => !n.synthetic);
+    rail.total = rail.sections.reduce((a, x) => a + x.distance, 0);
+    rail.syntheticAdded = 0;
+  }
+  function railSummaryText() {
+    const n = rail.syntheticAdded || 0;
+    return `駅 ${rail.stations.size} 駅・区間 ${rail.sections.length} 本${n ? `(うち ${n} 本は系統データの駅座標から補った直線)` : ''}・合計 ${Math.round(rail.total)} ブロック`;
+  }
+  function addMissingSections(canon, pairSec, adj, secByKey) {
+    const rs = routeData.stations || {};
+    const ensure = (id) => {
+      if (rail.stations.has(id)) return rail.stations.get(id);
+      const r = rs[id];
+      if (!r || !Number.isFinite(Number(r.x)) || !Number.isFinite(Number(r.z))) return null;
+      const info = parseStationName(r.name);
+      const st = { id, ...info, x: Number(r.x), z: Number(r.z), neighbors: [], lines: [], synthetic: true };
+      rail.stations.set(id, st);
+      return st;
+    };
+    let added = 0;
+    for (const route of routeData.routes) {
+      const ids = (route.stations || []).map((x) => canon(String(x).split('_')[0]));
+      for (let i = 1; i < ids.length; i++) {
+        const a = ids[i - 1], b = ids[i];
+        if (a === b) continue;
+        const pk = [a, b].sort().join('|');
+        if (pairSec.has(pk) || shortestPath(adj, a, b)) continue;
+        const sa = ensure(a), sb = ensure(b);
+        if (!sa || !sb) continue;
+        const distance = Math.round(Math.hypot(sa.x - sb.x, sa.z - sb.z) * 10) / 10;
+        const key = [a, b].sort().join('|');
+        const sec = { key, fromId: a, toId: b, distance, measured: false, synthetic: true,
+          pts: [[sa.x, sa.z], [sb.x, sb.z]], routes: [], names: [] };
+        rail.sections.push(sec);
+        rail.total += distance;
+        pairSec.set(pk, sec);
+        secByKey.set(key, sec);
+        sa.neighbors.push({ id: b, distance, synthetic: true });
+        sb.neighbors.push({ id: a, distance, synthetic: true });
+        for (const [x, y] of [[a, b], [b, a]]) {
+          if (!adj.has(x)) adj.set(x, []);
+          adj.get(x).push({ to: y, w: distance || 1, key });
+        }
+        added++;
+      }
+    }
+    rail.syntheticAdded = added;
+    if (added) {
+      $('railSummary').textContent = railSummaryText();
+      fillFareSelects();
+    }
+  }
+
   function applyRoutes() {
     if (!rail || !routeData) return;
     const secByKey = new Map();
     const adj = new Map();
+    dropSyntheticRail();                 // 前回の補い分を外してから、組み直す
     const alias = buildStationAlias(rail, routeData);
     const canon = (id) => resolveAlias(alias, id);
     rail.platforms = buildPlatforms(rail, routeData, canon);
@@ -2511,6 +2569,8 @@
         adj.get(a).push({ to: b, w: sec.distance || 1, key: sec.key });
       }
     }
+    // 鉄道JSONに区間が無い所(非電化の架線なし区間など)は、系統データの駅座標を直線でつないで補う
+    addMissingSections(canon, pairSec, adj, secByKey);
     for (const st of rail.stations.values()) st.lines = [];
     let nDirect = 0, nEstimated = 0, nFailed = 0;
     let entries = [];
@@ -3293,6 +3353,15 @@
       const t = lineToCompany.get(lineCodeOf(c));
       if (t && !ids.includes(t)) ids.push(t);
     }
+    // 駅番号が無い駅は、station.csv の「乗り入れ会社」から会社を求める
+    if (!ids.length) {
+      const row = stationRowOf(st);
+      for (const name of (row && row.companies) || []) {
+        for (const li of lineInfo.values()) {
+          if (li.company === name && li.companyTxt && !ids.includes(li.companyTxt)) { ids.push(li.companyTxt); break; }
+        }
+      }
+    }
     return ids;
   }
 
@@ -3318,6 +3387,8 @@
   const normLine = (s) => String(s || '').trim().replace(/-$/, '');
   let lineInfo = new Map();          // 路線コード -> { code, company, name, color, companyTxt }
   let stationByCode = new Map();     // 駅番号(HL01 など) -> { name, reading, pref, companies, ridership }
+  let stationByName = new Map();     // 駅名 -> 同じ行(駅番号が無い会社の駅は、こちらで照合する)
+  const nameKey = (t) => String(t || '').normalize('NFKC').replace(/\s+/g, '').trim();
   let interchangeGroups = [];        // 駅番号が複数ある駅(同じ駅で乗り換えられる駅番号の組)
   // CSV を読む(引用符・改行に対応)
   function parseCSV(text) {
@@ -3390,6 +3461,7 @@
   // station.csv: 駅番号ごとの情報と、駅番号が複数ある駅(乗換駅)
   function applyStations(text) {
     stationByCode = new Map();
+    stationByName = new Map();
     interchangeGroups = [];
     railGraph = null;
     for (const r of tableOf(text)) {
@@ -3404,6 +3476,7 @@
         st: /^ST-/.test((r['ST'] || '').trim()) ? r['ST'].trim() : '',   // 整備度(ST)。無い駅は空(ホームは赤い四角のまま)
       };
       for (const c of codes) stationByCode.set(c, row);
+      if (!stationByName.has(nameKey(name))) stationByName.set(nameKey(name), row);
       if (codes.length >= 2) interchangeGroups.push(codes);
     }
     scheduleExplore();
@@ -3415,7 +3488,10 @@
     for (const li of lineInfo.values()) if (li.companyTxt === txt && li.company) return li.company;
     return txt;
   };
+  // 駅名で照合する(駅番号の無い会社の駅も結び付く)。名前が合わない時だけ、駅番号で探す
   const stationRowOf = (st) => {
+    const byName = stationByName.get(nameKey(st.ja));
+    if (byName) return byName;
     for (const c of st.codes || []) if (stationByCode.has(c)) return stationByCode.get(c);
     return null;
   };
@@ -3429,7 +3505,7 @@
   };
 
   const lineCodeOf = (code) => normLine(String(code || '').replace(/\d+$/, ''));
-  const companyOfStation = (st) => lineToCompany.get(lineCodeOf(st.codes[0])) || '';
+  const companyOfStation = (st) => lineToCompany.get(lineCodeOf(st.codes[0])) || companyIdsOf(st)[0] || '';
 
   async function fetchText(url) {
     try {
