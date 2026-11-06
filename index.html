@@ -2489,16 +2489,115 @@
 
   // 鉄道JSONに無く、系統データの駅座標から補った区間・駅は synthetic の印を付ける(組み直しのときに外す)
   function dropSyntheticRail() {
-    if (!rail || !rail.syntheticAdded) return;
-    rail.sections = rail.sections.filter((x) => !x.synthetic);
+    if (!rail || !(rail.syntheticAdded || rail.splitLog)) return;
+    rail.sections = rail.sections.filter((x) => !x.synthetic && !x.split);
     for (const [id, st] of [...rail.stations]) if (st.synthetic) rail.stations.delete(id);
     for (const st of rail.stations.values()) st.neighbors = st.neighbors.filter((n) => !n.synthetic);
+    if (rail.splitLog) {
+      // 分割した元の区間を戻す
+      for (const sec of rail.splitLog.removed) {
+        rail.sections.push(sec);
+        const a = rail.stations.get(sec.fromId), b = rail.stations.get(sec.toId);
+        if (a) a.neighbors.push({ id: sec.toId, distance: sec.distance });
+        if (b) b.neighbors.push({ id: sec.fromId, distance: sec.distance });
+      }
+      rail.splitLog = null;
+    }
     rail.total = rail.sections.reduce((a, x) => a + x.distance, 0);
     rail.syntheticAdded = 0;
+    rail.splitCount = 0;
+  }
+  // 鉄道JSONに無い駅(各駅停車だけが停まる駅など)が、長い区間(快速が通過する線路)の途中にあれば、その線路を駅で分ける。
+  // 駅の座標が線路の近く(SPLIT_TOL ブロック以内)で、区間の途中にある駅だけが対象。分けた線路は元の線形をそのまま使う
+  const SPLIT_TOL = 16;
+  function splitSectionsAtStations() {
+    const rs = routeData.stations || {};
+    const segAt = (p, a, b) => {
+      const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2)) : 0;
+      return { d: Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dz)), t, len: Math.sqrt(l2) };
+    };
+    const cumOf = new Map();
+    const cum = (sec) => {
+      if (!cumOf.has(sec)) {
+        const c = [0];
+        for (let i = 1; i < sec.pts.length; i++) c.push(c[i - 1] + Math.hypot(sec.pts[i][0] - sec.pts[i - 1][0], sec.pts[i][1] - sec.pts[i - 1][1]));
+        cumOf.set(sec, c);
+      }
+      return cumOf.get(sec);
+    };
+    const bySec = new Map();
+    for (const [id, r] of Object.entries(rs)) {
+      if (rail.stations.has(id)) continue;
+      const x = Number(r.x), z = Number(r.z);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
+      let best = null;
+      for (const sec of rail.sections) {
+        const c = cum(sec);
+        for (let k = 1; k < sec.pts.length; k++) {
+          const q = segAt([x, z], sec.pts[k - 1], sec.pts[k]);
+          if (!best || q.d < best.d) best = { d: q.d, sec, along: c[k - 1] + q.t * q.len };
+        }
+      }
+      if (!best || best.d > SPLIT_TOL) continue;
+      const total = cum(best.sec)[best.sec.pts.length - 1];
+      if (best.along < 1 || best.along > total - 1) continue;   // 端の駅のすぐそばは、別の駅とみなさない
+      if (!bySec.has(best.sec)) bySec.set(best.sec, []);
+      bySec.get(best.sec).push({ id, r, x, z, along: best.along });
+    }
+    if (!bySec.size) return;
+    const pointAt = (sec, a) => {
+      const c = cum(sec);
+      let k = 1;
+      while (k < c.length - 1 && c[k] < a) k++;
+      const l = c[k] - c[k - 1] || 1;
+      const t = Math.max(0, Math.min(1, (a - c[k - 1]) / l));
+      return [sec.pts[k - 1][0] + t * (sec.pts[k][0] - sec.pts[k - 1][0]), sec.pts[k - 1][1] + t * (sec.pts[k][1] - sec.pts[k - 1][1])];
+    };
+    const sub = (sec, a0, a1) => {
+      const c = cum(sec);
+      const out = [pointAt(sec, a0)];
+      for (let i = 1; i < sec.pts.length - 1; i++) if (c[i] > a0 && c[i] < a1) out.push(sec.pts[i]);
+      out.push(pointAt(sec, a1));
+      return out;
+    };
+    const log = { removed: [] };
+    let count = 0;
+    for (const [sec, list] of bySec) {
+      list.sort((a, b) => a.along - b.along);
+      const total = cum(sec)[sec.pts.length - 1];
+      const nodes = [{ id: sec.fromId, along: 0 }, ...list, { id: sec.toId, along: total }];
+      for (const n of list) {
+        if (!rail.stations.has(n.id)) {
+          rail.stations.set(n.id, { id: n.id, ...parseStationName(n.r.name), x: n.x, z: n.z, neighbors: [], lines: [], synthetic: true });
+        }
+      }
+      // 元の区間を外して、駅ごとの区間に置き換える
+      rail.sections = rail.sections.filter((x) => x !== sec);
+      log.removed.push(sec);
+      const A = rail.stations.get(sec.fromId), B = rail.stations.get(sec.toId);
+      A.neighbors = A.neighbors.filter((n) => !(n.id === sec.toId && !n.synthetic));
+      B.neighbors = B.neighbors.filter((n) => !(n.id === sec.fromId && !n.synthetic));
+      for (let i = 1; i < nodes.length; i++) {
+        const a = nodes[i - 1], b = nodes[i];
+        const part = b.along - a.along;
+        const distance = Math.round(sec.distance * part / total * 10) / 10;
+        const key = [a.id, b.id].sort().join('|');
+        rail.sections.push({ key, fromId: a.id, toId: b.id, distance, measured: false, split: true, pts: sub(sec, a.along, b.along), routes: [], names: [] });
+        rail.stations.get(a.id).neighbors.push({ id: b.id, distance, synthetic: true });
+        rail.stations.get(b.id).neighbors.push({ id: a.id, distance, synthetic: true });
+        count++;
+      }
+    }
+    rail.splitLog = log;
+    rail.splitCount = count;
   }
   function railSummaryText() {
-    const n = rail.syntheticAdded || 0;
-    return `駅 ${rail.stations.size} 駅・区間 ${rail.sections.length} 本${n ? `(うち ${n} 本は系統データの駅座標から補った直線)` : ''}・合計 ${Math.round(rail.total)} ブロック`;
+    const n = rail.syntheticAdded || 0, sp = rail.splitCount || 0;
+    const notes = [];
+    if (sp) notes.push(`${sp} 本は通過線を駅で分けたもの`);
+    if (n) notes.push(`${n} 本は系統データの駅座標から補った直線`);
+    return `駅 ${rail.stations.size} 駅・区間 ${rail.sections.length} 本${notes.length ? `(うち ${notes.join('・')})` : ''}・合計 ${Math.round(rail.total)} ブロック`;
   }
   function addMissingSections(canon, pairSec, adj, secByKey) {
     const rs = routeData.stations || {};
@@ -2539,7 +2638,7 @@
       }
     }
     rail.syntheticAdded = added;
-    if (added) {
+    if (added || rail.splitCount) {
       $('railSummary').textContent = railSummaryText();
       fillFareSelects();
     }
@@ -2550,6 +2649,7 @@
     const secByKey = new Map();
     const adj = new Map();
     dropSyntheticRail();                 // 前回の補い分を外してから、組み直す
+    splitSectionsAtStations();
     const alias = buildStationAlias(rail, routeData);
     const canon = (id) => resolveAlias(alias, id);
     rail.platforms = buildPlatforms(rail, routeData, canon);
