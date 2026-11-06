@@ -1673,7 +1673,7 @@
       for (const d of sc.deps) {
         const dt = d.departureMillis;
         if (dt < minDep || dt > sc.windowEnd) continue;
-        const route = routeByKey(sysKeyOf(d.routeName));
+        const route = routeByKey(sysKeyOf(d.routeName)) || routeBySysLine(d.routeName, u, d.destination);
         if (!route) continue;
         const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
         const i = ids.indexOf(u);
@@ -3148,11 +3148,13 @@
   };
   const codeOnLine = (st, line) => (st.codes || []).find((c) => lineCodeOf(c) === line) || '';
   const numOf = (code) => { const m = /(\d+)$/.exec(code || ''); return m ? Number(m[1]) : null; };
-  const lineColorSafe = (line) => (lineColorOn() ? lineColorOf(line) : RAIL_COLOR);
+  const lineColorSafe = (line) => (pseudoLines.has(line) ? pseudoLines.get(line) : lineColorOn() ? lineColorOf(line) : RAIL_COLOR);
 
   function stationSign(st, srow) {
     const lines = uniqueLineCodes(st);
-    const colors = lines.length ? lines.map(lineColorSafe) : [RAIL_COLOR];
+    // 駅番号が無い駅は、通る系統(系統データ)の色で塗る。系統も無ければ灰色
+    const routeColors = [...new Set((st.lines || []).map((l) => l.color))];
+    const colors = lines.length ? lines.map(lineColorSafe) : (routeColors.length ? routeColors : [RAIL_COLOR]);
     const band = (thin) => {
       const b = mk('div', 'sign-band' + (thin ? ' thin' : ''));
       for (const c of colors) { const i = document.createElement('i'); i.style.background = c; b.append(i); }
@@ -3482,7 +3484,7 @@
     scheduleExplore();
   }
   // 路線の色・名前・会社名(表示用)
-  const lineColorOf = (code) => (lineInfo.get(code) && lineInfo.get(code).color) || lineColor(code);
+  const lineColorOf = (code) => (lineInfo.get(code) && lineInfo.get(code).color) || pseudoLines.get(code) || lineColor(code);
   const lineNameOf = (code) => (lineInfo.get(code) && lineInfo.get(code).name) || code;
   const companyJa = (txt) => {
     for (const li of lineInfo.values()) if (li.companyTxt === txt && li.company) return li.company;
@@ -3626,7 +3628,12 @@
   // 系統名の種別の語: 「会社||各停 青前→天夜町(AM)」→「各停」、「会社||各停上り(NS)」→「各停」。無ければ ''
   const typeWordOf = (name) => { const m = /\|\|\s*([^\s上下(（→]+)/.exec(String(name || '')); return m ? m[1] : ''; };
   // 種別の当てはめ: 種別の番号(正式名)で探し、無ければ系統名の語で探す。見つからなければ type は ''
-  function typeMatch(stopLines, numberType, nameWord) {
+  function typeMatch(stopLines, numberType, nameWord, sysLine) {
+    // 駅番号が無い会社は、系統名の最初の部分が同じなら同じ路線(種別は系統どおり)
+    if (sysLine && pseudoLines.has(sysLine)) {
+      const hit = stopLines.filter((x) => x.line === sysLine);
+      if (hit.length) return { type: hit[0].type, cands: [sysLine] };
+    }
     for (const raw of [numberType, nameWord]) {
       if (!raw || raw === '-') continue;
       const cands = stopLines.filter((x) => sameType(x.type, raw)).map((x) => x.line);
@@ -3635,6 +3642,10 @@
     return { type: '', cands: [] };
   }
   let stopTypes = new Map();    // 駅 id -> [{ line, type }]
+  // 駅番号が無い会社(河原鉄道など)は、系統名の「|」で区切った最初の部分(河原鉄道)を、路線として扱う
+  const sysLineOf = (name) => String(name || '').split('|')[0].trim();
+  let pseudoLines = new Map();  // 擬似路線の名前 -> 色
+  const NUMBERLESS_TYPE = '普通';  // 種別の無い系統の表示
   // color.txt: 「(c)会社txt」の下に、「種別名・背景色・文字色」の3行が1組で並ぶ
   function applyTypeColors(text) {
     typeColors = new Map();
@@ -3656,6 +3667,7 @@
   // 系統の路線は、停車駅で一番多い路線(持ち主)を使う。直通で他社線の駅に停まる時は、その駅の番号の路線で表示する
   function buildStopTypes() {
     stopTypes = new Map();
+    pseudoLines = new Map();
     if (!routeData) return;
     const linesOfStation = (id) => {
       const s = routeData.stations && routeData.stations[id];
@@ -3664,16 +3676,23 @@
       return [...head.matchAll(/\[([^\]]+)\]/g)].map((m) => lineCodeOf(m[1]));
     };
     for (const route of routeData.routes || []) {
-      const type = canonType(String(route.number || '').split('|')[0].trim() || typeWordOf(route.name) || '-');
       const ids = (route.stations || []).map((raw) => String(raw).split('_')[0]);
+      // 停車駅に駅番号が1つも無い系統は、駅番号の無い会社の系統。系統名の最初の部分を路線にする
+      const numberless = ids.length >= 2 && ids.every((id) => !linesOfStation(id).length);
+      const pseudo = numberless ? sysLineOf(route.name) : '';
+      if (pseudo && !pseudoLines.has(pseudo)) pseudoLines.set(pseudo, colorHex(route.color));
+      const type = pseudo
+        ? (canonType(String(route.number || '').split('|')[0].trim()) || NUMBERLESS_TYPE)
+        : canonType(String(route.number || '').split('|')[0].trim() || typeWordOf(route.name) || '-');
+      const linesOf = (id) => (pseudo ? [pseudo] : linesOfStation(id));
       const votes = new Map();
-      for (const id of ids) for (const l of linesOfStation(id)) votes.set(l, (votes.get(l) || 0) + 1);
+      for (const id of ids) for (const l of linesOf(id)) votes.set(l, (votes.get(l) || 0) + 1);
       let owner = '', best = 0;
       for (const [l, n] of votes) if (n > best) { best = n; owner = l; }
       // 両端の駅が共通して持つ路線(停車駅の前後の区間の路線)で、その停車駅の路線を決める
-      const commonLine = (a, b) => { const bl = linesOfStation(b); return linesOfStation(a).find((c) => bl.includes(c)); };
+      const commonLine = (a, b) => { const bl = linesOf(b); return linesOf(a).find((c) => bl.includes(c)); };
       ids.forEach((id, i) => {
-        const own = linesOfStation(id);
+        const own = linesOf(id);
         const lines = new Set();
         // 境界駅では、前後の区間それぞれの路線で種別を出す(両方の路線に停まる系統は両方に出る)
         if (i > 0) { const c = commonLine(ids[i - 1], id); if (c) lines.add(c); }
@@ -3795,6 +3814,28 @@
     }
     return routeByKeyCache.m.get(key) || null;
   }
+  // 完全に一致する系統が無い時: 系統名の最初の部分が同じで、この駅から行先へ向かう系統(いちばん短いもの)
+  function routeBySysLine(routeName, sid, destName) {
+    if (!routeData) return null;
+    const head = sysLineOf(routeName);
+    if (!head) return null;
+    const dest = parseStationName(destName).ja;
+    let best = null, bestLen = Infinity;
+    for (const r of routeData.routes || []) {
+      if (sysLineOf(r.name) !== head) continue;
+      const ids = (r.stations || []).map((raw) => String(raw).split('_')[0]);
+      const i = ids.indexOf(sid);
+      if (i < 0 || i >= ids.length - 1) continue;
+      let len = ids.length - i;
+      if (dest) {
+        const j = ids.findIndex((id, k) => k > i && jaName((routeData.stations[id] || {}).name) === dest);
+        if (j < 0) continue;
+        len = j - i;
+      }
+      if (len < bestLen) { best = r; bestLen = len; }
+    }
+    return best;
+  }
   // 通過ごとの系統の、この駅から終点までの区間。この駅が系統に無い・終点なら null
   // 戻り値は { line: 乗る路線(候補にあるもの), path: 駅の並び(地図で分かる駅まで), dest: 終点の名前 }
   function routeHop(sid, route, candidates) {
@@ -3827,7 +3868,7 @@
       const dwellSec = Number(t.dwellRemainSec) || 0;
       // 1) 停車中の列車: 今の系統で、この駅からの発車
       if (dwellHere) {
-        const { type, cands: candidates } = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName));
+        const { type, cands: candidates } = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName), sysLineOf(t.routeName));
         const dest = parseStationName(t.destination).ja || '-';
         if (candidates.length && !(st.ja && dest === st.ja)) {
           const hop = departHop(sid, t, candidates);
@@ -3845,7 +3886,7 @@
         let type, dest, hop, dirName;
         if (!route) {
           // 今の系統(折返し前)の通過
-          const m = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName));
+          const m = typeMatch(stopLines, jaName(t.routeNumber), typeWordOf(t.routeName), sysLineOf(t.routeName));
           type = m.type;
           const candidates = m.cands;
           if (!candidates.length) continue;
@@ -3855,7 +3896,7 @@
           dirName = dest;
         } else {
           // 折返し後など、別の系統の通過: 系統の種別・終点・路線で出す
-          const m = typeMatch(stopLines, String(route.number || '').split('|')[0].trim(), typeWordOf(route.name));
+          const m = typeMatch(stopLines, String(route.number || '').split('|')[0].trim(), typeWordOf(route.name), sysLineOf(route.name));
           type = m.type;
           const candidates = m.cands;
           if (!candidates.length) continue;
@@ -3938,10 +3979,11 @@
   function adjacentOf(st, line) {
     const myNum = numOf(codeOnLine(st, line));
     const prev = [], next = [], other = [];
+    const pseudo = pseudoLines.has(line);
     for (const nb of st.neighbors) {
       const ns = rail.stations.get(nb.id);
       if (!ns) continue;
-      const nc = codeOnLine(ns, line);
+      const nc = pseudo ? ((ns.lines || []).some((l) => l.name === line) ? '-' : '') : codeOnLine(ns, line);
       if (!nc) continue;
       const item = { st: ns, dist: nb.distance, code: nc };
       const n = numOf(nc);
@@ -3957,7 +3999,7 @@
     b.type = 'button';
     b.innerHTML = dir === 'next' ? ICON.right : dir === 'prev' ? ICON.left : '';
     const t = mk('span', 't');
-    t.append(mk('b', '', stationName(it.st)), mk('small', '', `${it.code} ・ ${(it.dist / 1000).toFixed(1)} km`));
+    t.append(mk('b', '', stationName(it.st)), mk('small', '', `${it.code && it.code !== '-' ? it.code + ' ・ ' : ''}${(it.dist / 1000).toFixed(1)} km`));
     b.append(t);
     b.addEventListener('click', () => selectStation(it.st, { fly: true }));
     return b;
@@ -3989,7 +4031,7 @@
       block.style.setProperty('--lc', lineColorSafe(line));
       // 見出し: 路線のバッジ・路線名・会社名
       const head = mk('div', 'lblock-head');
-      head.append(codeBadge(line));
+      if (!pseudoLines.has(line)) head.append(codeBadge(line));
       const nm = mk('div');
       nm.append(mk('div', 'lblock-name', lineNameOf(line)));
       const co = companyJa(lineToCompany.get(line) || '');
