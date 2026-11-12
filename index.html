@@ -560,6 +560,11 @@
           <label class="set-row"><span>縮尺に応じて細い道路を隠す</span><input type="checkbox" id="zoomFilter" checked></label>
         </div>
         <div class="set-group">
+          <h2 class="set-h">地価</h2>
+          <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
+          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。地価は駅データから算出した参考値です。</div>
+        </div>
+        <div class="set-group">
           <h2 class="set-h">背景</h2>
           <label class="set-row"><span>背景の地図</span><input type="checkbox" id="bgShow" checked></label>
           <div class="range-row"><span>濃さ</span><input id="bgAlpha" type="range" min="10" max="100" value="60" aria-label="背景の地図の濃さ"></div>
@@ -587,6 +592,7 @@
         <div class="set-group">
           <h2 class="set-h">凡例</h2>
           <div id="legend" class="legend-grid">
+            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(低 → 高・万円/チャンク)</div>
             <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
@@ -1273,6 +1279,74 @@
       t.bitmap = null;
       t.level = 0;
     }
+  }
+
+  // 駅の等級・利用者数・属性から駅前価格を設定し、距離に応じて減衰させる。
+  // 16×16ブロックを1チャンクとして描画し、駅群は空間ビンで検索する。
+  const landAttributeFactor = (attrs) => {
+    const weights = { 商業: 1.3, オフィス: 1.35, 娯楽: 1.2, レジャー: 1.15, 観光: 1.2, 住宅: 1.08, 行政: 1.15, 学校: 1.05, 工業: 0.9, 港湾: 0.95 };
+    return Math.min(1.8, (attrs || []).reduce((n, a) => n * (weights[a] || 1), 1));
+  };
+  function ensureLandPriceIndex() {
+    if (!rail) return;
+    const key = `${stationDataVersion}:${rail.stations.size}`;
+    if (key === landPriceIndexKey) return;
+    landPriceIndexKey = key;
+    landPriceBins = new Map();
+    for (const st of rail.stations.values()) {
+      if (st.synthetic || !Number.isFinite(st.x) || !Number.isFinite(st.z)) continue;
+      const row = stationRowOf(st);
+      if (!row) continue;
+      const grade = Math.max(1, Math.min(5, row.grade || 5));
+      const base = (160 + (6 - grade) * 145) * (1 + Math.log10(1 + Math.max(0, row.ridership)) / 3) * landAttributeFactor(row.attributes);
+      const q = { x: st.x, z: st.z, base, name: stationName(st) };
+      const bx = Math.floor(q.x / LAND_BIN), bz = Math.floor(q.z / LAND_BIN);
+      const k = `${bx},${bz}`;
+      if (!landPriceBins.has(k)) landPriceBins.set(k, []);
+      landPriceBins.get(k).push(q);
+    }
+  }
+  function landPriceAt(x, z) {
+    ensureLandPriceIndex();
+    if (!landPriceBins.size) return 0;
+    let best = 0;
+    const bx = Math.floor(x / LAND_BIN), bz = Math.floor(z / LAND_BIN);
+    const span = Math.ceil(LAND_RADIUS / LAND_BIN);
+    for (let ix = bx - span; ix <= bx + span; ix++) for (let iz = bz - span; iz <= bz + span; iz++) {
+      for (const st of landPriceBins.get(`${ix},${iz}`) || []) {
+        const d = Math.hypot(st.x - x, st.z - z);
+        if (d >= LAND_RADIUS) continue;
+        const value = st.base * Math.pow(1 - d / LAND_RADIUS, 1.35);
+        if (value > best) best = value;
+      }
+    }
+    return Math.round(best);
+  }
+  function landColor(value) {
+    const t = Math.max(0, Math.min(1, value / 1200));
+    const stops = [[49,132,216],[82,183,136],[242,207,74],[237,123,53],[217,67,67]];
+    const p = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(p)), f = p - i;
+    const c = stops[i].map((v, n) => Math.round(v + (stops[i + 1][n] - v) * f));
+    return `rgba(${c[0]},${c[1]},${c[2]},0.43)`;
+  }
+  function drawLandPrices() {
+    if (!$('showLandPrice').checked || !rail) return;
+    ensureLandPriceIndex();
+    const [wx0, wz0] = toWorld(0, 0), [wx1, wz1] = toWorld(innerWidth, innerHeight);
+    const x0 = Math.floor(Math.min(wx0, wx1) / LAND_CHUNK), x1 = Math.ceil(Math.max(wx0, wx1) / LAND_CHUNK);
+    const z0 = Math.floor(Math.min(wz0, wz1) / LAND_CHUNK), z1 = Math.ceil(Math.max(wz0, wz1) / LAND_CHUNK);
+    // 遠景では数チャンクをまとめて描き、拡大時に1チャンクずつ表示する。
+    const step = Math.max(1, Math.ceil(6 / (LAND_CHUNK * view.scale)));
+    ctx.save();
+    for (let cx = x0; cx < x1; cx += step) for (let cz = z0; cz < z1; cz += step) {
+      const x = cx * LAND_CHUNK, z = cz * LAND_CHUNK;
+      const value = landPriceAt(x + LAND_CHUNK * step / 2, z + LAND_CHUNK * step / 2);
+      if (!value) continue;
+      const [sx, sy] = toScreen(x, z);
+      ctx.fillStyle = landColor(value);
+      ctx.fillRect(sx, sy, LAND_CHUNK * step * view.scale + 0.5, LAND_CHUNK * step * view.scale + 0.5);
+    }
+    ctx.restore();
   }
 
   function drawMap() {
@@ -1965,6 +2039,7 @@
     ctx.fillStyle = T.mapBg;
     ctx.fillRect(0, 0, innerWidth, innerHeight);
     drawMap();
+    drawLandPrices();
     if (tiles.size && $('bgShow').checked && T.veil !== 'rgba(0, 0, 0, 0)') {
       // 暗い画面では、明るい背景の地図画像を少し沈める
       ctx.fillStyle = T.veil;
@@ -3305,6 +3380,8 @@
       $('infoActions').hidden = false;
       renderStopTypes(st);
       if (srow && srow.ridership) addRow(dl, '利用者数', srow.ridership.toLocaleString('ja-JP') + ' 人');
+      if (srow && srow.grade) addRow(dl, '等級', `${srow.grade}級`);
+      if (srow && srow.attributes.length) addRow(dl, '属性', srow.attributes.join(' ・ '));
       if (srow && srow.pref) addRow(dl, '都道府県', srow.pref);
       if (srow && srow.companies.length) addRow(dl, '乗り入れ', srow.companies.join(' ・ '));
       if (srow && srow.st) addRow(dl, '整備度', srow.st);
@@ -3488,6 +3565,12 @@
   // 路線コードの末尾の「-」は外して照合する(lines.csv の「M-」と、駅番号の「M15」を同じ路線として扱う)
   const normLine = (s) => String(s || '').trim().replace(/-$/, '');
   let lineInfo = new Map();          // 路線コード -> { code, company, name, color, companyTxt }
+  let stationDataVersion = 0;
+  let landPriceIndexKey = '';
+  let landPriceBins = new Map();
+  const LAND_CHUNK = 16;
+  const LAND_RADIUS = 8192;
+  const LAND_BIN = 2048;
   let stationByCode = new Map();     // 駅番号(HL01 など) -> { name, reading, pref, companies, ridership }
   let stationByName = new Map();     // 駅名 -> 同じ行(駅番号が無い会社の駅は、こちらで照合する)
   const nameKey = (t) => String(t || '').normalize('NFKC').replace(/\s+/g, '').trim();
@@ -3566,6 +3649,8 @@
     stationByName = new Map();
     interchangeGroups = [];
     railGraph = null;
+    stationDataVersion++;
+    landPriceIndexKey = '';
     for (const r of tableOf(text)) {
       const name = r['駅名'];
       if (!name || name.startsWith('#')) continue;
@@ -3574,7 +3659,8 @@
         name, reading: r['読み'], pref: r['都道府県'],
         companies: (r['乗り入れ会社'] || '').split('・').filter(Boolean),
         ridership: Number(r['利用者数']) || 0,
-        grade: Number(r['等級']) || 5,   // 等級が無い駅は5級(従来どおりの表示)
+        grade: Number(r['等級']) || 5,
+        attributes: (r['属性'] || '').split(/[、,，]/).map((v) => v.trim()).filter(Boolean),
         st: /^ST-/.test((r['ST'] || '').trim()) ? r['ST'].trim() : '',   // 整備度(ST)。無い駅は空(ホームは赤い四角のまま)
       };
       for (const c of codes) stationByCode.set(c, row);
@@ -5061,6 +5147,7 @@
   }));
   $('bgClear').addEventListener('click', clearTiles);
   ['bgShow', 'bgAlpha'].forEach((id) => $(id).addEventListener('input', () => { needsDraw = true; }));
+  $('showLandPrice').addEventListener('change', () => { needsDraw = true; });
   ['showHighway', 'showOther', 'showUnbuilt', 'zoomFilter'].forEach((id) => $(id).addEventListener('change', () => {
     if (selected && !visible(selected)) { selected = null; showInfo(null); }
     needsDraw = true;
@@ -5104,7 +5191,8 @@
   });
   canvas.addEventListener('pointermove', (e) => {
     const [wx, wz] = toWorld(e.clientX, e.clientY);
-    $('coord').textContent = `X ${Math.round(wx)}   Z ${Math.round(wz)}`;
+    const land = $('showLandPrice').checked ? landPriceAt(wx, wz) : null;
+    $('coord').textContent = `X ${Math.round(wx)}   Z ${Math.round(wz)}${land ? `   地価 ${land.toLocaleString('ja-JP')} 万円/チャンク` : ''}`;
     if (drag) {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
