@@ -562,7 +562,7 @@
         <div class="set-group">
           <h2 class="set-h">地価</h2>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
-          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。地価は駅データから算出した参考値です。</div>
+          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。駅から半径250ブロックを影響範囲として、駅データから算出した参考値です。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
@@ -592,7 +592,7 @@
         <div class="set-group">
           <h2 class="set-h">凡例</h2>
           <div id="legend" class="legend-grid">
-            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(低 → 高・万円/チャンク)</div>
+            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(低 → 高・万CP/チャンク)</div>
             <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
@@ -3569,7 +3569,7 @@
   let landPriceIndexKey = '';
   let landPriceBins = new Map();
   const LAND_CHUNK = 16;
-  const LAND_RADIUS = 8192;
+  const LAND_RADIUS = 250;
   const LAND_BIN = 2048;
   let stationByCode = new Map();     // 駅番号(HL01 など) -> { name, reading, pref, companies, ridership }
   let stationByName = new Map();     // 駅名 -> 同じ行(駅番号が無い会社の駅は、こちらで照合する)
@@ -5192,7 +5192,7 @@
   canvas.addEventListener('pointermove', (e) => {
     const [wx, wz] = toWorld(e.clientX, e.clientY);
     const land = $('showLandPrice').checked ? landPriceAt(wx, wz) : null;
-    $('coord').textContent = `X ${Math.round(wx)}   Z ${Math.round(wz)}${land ? `   地価 ${land.toLocaleString('ja-JP')} 万円/チャンク` : ''}`;
+    $('coord').textContent = `X ${Math.round(wx)}   Z ${Math.round(wz)}${land ? `   地価 ${land.toLocaleString('ja-JP')} 万CP/チャンク` : ''}`;
     if (drag) {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
