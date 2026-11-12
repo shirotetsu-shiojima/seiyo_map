@@ -562,7 +562,7 @@
         <div class="set-group">
           <h2 class="set-h">地価</h2>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
-          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映します。</div>
+          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、最低地価は3万CP/チャンクです。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
@@ -592,7 +592,7 @@
         <div class="set-group">
           <h2 class="set-h">凡例</h2>
           <div id="legend" class="legend-grid">
-            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(低 → 高・万CP/チャンク)</div>
+            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(3〜5,000万CP/チャンク)</div>
             <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
@@ -1317,7 +1317,7 @@
   }
   function landPriceAt(x, z) {
     ensureLandPriceIndex();
-    if (!landPriceBins.size) return 0;
+    if (!landPriceBins.size) return 3;
     let best = 0;
     const bx = Math.floor(x / LAND_BIN), bz = Math.floor(z / LAND_BIN);
     const span = Math.ceil(LAND_RADIUS_MAX / LAND_BIN);
@@ -1329,10 +1329,10 @@
         if (value > best) best = value;
       }
     }
-    return Math.round(best);
+    return Math.max(3, Math.round(best));
   }
   function landColor(value) {
-    const t = Math.max(0, Math.min(1, value / 1200));
+    const t = Math.max(0, Math.min(1, value / 5000));
     const stops = [[49,132,216],[82,183,136],[242,207,74],[237,123,53],[217,67,67]];
     const p = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(p)), f = p - i;
     const c = stops[i].map((v, n) => Math.round(v + (stops[i + 1][n] - v) * f));
