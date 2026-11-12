@@ -562,7 +562,7 @@
         <div class="set-group">
           <h2 class="set-h">地価</h2>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
-          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、駅ごとの上限は利用者数に応じて設定します。最低地価は3万CP/チャンクです。</div>
+          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、駅ごとの寄与上限は利用者数に応じて駅前で適用し、距離に応じて減衰します。複数駅の寄与は加算します。最低地価は3万CP/チャンクです。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
@@ -1332,18 +1332,18 @@
   function landPriceAt(x, z) {
     ensureLandPriceIndex();
     if (!landPriceBins.size) return 3;
-    let best = 0;
+    let total = 0;
     const bx = Math.floor(x / LAND_BIN), bz = Math.floor(z / LAND_BIN);
     const span = Math.ceil(LAND_RADIUS_MAX / LAND_BIN);
     for (let ix = bx - span; ix <= bx + span; ix++) for (let iz = bz - span; iz <= bz + span; iz++) {
       for (const st of landPriceBins.get(`${ix},${iz}`) || []) {
         const d = Math.hypot(st.x - x, st.z - z);
         if (d >= st.radius) continue;
-        const value = Math.min(st.cap, st.base * Math.pow(1 - d / st.radius, 1.35));
-        if (value > best) best = value;
+        const stationFront = Math.min(st.base, st.cap);
+        total += stationFront * Math.pow(1 - d / st.radius, 1.7);
       }
     }
-    return Math.max(3, Math.round(best));
+    return Math.max(3, Math.round(total));
   }
   function landColor(value) {
     const t = Math.max(0, Math.min(1, value / 5000));
