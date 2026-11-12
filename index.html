@@ -562,7 +562,7 @@
         <div class="set-group">
           <h2 class="set-h">地価</h2>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
-          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、最低地価は3万CP/チャンクです。</div>
+          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、駅ごとの上限は利用者数に応じて設定します。最低地価は3万CP/チャンクです。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
@@ -1287,6 +1287,19 @@
     const weights = { 商業: 1.3, オフィス: 1.35, 娯楽: 1.2, レジャー: 1.15, 観光: 1.2, 住宅: 1.08, 行政: 1.15, 学校: 1.05, 工業: 0.9, 港湾: 0.95 };
     return Math.min(1.8, (attrs || []).reduce((n, a) => n * (weights[a] || 1), 1));
   };
+  // 利用者数ごとの駅単位の地価上限。小規模駅の等級・属性による過大評価を防ぐ。
+  function stationPriceCap(ridership) {
+    const users = Math.max(0, Number(ridership) || 0);
+    if (users <= 0) return 3;
+    if (users < 1000) return Math.max(3, Math.round(300 * Math.sqrt(users / 1000)));
+    const stops = [[1000, 300], [10000, 600], [100000, 1500], [1000000, 5000]];
+    if (users >= stops[stops.length - 1][0]) return 5000;
+    for (let i = 1; i < stops.length; i++) {
+      const [u1, p1] = stops[i - 1], [u2, p2] = stops[i];
+      if (users <= u2) return Math.round(p1 * Math.pow(users / u1, Math.log(p2 / p1) / Math.log(u2 / u1)));
+    }
+    return 5000;
+  }
   // 利用者数と影響半径の基準点を通る逓減曲線。各区間を対数補間する。
   function stationInfluenceRadius(ridership) {
     const users = Math.max(0, Number(ridership) || 0);
@@ -1308,7 +1321,8 @@
       const grade = Math.max(1, Math.min(9, row.grade || 6));
       const radius = stationInfluenceRadius(row.ridership);
       const base = (160 + (10 - grade) * 120) * (1 + Math.log10(1 + Math.max(0, row.ridership)) / 3) * landAttributeFactor(row.attributes);
-      const q = { x: st.x, z: st.z, base, radius, name: stationName(st) };
+      const cap = stationPriceCap(row.ridership);
+      const q = { x: st.x, z: st.z, base, cap, radius, name: stationName(st) };
       const bx = Math.floor(q.x / LAND_BIN), bz = Math.floor(q.z / LAND_BIN);
       const k = `${bx},${bz}`;
       if (!landPriceBins.has(k)) landPriceBins.set(k, []);
@@ -1325,7 +1339,7 @@
       for (const st of landPriceBins.get(`${ix},${iz}`) || []) {
         const d = Math.hypot(st.x - x, st.z - z);
         if (d >= st.radius) continue;
-        const value = st.base * Math.pow(1 - d / st.radius, 1.35);
+        const value = Math.min(st.cap, st.base * Math.pow(1 - d / st.radius, 1.35));
         if (value > best) best = value;
       }
     }
