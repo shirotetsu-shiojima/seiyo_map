@@ -562,7 +562,7 @@
         <div class="set-group">
           <h2 class="set-h">地価</h2>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
-          <div class="meta">駅前を基準に、駅から離れるほど地価が下がります。影響半径は利用者数を基準に算出します(1万人:100、10万人:500、100万人:2,000ブロック)。等級・属性は駅前価格に反映し、駅ごとの寄与上限は利用者数に応じて駅前で適用し、距離に応じて減衰します。複数駅の寄与は加算します。最低地価は3万CP/チャンクです。</div>
+          <div class="meta">駅前の価格は利用者数(対数)から決め、等級・属性で±数割補正します。駅前で急に下がり、徒歩圏でなだらかに下がって、影響半径(1万人:100、10万人:500、100万人:2,000ブロック)の端で0になります。駅が重なる所は大きい方を主として少し上乗せします。利用者数が未登録の駅は等級から見積もります。最低地価は3万CP/チャンクで、色は対数(3→青、5,000→赤)です。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
@@ -592,7 +592,7 @@
         <div class="set-group">
           <h2 class="set-h">凡例</h2>
           <div id="legend" class="legend-grid">
-            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(3〜5,000万CP/チャンク)</div>
+            <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(3〜5,000万CP/チャンク・対数)</div>
             <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
@@ -1281,32 +1281,49 @@
     }
   }
 
-  // 駅の等級・利用者数・属性から駅前価格を設定し、距離に応じて減衰させる。
-  // 16×16ブロックを1チャンクとして描画し、駅規模ごとの半径で価格を減衰させる。
+  // 駅の利用者数・等級・属性から駅前価格を決め、駅から離れるほど下げる(単位: 万CP/チャンク。16×16ブロックが1チャンク)。
+  // 現実の地価に近づけるための考え方:
+  //  1) 駅前価格は利用者数の対数に比例して上がる(乗降客が10倍で、価格は2.5倍ほど)。等級・属性は±数割の補正にとどめる
+  //  2) 駅から離れると急に下がり(駅前の商業地)、その先は緩やかに下がる(徒歩圏の住宅地)。ぶつ切りにせず滑らかに0へ近づける
+  //  3) 近くの駅が重なる所は、足し算ではなく「大きい方に引っ張られて少し上乗せ」(p乗平均)。隣の小さな駅が主要駅を追い越さない
+  //  4) 利用者数が登録されていない駅は、等級から利用者数を見積もる
+  const LAND_MIN = 3, LAND_MAX = 5000, LAND_PNORM = 3;
   const landAttributeFactor = (attrs) => {
-    const weights = { 商業: 1.3, オフィス: 1.35, 娯楽: 1.2, レジャー: 1.15, 観光: 1.2, 住宅: 1.08, 行政: 1.15, 学校: 1.05, 工業: 0.9, 港湾: 0.95 };
-    return Math.min(1.8, (attrs || []).reduce((n, a) => n * (weights[a] || 1), 1));
+    // 商業・オフィスは高く、工業・港湾・何もない場所は低く。複数あれば掛け合わせ、0.8〜1.4倍に収める
+    const weights = { 商業: 1.2, オフィス: 1.2, 娯楽: 1.1, レジャー: 1.08, 観光: 1.1, 住宅: 1.04, 行政: 1.08, 学校: 1.02, 工業: 0.9, 港湾: 0.92, 何もない: 0.8 };
+    const f = (attrs || []).reduce((n, a) => n * (weights[a] || 1), 1);
+    return Math.max(0.8, Math.min(1.4, f));
   };
-  // 利用者数ごとの駅単位の地価上限。小規模駅の等級・属性による過大評価を防ぐ。
+  const LAND_GRADE_FACTOR = { 1: 1.12, 2: 1.08, 3: 1.04, 4: 1.0, 5: 0.96, 6: 0.92, 7: 0.88, 8: 0.84, 9: 0.8 };
+  const LAND_GRADE_RIDERSHIP = { 1: 1500000, 2: 600000, 3: 250000, 4: 120000, 5: 50000, 6: 15000, 7: 5000, 8: 1500, 9: 500 };
+  // 利用者数 → 駅前価格(対数補間)。100万人超えは3,000万人で上限
   function stationPriceCap(ridership) {
     const users = Math.max(0, Number(ridership) || 0);
-    if (users <= 0) return 3;
-    if (users < 1000) return Math.max(3, Math.round(300 * Math.sqrt(users / 1000)));
-    const stops = [[1000, 300], [10000, 600], [100000, 1500], [1000000, 5000]];
-    if (users >= stops[stops.length - 1][0]) return 5000;
+    if (users <= 0) return LAND_MIN;
+    const stops = [[100, 60], [1000, 250], [10000, 600], [100000, 1500], [1000000, 3500], [3000000, 5000]];
+    if (users <= stops[0][0]) return Math.max(LAND_MIN, Math.round(stops[0][1] * users / stops[0][0]));
+    if (users >= stops[stops.length - 1][0]) return stops[stops.length - 1][1];
     for (let i = 1; i < stops.length; i++) {
       const [u1, p1] = stops[i - 1], [u2, p2] = stops[i];
       if (users <= u2) return Math.round(p1 * Math.pow(users / u1, Math.log(p2 / p1) / Math.log(u2 / u1)));
     }
-    return 5000;
+    return LAND_MAX;
   }
-  // 利用者数と影響半径の基準点を通る逓減曲線。各区間を対数補間する。
+  // 利用者数と影響半径の基準点を通る逓減曲線(1万人:100、10万人:500、100万人:2,000ブロック)
   function stationInfluenceRadius(ridership) {
     const users = Math.max(0, Number(ridership) || 0);
     if (users <= 10000) return Math.max(50, Math.round(100 * Math.sqrt(users / 10000)));
     if (users <= 100000) return Math.round(100 * Math.pow(users / 10000, Math.log(5) / Math.log(10)));
     if (users <= 1000000) return Math.round(500 * Math.pow(users / 100000, Math.log(4) / Math.log(10)));
     return Math.min(3000, Math.round(2000 * Math.pow(users / 1000000, 0.45)));
+  }
+  // 駅からの距離 d での、駅前価格に対する割合。駅前の急な下がり + 徒歩圏のなだらかな下がり。radius で滑らかに0へ
+  function landFalloff(d, radius) {
+    if (d >= radius) return 0;
+    const core = Math.exp(-d / (radius / 6));        // 駅前の商業地: 半径の6分の1ほどで 1/e
+    const wide = Math.exp(-d / (radius / 2));        // 徒歩圏の住宅地: 半径の半分で 1/e
+    const edge = 1 - Math.pow(d / radius, 2);        // 半径の端で0になる窓
+    return (0.55 * core + 0.45 * wide) * edge;
   }
   function ensureLandPriceIndex() {
     if (!rail) return;
@@ -1315,14 +1332,15 @@
     landPriceIndexKey = key;
     landPriceBins = new Map();
     for (const st of rail.stations.values()) {
-      if (st.synthetic || !Number.isFinite(st.x) || !Number.isFinite(st.z)) continue;
+      if (!Number.isFinite(st.x) || !Number.isFinite(st.z)) continue;
       const row = stationRowOf(st);
       if (!row) continue;
       const grade = Math.max(1, Math.min(9, row.grade || 6));
-      const radius = stationInfluenceRadius(row.ridership);
-      const base = (160 + (10 - grade) * 120) * (1 + Math.log10(1 + Math.max(0, row.ridership)) / 3) * landAttributeFactor(row.attributes);
-      const cap = stationPriceCap(row.ridership);
-      const q = { x: st.x, z: st.z, base, cap, radius, name: stationName(st) };
+      // 利用者数が無い駅は、等級から見積もる
+      const users = Number(row.ridership) > 0 ? Number(row.ridership) : (LAND_GRADE_RIDERSHIP[grade] || 0);
+      const radius = stationInfluenceRadius(users);
+      const front = Math.min(LAND_MAX, stationPriceCap(users) * (LAND_GRADE_FACTOR[grade] || 1) * landAttributeFactor(row.attributes));
+      const q = { x: st.x, z: st.z, front, radius, name: stationName(st) };
       const bx = Math.floor(q.x / LAND_BIN), bz = Math.floor(q.z / LAND_BIN);
       const k = `${bx},${bz}`;
       if (!landPriceBins.has(k)) landPriceBins.set(k, []);
@@ -1331,22 +1349,23 @@
   }
   function landPriceAt(x, z) {
     ensureLandPriceIndex();
-    if (!landPriceBins.size) return 3;
-    let total = 0;
+    if (!landPriceBins.size) return LAND_MIN;
+    let sum = 0;
     const bx = Math.floor(x / LAND_BIN), bz = Math.floor(z / LAND_BIN);
     const span = Math.ceil(LAND_RADIUS_MAX / LAND_BIN);
     for (let ix = bx - span; ix <= bx + span; ix++) for (let iz = bz - span; iz <= bz + span; iz++) {
       for (const st of landPriceBins.get(`${ix},${iz}`) || []) {
         const d = Math.hypot(st.x - x, st.z - z);
         if (d >= st.radius) continue;
-        const stationFront = Math.min(st.base, st.cap);
-        total += stationFront * Math.pow(1 - d / st.radius, 1.7);
+        sum += Math.pow(st.front * landFalloff(d, st.radius), LAND_PNORM);
       }
     }
-    return Math.max(3, Math.round(total));
+    // p乗平均で重ねる(大きい方が主役。近い駅どうしで少し上乗せされる)
+    return Math.max(LAND_MIN, Math.min(LAND_MAX, Math.round(Math.pow(sum, 1 / LAND_PNORM))));
   }
   function landColor(value) {
-    const t = Math.max(0, Math.min(1, value / 5000));
+    // 地価は桁で違うので、色は対数で割り当てる(3 → 青、5,000 → 赤)
+    const t = Math.max(0, Math.min(1, Math.log(Math.max(LAND_MIN, value) / LAND_MIN) / Math.log(LAND_MAX / LAND_MIN)));
     const stops = [[49,132,216],[82,183,136],[242,207,74],[237,123,53],[217,67,67]];
     const p = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(p)), f = p - i;
     const c = stops[i].map((v, n) => Math.round(v + (stops[i + 1][n] - v) * f));
