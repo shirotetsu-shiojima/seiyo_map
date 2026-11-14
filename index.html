@@ -1395,11 +1395,19 @@
     ['翠山県', 710, 392], ['北路県', 813, 390], ['蓮台県', 365, 457], ['城山県', 444, 460], ['桜那県', 514, 483],
     ['佐原県', 588, 463], ['白木府', 706, 470], ['長海県', 817, 470], ['浪町県', 907, 470],
   ];
-  const PREF_LABELS = PREF_LABEL_PX.map(([name, px, py]) => ({
-    name,
-    x: PREF_MAP_FIT.ax * px + PREF_MAP_FIT.ay * py + PREF_MAP_FIT.ac,
-    z: PREF_MAP_FIT.bx * px + PREF_MAP_FIT.by * py + PREF_MAP_FIT.bc,
-  }));
+  // 個別に座標を指定する県(重なりの調整用)。ここに書いた座標は、画像からの変換より優先する
+  const PREF_LABEL_OVERRIDE = {
+    '白木府': [23000, 28000],
+    '河原県': [4000, -11000],
+  };
+  const PREF_LABELS = PREF_LABEL_PX.map(([name, px, py]) => {
+    const o = PREF_LABEL_OVERRIDE[name];
+    return {
+      name,
+      x: o ? o[0] : PREF_MAP_FIT.ax * px + PREF_MAP_FIT.ay * py + PREF_MAP_FIT.ac,
+      z: o ? o[1] : PREF_MAP_FIT.bx * px + PREF_MAP_FIT.by * py + PREF_MAP_FIT.bc,
+    };
+  });
   function drawPrefectureLabels() {
     if (!$('showPrefName').checked) return;
     // 拡大しすぎると都道府県の中に文字が収まらないので、だんだん薄くして消す
