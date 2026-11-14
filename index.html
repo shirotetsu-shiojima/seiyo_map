@@ -2159,7 +2159,6 @@
       ctx.fillRect(0, 0, innerWidth, innerHeight);
     }
     drawGrid();
-    drawPrefectureLabels();
     drawOrigin();
     if (roads.length) drawRoads();
     if (railOn()) drawRail();
@@ -2167,6 +2166,8 @@
     drawRoute();
     drawPins();
     drawProbe();
+    // 都道府県名は最前面(線路・駅・列車・ルートの上)に描く
+    drawPrefectureLabels();
     updateScale();
   }
 
