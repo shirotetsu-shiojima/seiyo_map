@@ -569,6 +569,9 @@
           <h2 class="set-h">背景</h2>
           <label class="set-row"><span>背景の地図</span><input type="checkbox" id="bgShow" checked></label>
           <div class="range-row"><span>濃さ</span><input id="bgAlpha" type="range" min="10" max="100" value="60" aria-label="背景の地図の濃さ"></div>
+          <div class="set-row" style="flex-wrap:wrap;gap:6px"><span>位置合わせ<span class="sub">背景の地図を、鉄道・地価・都道府県名に重ねて調整</span></span>
+            <span style="display:flex;gap:6px;align-items:center;font-size:12px">X <input id="bgCalX" type="number" step="100" style="width:84px"> Z <input id="bgCalZ" type="number" step="100" style="width:84px"> 倍率 <input id="bgCalS" type="number" step="0.001" min="0.5" max="2" style="width:70px"></span></div>
+          <div class="meta" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="bgCalOut" style="font-family:monospace;word-break:break-all"></span><button type="button" id="bgCalReset" style="font-size:12px">リセット</button></div>
           <label class="set-row"><span>方眼<span class="sub">縮尺に合わせた目安の線</span></span><input type="checkbox" id="showGrid" checked></label>
         </div>
         <div class="set-group">
@@ -1373,7 +1376,13 @@
     return `rgba(${c[0]},${c[1]},${c[2]},0.43)`;
   }
   // 都道府県名の表示。都道府県地図の画像上の位置(px, py)を、駅の位置から求めた変換でアプリの座標にしている
-  const PREF_MAP_FIT = { ax: 107.51, ay: -0.36, ac: -52651, bx: 1.93, by: 147.31, bc: -39525 };
+  // 都道府県地図(960×700px)は、開発範囲 X −49152〜49152、Z −33792〜56320 を描いている(縦横の比は Z 方向で合わせてある)
+  const PREF_MAP_W = 960, PREF_MAP_H = 700;
+  const PREF_MAP_BOUNDS = { x0: -49152, x1: 49152, z0: -33792, z1: 56320 };
+  const PREF_MAP_FIT = {
+    ax: (PREF_MAP_BOUNDS.x1 - PREF_MAP_BOUNDS.x0) / PREF_MAP_W, ay: 0, ac: PREF_MAP_BOUNDS.x0,
+    bx: 0, by: (PREF_MAP_BOUNDS.z1 - PREF_MAP_BOUNDS.z0) / PREF_MAP_H, bc: PREF_MAP_BOUNDS.z0,
+  };
   const PREF_LABEL_PX = [
     ['古莉亜府', 75, 82], ['狐兎県', 180, 47], ['飾紐県', 283, 33], ['檸斜巫県', 530, 33], ['洎夫藍県', 393, 88],
     ['砂糖県', 265, 98], ['茴香芹県', 555, 122], ['葉環田県', 666, 60], ['止原県', 770, 37], ['側野県', 866, 60],
@@ -1433,6 +1442,24 @@
     ctx.restore();
   }
 
+  // 背景の位置合わせ: dx, dz はブロック単位の平行移動、s は倍率(中心は (0,0))。ブラウザに保存して、次回も使う
+  let BG_CAL = { dx: 0, dz: 0, s: 1 };
+  function loadBgCal() {
+    try {
+      const v = JSON.parse(localStorage.getItem('seiyoBgCal') || 'null');
+      if (v && Number.isFinite(v.dx) && Number.isFinite(v.dz) && Number.isFinite(v.s) && v.s > 0) BG_CAL = { dx: v.dx, dz: v.dz, s: v.s };
+    } catch (e) { /* 保存できない環境では、初期値のまま */ }
+  }
+  function showBgCal() {
+    $('bgCalX').value = BG_CAL.dx; $('bgCalZ').value = BG_CAL.dz; $('bgCalS').value = BG_CAL.s;
+    $('bgCalOut').textContent = `BG_CAL = { dx: ${Math.round(BG_CAL.dx)}, dz: ${Math.round(BG_CAL.dz)}, s: ${BG_CAL.s.toFixed(4)} }`;
+  }
+  function setBgCal(next) {
+    BG_CAL = next;
+    showBgCal();
+    try { localStorage.setItem('seiyoBgCal', JSON.stringify(BG_CAL)); } catch (e) { /* 保存できなくても表示は変える */ }
+    needsDraw = true;
+  }
   function drawMap() {
     if (!tiles.size || !$('bgShow').checked) return;
     frameNo++;
@@ -1443,16 +1470,18 @@
     ctx.globalAlpha = Number($('bgAlpha').value) / 100;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    const cal = BG_CAL;
+    const tw = TILE_W * cal.s, th = TILE_H * cal.s;
     for (const t of tiles.values()) {
-      const { x, z } = t.origin;
+      const x = t.origin.x * cal.s + cal.dx, z = t.origin.z * cal.s + cal.dz;
       // 画面に映っていない画像は、読み込みも描画もしない
-      if (x + TILE_W < wx0 || x > wx1 || z + TILE_H < wz0 || z > wz1) continue;
+      if (x + tw < wx0 || x > wx1 || z + th < wz0 || z > wz1) continue;
       t.lastSeen = frameNo;
       if (wantLoad(t, need)) requestLoad(t, need);
       if (!t.bitmap) continue;
       // 隣の画像との境目に隙間が出ないよう、端を整数の画素に揃える
       const [sx0, sy0] = toScreen(x, z);
-      const [sx1, sy1] = toScreen(x + TILE_W, z + TILE_H);
+      const [sx1, sy1] = toScreen(x + tw, z + th);
       const dx = Math.round(sx0), dy = Math.round(sy0);
       ctx.drawImage(t.bitmap, dx, dy, Math.round(sx1) - dx, Math.round(sy1) - dy);
     }
@@ -5233,6 +5262,14 @@
   }));
   $('bgClear').addEventListener('click', clearTiles);
   ['bgShow', 'bgAlpha'].forEach((id) => $(id).addEventListener('input', () => { needsDraw = true; }));
+  loadBgCal();
+  showBgCal();
+  const readBgCalInputs = () => {
+    const dx = Number($('bgCalX').value), dz = Number($('bgCalZ').value), sc = Number($('bgCalS').value);
+    if (Number.isFinite(dx) && Number.isFinite(dz) && Number.isFinite(sc) && sc > 0) setBgCal({ dx, dz, s: sc });
+  };
+  ['bgCalX', 'bgCalZ', 'bgCalS'].forEach((id) => $(id).addEventListener('input', readBgCalInputs));
+  $('bgCalReset').addEventListener('click', () => setBgCal({ dx: 0, dz: 0, s: 1 }));
   $('showLandPrice').addEventListener('change', () => { needsDraw = true; });
   ['showHighway', 'showOther', 'showUnbuilt', 'zoomFilter'].forEach((id) => $(id).addEventListener('change', () => {
     if (selected && !visible(selected)) { selected = null; showInfo(null); }
