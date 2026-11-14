@@ -1,7 +1,7 @@
 {
   "format": "car_input.roads",
   "version": 2,
-  "exported_at": "2026-11-08T11:09:48.217220900Z",
+  "exported_at": "2026-11-14T12:19:44.267068600Z",
   "roads": [
     {
       "id": 1,
@@ -13993,6 +13993,2998 @@
       "height": {
         "min": 83,
         "max": 84
+      }
+    },
+    {
+      "id": 564,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 368,
+        "y": 143,
+        "z": -8015
+      },
+      "to": {
+        "x": 444,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 76,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 565,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 544,
+        "y": 136,
+        "z": -8015
+      },
+      "to": {
+        "x": 501,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 43,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 143
+      }
+    },
+    {
+      "id": 566,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 545,
+        "y": 136,
+        "z": -8015
+      },
+      "to": {
+        "x": 555,
+        "y": 136,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 10,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 136
+      }
+    },
+    {
+      "id": 567,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 500,
+        "y": 143,
+        "z": -8015
+      },
+      "to": {
+        "x": 445,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 55,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 568,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 556,
+        "y": 136,
+        "z": -8015
+      },
+      "to": {
+        "x": 596,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 40,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 143
+      }
+    },
+    {
+      "id": 569,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 610,
+        "y": 143,
+        "z": -7995
+      },
+      "to": {
+        "x": 610,
+        "y": 143,
+        "z": -8042
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 47,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 570,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 614,
+        "y": 143,
+        "z": -8015
+      },
+      "to": {
+        "x": 597,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 17,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 571,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 610,
+        "y": 143,
+        "z": -8043
+      },
+      "to": {
+        "x": 611,
+        "y": 143,
+        "z": -8200
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 157,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": -1.5580576455575703,
+        "lead": 0.0,
+        "r1": 6162.500000000059,
+        "bridge": 0.0,
+        "r2": 6162.500000000059,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 572,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 611,
+        "y": 143,
+        "z": -8201
+      },
+      "to": {
+        "x": 685,
+        "y": 143,
+        "z": -8280
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 121,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": -1.5707963267948966,
+        "lead": 4.999999999999986,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 74.00000000000001,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 573,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 610,
+        "y": 143,
+        "z": -7974
+      },
+      "to": {
+        "x": 610,
+        "y": 143,
+        "z": -7994
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 20,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 574,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 610,
+        "y": 143,
+        "z": -7973
+      },
+      "to": {
+        "x": 514,
+        "y": 143,
+        "z": -7930
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 121,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 2,
+        "mid_angle": 3.141592653589793,
+        "lead": 0.0,
+        "r1": 42.99999999999999,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 53.000000000000014,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 575,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 378,
+        "y": 143,
+        "z": -7930
+      },
+      "to": {
+        "x": 513,
+        "y": 143,
+        "z": -7930
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 135,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 576,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 377,
+        "y": 143,
+        "z": -7930
+      },
+      "to": {
+        "x": 303,
+        "y": 143,
+        "z": -7930
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 74,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 577,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 367,
+        "y": 143,
+        "z": -8015
+      },
+      "to": {
+        "x": 238,
+        "y": 143,
+        "z": -8015
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 129,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 578,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 311,
+        "y": 143,
+        "z": -8010
+      },
+      "to": {
+        "x": 311,
+        "y": 143,
+        "z": -8019
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 9,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 579,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 311,
+        "y": 136,
+        "z": -7991
+      },
+      "to": {
+        "x": 311,
+        "y": 143,
+        "z": -8009
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 18,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 143
+      }
+    },
+    {
+      "id": 580,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 311,
+        "y": 136,
+        "z": -7990
+      },
+      "to": {
+        "x": 311,
+        "y": 136,
+        "z": -7977
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 13,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 136
+      }
+    },
+    {
+      "id": 581,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 311,
+        "y": 136,
+        "z": -7976
+      },
+      "to": {
+        "x": 311,
+        "y": 143,
+        "z": -7936
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 40,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 136,
+        "max": 143
+      }
+    },
+    {
+      "id": 582,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 311,
+        "y": 143,
+        "z": -7926
+      },
+      "to": {
+        "x": 311,
+        "y": 143,
+        "z": -7935
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 9,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 583,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 686,
+        "y": 143,
+        "z": -8280
+      },
+      "to": {
+        "x": 964,
+        "y": 144,
+        "z": -8322
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 282,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.29989034114689067,
+        "lead": 0.0,
+        "r1": 470.5238095238095,
+        "bridge": 0.0,
+        "r2": 470.5238095238095,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 144
+      }
+    },
+    {
+      "id": 584,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 965,
+        "y": 144,
+        "z": -8322
+      },
+      "to": {
+        "x": 1253,
+        "y": 144,
+        "z": -8396
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 308,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 109.34819638439097,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 252.65180361560908,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 585,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1378,
+        "y": 144,
+        "z": -8459
+      },
+      "to": {
+        "x": 1254,
+        "y": 144,
+        "z": -8397
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 143,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 1,
+        "mid_angle": 2.356194490192345,
+        "lead": 0.0,
+        "r1": 149.68124086713195,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 25.681240867131866,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 586,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1379,
+        "y": 144,
+        "z": -8459
+      },
+      "to": {
+        "x": 1486,
+        "y": 144,
+        "z": -8478
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 109,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.35147659337073356,
+        "lead": 0.0,
+        "r1": 155.39473684210526,
+        "bridge": 0.0,
+        "r2": 155.39473684210526,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 587,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1487,
+        "y": 144,
+        "z": -8478
+      },
+      "to": {
+        "x": 1630,
+        "y": 144,
+        "z": -8557
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 171,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -1.0094407751825203,
+        "lead": 0.0,
+        "r1": 84.4620253164557,
+        "bridge": 0.0,
+        "r2": 84.4620253164557,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 588,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 1631,
+        "y": 144,
+        "z": -8557
+      },
+      "to": {
+        "x": 1748,
+        "y": 144,
+        "z": -8564
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 117,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.11951565277679514,
+        "lead": 0.0,
+        "r1": 490.64285714285717,
+        "bridge": 0.0,
+        "r2": 490.64285714285717,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 589,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1702,
+        "y": 144,
+        "z": -8556
+      },
+      "to": {
+        "x": 1631,
+        "y": 144,
+        "z": -8557
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 71,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.169759805235514,
+        "lead": 0.0,
+        "r1": 1260.499999999989,
+        "bridge": 0.0,
+        "r2": 1260.499999999989,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 590,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1703,
+        "y": 144,
+        "z": -8556
+      },
+      "to": {
+        "x": 1748,
+        "y": 144,
+        "z": -8564
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 46,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.3518792509050557,
+        "lead": 0.0,
+        "r1": 65.28125,
+        "bridge": 0.0,
+        "r2": 65.28125,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 144,
+        "max": 144
+      }
+    },
+    {
+      "id": 591,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1749,
+        "y": 144,
+        "z": -8564
+      },
+      "to": {
+        "x": 1812,
+        "y": 143,
+        "z": -8566
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 63,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.0634707470569158,
+        "lead": 0.0,
+        "r1": 496.625,
+        "bridge": 0.0,
+        "r2": 496.625,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 144
+      }
+    },
+    {
+      "id": 592,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1813,
+        "y": 143,
+        "z": -8566
+      },
+      "to": {
+        "x": 1971,
+        "y": 143,
+        "z": -8564
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 158,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.025315103668103925,
+        "lead": 0.0,
+        "r1": 3121.0,
+        "bridge": 0.0,
+        "r2": 3121.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 593,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 1972,
+        "y": 143,
+        "z": -8564
+      },
+      "to": {
+        "x": 2059,
+        "y": 143,
+        "z": -8581
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 92,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 5,
+        "mid_angle": 0.0,
+        "lead": 45.95836943965739,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 58.041630560342625,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 594,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 2139,
+        "y": 143,
+        "z": -8636
+      },
+      "to": {
+        "x": 2059,
+        "y": 143,
+        "z": -8581
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 98,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 2.7224161247173133,
+        "lead": 0.0,
+        "r1": 133.28962825366415,
+        "bridge": 0.0,
+        "r2": 133.28962825366415,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 595,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2107,
+        "y": 143,
+        "z": -8595
+      },
+      "to": {
+        "x": 2059,
+        "y": 143,
+        "z": -8581
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 52,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 1,
+        "end_dir": 1,
+        "mid_angle": 3.359402598570586,
+        "lead": 0.0,
+        "r1": 25.99657283774071,
+        "bridge": 0.0,
+        "r2": 25.99657283774071,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 596,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2108,
+        "y": 143,
+        "z": -8596
+      },
+      "to": {
+        "x": 2139,
+        "y": 143,
+        "z": -8636
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 51,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 5,
+        "mid_angle": -1.037574353526629,
+        "lead": 0.0,
+        "r1": 100.60558147881932,
+        "bridge": 0.0,
+        "r2": 100.60558147881932,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 597,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2140,
+        "y": 143,
+        "z": -8637
+      },
+      "to": {
+        "x": 2176,
+        "y": 143,
+        "z": -8693
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 69,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 4,
+        "mid_angle": -0.7853981633974483,
+        "lead": 30.91168824543142,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 48.284271247461895,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 598,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 2176,
+        "y": 143,
+        "z": -8694
+      },
+      "to": {
+        "x": 2431,
+        "y": 156,
+        "z": -8816
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 325,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 122.00000000000001,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 133.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 156
+      }
+    },
+    {
+      "id": 599,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2183,
+        "y": 152,
+        "z": -8741
+      },
+      "to": {
+        "x": 2176,
+        "y": 143,
+        "z": -8694
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 48,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 1.8664950573124077,
+        "lead": 0.0,
+        "r1": 80.64285714285711,
+        "bridge": 0.0,
+        "r2": 80.64285714285711,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 152
+      }
+    },
+    {
+      "id": 600,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2183,
+        "y": 152,
+        "z": -8742
+      },
+      "to": {
+        "x": 2362,
+        "y": 137,
+        "z": -8833
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 231,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 91.00000000000001,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 88.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 137,
+        "max": 152
+      }
+    },
+    {
+      "id": 601,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2363,
+        "y": 137,
+        "z": -8833
+      },
+      "to": {
+        "x": 2431,
+        "y": 156,
+        "z": -8816
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "tunnel",
+      "length": 71,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.4899573262537283,
+        "lead": 0.0,
+        "r1": 72.25,
+        "bridge": 0.0,
+        "r2": 72.25,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 137,
+        "max": 156
+      }
+    },
+    {
+      "id": 602,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2432,
+        "y": 156,
+        "z": -8816
+      },
+      "to": {
+        "x": 2477,
+        "y": 156,
+        "z": -8816
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 45,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 603,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2447,
+        "y": 156,
+        "z": -8820
+      },
+      "to": {
+        "x": 2447,
+        "y": 156,
+        "z": -8799
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 21,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 604,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2447,
+        "y": 156,
+        "z": -8798
+      },
+      "to": {
+        "x": 2410,
+        "y": 156,
+        "z": -8767
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 55,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 0,
+        "end_dir": 2,
+        "mid_angle": 3.141592653589793,
+        "lead": 0.0,
+        "r1": 30.999999999999996,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 6.000000000000007,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 605,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2409,
+        "y": 156,
+        "z": -8767
+      },
+      "to": {
+        "x": 2309,
+        "y": 150,
+        "z": -8737
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 108,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 1,
+        "mid_angle": 3.141592653589793,
+        "lead": 27.573593128807175,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 102.42640687119284,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 150,
+        "max": 156
+      }
+    },
+    {
+      "id": 606,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2308,
+        "y": 150,
+        "z": -8737
+      },
+      "to": {
+        "x": 2163,
+        "y": 143,
+        "z": -8642
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 190,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 1,
+        "end_dir": 3,
+        "mid_angle": 2.356194490192345,
+        "lead": 134.35028842544403,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 35.35533905932738,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 150
+      }
+    },
+    {
+      "id": 607,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2151,
+        "y": 143,
+        "z": -8653
+      },
+      "to": {
+        "x": 2162,
+        "y": 143,
+        "z": -8643
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 15,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 7,
+        "end_dir": 7,
+        "mid_angle": 0.6902319568434817,
+        "lead": 0.0,
+        "r1": 78.13529932111365,
+        "bridge": 0.0,
+        "r2": 78.13529932111365,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 143,
+        "max": 143
+      }
+    },
+    {
+      "id": 608,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2478,
+        "y": 156,
+        "z": -8816
+      },
+      "to": {
+        "x": 2632,
+        "y": 156,
+        "z": -8830
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 155,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.18131977440149022,
+        "lead": 0.0,
+        "r1": 427.0,
+        "bridge": 0.0,
+        "r2": 427.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 609,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2633,
+        "y": 156,
+        "z": -8830
+      },
+      "to": {
+        "x": 2755,
+        "y": 156,
+        "z": -8838
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 122,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.13096004984692963,
+        "lead": 0.0,
+        "r1": 467.125,
+        "bridge": 0.0,
+        "r2": 467.125,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 610,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2756,
+        "y": 156,
+        "z": -8838
+      },
+      "to": {
+        "x": 2922,
+        "y": 156,
+        "z": -8847
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 166,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": -0.1083276760737598,
+        "lead": 0.0,
+        "r1": 767.6944444444445,
+        "bridge": 0.0,
+        "r2": 767.6944444444445,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 611,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2923,
+        "y": 156,
+        "z": -8847
+      },
+      "to": {
+        "x": 2991,
+        "y": 156,
+        "z": -8827
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 73,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 7,
+        "mid_angle": 0.0,
+        "lead": 19.715728752538098,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 68.28427124746192,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 612,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 2992,
+        "y": 156,
+        "z": -8826
+      },
+      "to": {
+        "x": 3096,
+        "y": 156,
+        "z": -8786
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 115,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 7,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 136.56854249492383,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 7.431457505076193,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 613,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3137,
+        "y": 164,
+        "z": -8618
+      },
+      "to": {
+        "x": 3137,
+        "y": 164,
+        "z": -8834
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "bridge",
+      "length": 216,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 614,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3097,
+        "y": 156,
+        "z": -8786
+      },
+      "to": {
+        "x": 3154,
+        "y": 156,
+        "z": -8785
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 57,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.035084120114804974,
+        "lead": 0.0,
+        "r1": 812.5,
+        "bridge": 0.0,
+        "r2": 812.5,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 615,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3137,
+        "y": 164,
+        "z": -8835
+      },
+      "to": {
+        "x": 3158,
+        "y": 164,
+        "z": -8856
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 33,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 6,
+        "mid_angle": -1.5707963267948966,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 21.000000000000004,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 616,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3159,
+        "y": 164,
+        "z": -8856
+      },
+      "to": {
+        "x": 3202,
+        "y": 156,
+        "z": -8797
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 84,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 0,
+        "mid_angle": 1.5707963267948966,
+        "lead": 0.0,
+        "r1": 43.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 16.000000000000007,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 164
+      }
+    },
+    {
+      "id": 617,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3155,
+        "y": 156,
+        "z": -8785
+      },
+      "to": {
+        "x": 3221,
+        "y": 156,
+        "z": -8785
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 66,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 618,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3202,
+        "y": 156,
+        "z": -8796
+      },
+      "to": {
+        "x": 3202,
+        "y": 156,
+        "z": -8781
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 15,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 0,
+        "end_dir": 0,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 619,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3222,
+        "y": 156,
+        "z": -8785
+      },
+      "to": {
+        "x": 3285,
+        "y": 156,
+        "z": -8825
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 77,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 5,
+        "mid_angle": -0.7853981633974483,
+        "lead": 0.0,
+        "r1": 55.526911934581186,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 33.56854249492381,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 620,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3285,
+        "y": 156,
+        "z": -8826
+      },
+      "to": {
+        "x": 3309,
+        "y": 156,
+        "z": -8835
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 26,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 5,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 30.727922061357866,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 2.2720779386421377,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 156,
+        "max": 156
+      }
+    },
+    {
+      "id": 621,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 31549,
+        "y": 84,
+        "z": 23744
+      },
+      "to": {
+        "x": 31256,
+        "y": 84,
+        "z": 23867
+      },
+      "type": "highway",
+      "lanes": 6,
+      "mode": "earthwork",
+      "length": 326,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:quartz_block",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 1,
+        "mid_angle": 2.356194490192345,
+        "lead": 0.0,
+        "r1": 410.41630560342617,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 3.948268171890665,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 84,
+        "max": 84
+      }
+    },
+    {
+      "id": 622,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3145,
+        "y": 164,
+        "z": -8613
+      },
+      "to": {
+        "x": 3128,
+        "y": 164,
+        "z": -8613
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 17,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 623,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3137,
+        "y": 164,
+        "z": -8612
+      },
+      "to": {
+        "x": 3137,
+        "y": 164,
+        "z": -8617
+      },
+      "type": "residential",
+      "lanes": 2,
+      "mode": "earthwork",
+      "length": 5,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 624,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3146,
+        "y": 164,
+        "z": -8613
+      },
+      "to": {
+        "x": 3232,
+        "y": 164,
+        "z": -8612
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 86,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.02325476591276774,
+        "lead": 0.0,
+        "r1": 1849.25,
+        "bridge": 0.0,
+        "r2": 1849.25,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 625,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3233,
+        "y": 164,
+        "z": -8612
+      },
+      "to": {
+        "x": 3265,
+        "y": 164,
+        "z": -8602
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 34,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.6057697367499428,
+        "lead": 0.0,
+        "r1": 28.1,
+        "bridge": 0.0,
+        "r2": 28.1,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 164,
+        "max": 164
+      }
+    },
+    {
+      "id": 626,
+      "dimension": "minecraft:overworld",
+      "built": false,
+      "from": {
+        "x": 3236,
+        "y": 164,
+        "z": -8611
+      },
+      "to": {
+        "x": 3217,
+        "y": 157,
+        "z": -8642
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 42,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 2,
+        "mid_angle": -1.5707963267948966,
+        "lead": 12.000000000000004,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 18.999999999999996,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 157,
+        "max": 164
+      }
+    },
+    {
+      "id": 627,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3266,
+        "y": 164,
+        "z": -8602
+      },
+      "to": {
+        "x": 3290,
+        "y": 161,
+        "z": -8602
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 24,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 6,
+        "end_dir": 6,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 161,
+        "max": 164
+      }
+    },
+    {
+      "id": 628,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3284,
+        "y": 161,
+        "z": -8601
+      },
+      "to": {
+        "x": 3284,
+        "y": 161,
+        "z": -8606
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 5,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": false,
+        "start_dir": 4,
+        "end_dir": 4,
+        "mid_angle": 0.0,
+        "lead": 0.0,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 0.0,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 161,
+        "max": 161
+      }
+    },
+    {
+      "id": 629,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3284,
+        "y": 161,
+        "z": -8607
+      },
+      "to": {
+        "x": 3262,
+        "y": 157,
+        "z": -8633
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 39,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 4,
+        "end_dir": 2,
+        "mid_angle": -1.5707963267948966,
+        "lead": 4.000000000000011,
+        "r1": 0.0,
+        "bridge": 0.0,
+        "r2": 21.99999999999999,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 157,
+        "max": 161
+      }
+    },
+    {
+      "id": 630,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3261,
+        "y": 157,
+        "z": -8633
+      },
+      "to": {
+        "x": 3217,
+        "y": 157,
+        "z": -8642
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 45,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.5451173422303675,
+        "lead": 0.0,
+        "r1": 56.02777777777774,
+        "bridge": 0.0,
+        "r2": 56.02777777777774,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 157,
+        "max": 157
+      }
+    },
+    {
+      "id": 631,
+      "dimension": "minecraft:overworld",
+      "built": true,
+      "from": {
+        "x": 3216,
+        "y": 157,
+        "z": -8642
+      },
+      "to": {
+        "x": 3163,
+        "y": 157,
+        "z": -8648
+      },
+      "type": "residential",
+      "lanes": 1,
+      "mode": "earthwork",
+      "length": 53,
+      "sidewalk_width": 0,
+      "lane_surface": "minecraft:black_concrete",
+      "sidewalk_surface": "minecraft:stone_bricks",
+      "shape": {
+        "curved": true,
+        "start_dir": 2,
+        "end_dir": 2,
+        "mid_angle": 3.3670478767705485,
+        "lead": 0.0,
+        "r1": 118.54166666666654,
+        "bridge": 0.0,
+        "r2": 118.54166666666654,
+        "tail": 0.0,
+        "smooth": false,
+        "handle": 0.0
+      },
+      "route": {
+        "category": "",
+        "number": "",
+        "name": ""
+      },
+      "height": {
+        "min": 157,
+        "max": 157
       }
     }
   ]
