@@ -551,6 +551,7 @@
           <label class="set-row"><span>路線カラーで塗る<span class="sub">路線ごとの色(lines.csv)</span></span><input type="checkbox" id="showLineColor" checked></label>
           <label class="set-row"><span>系統の色で塗る<span class="sub">通る系統ごとに色の帯を並べる</span></span><input type="checkbox" id="showRouteColor" checked></label>
           <label class="set-row"><span>似た系統を1本にまとめる<span class="sub">同じ色で経路が近い系統は、停車駅が最も多い1本だけ</span></span><input type="checkbox" id="hideDup" checked></label>
+          <label class="set-row"><span>並行する系統を1本の線にする<span class="sub">色や路線名が違っても、経路が重なる系統は、停車駅が最も多い系統の色で1本に描く(オフにすると横に並べて描く)</span></span><input type="checkbox" id="oneLane" checked></label>
         </div>
         <div class="set-group">
           <h2 class="set-h">道路</h2>
@@ -3001,10 +3002,13 @@
     const clusters = new Map();
     entries.forEach((e, i) => {
       const root = find(i);
-      if (!clusters.has(root)) clusters.set(root, { keys: new Set(), members: [] });
+      if (!clusters.has(root)) clusters.set(root, { keys: new Set(), members: [], entries: [] });
       const c = clusters.get(root);
+      c.entries.push(e);
       for (const k of e.keys) c.keys.add(k);
       c.members.push(e.info);
+      // 停車駅がいちばん多い系統(同数なら先に出てきた方)を、この路線の代表にする
+      if (!c.main || e.stops > c.mainStops) { c.main = e.info; c.mainStops = e.stops; }
     });
     let nMerged = 0;
     // 同じ路線と判定された系統は、色や停車駅が違っても1本にまとめず、系統ごとに横に並べて描く
@@ -3015,7 +3019,10 @@
       const members = [...uniq.values()].sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : a.name < b.name ? -1 : 1));
       if (members.length > 1) nMerged++;
       const no = clusterNo++;
-      const lanes = members.map((m) => ({ ...m, cluster: no }));
+      // 「並行する系統を1本の線にする」がオンなら、代表の系統だけを描く。オフなら全系統を横に並べる
+      const stopsOf = new Map(c.entries.map((e) => [e.info.name + '|' + e.info.color, e.stops]));
+      const lanes = ($('oneLane').checked && c.main ? [c.main] : members)
+        .map((m) => ({ ...m, cluster: no, stops: stopsOf.get(m.name + '|' + m.color) || 0 }));
       // 路線の区間のうち、長い区間とほぼ重なるもの(並行する線路)は、長い方の1本にまとめて描く
       const secs = [...c.keys].map((k) => secByKey.get(k)).filter(Boolean).sort((a, b) => secLength(b) - secLength(a));
       const shown = [];
@@ -3032,6 +3039,15 @@
       }
       for (const sec of secs) {
         for (const m of members) if (!sec.names.includes(m.name)) sec.names.push(m.name);
+      }
+    }
+    // 別の路線にまとめられた系統どうしでも、同じ区間を通るなら、停車駅が最も多い系統だけを描く
+    if ($('oneLane').checked) {
+      for (const sec of rail.sections) {
+        if (sec.routes.length < 2) continue;
+        let best = sec.routes[0];
+        for (const r of sec.routes) if ((r.stops || 0) > (best.stops || 0)) best = r;
+        sec.routes = [best];
       }
     }
     // 並行して重なるだけの区間は描かない(長い方の区間に任せる)
@@ -5324,6 +5340,7 @@
   });
   $('showRouteColor').addEventListener('change', () => { needsDraw = true; });
   $('hideDup').addEventListener('change', () => applyRoutes());
+  $('oneLane').addEventListener('change', () => applyRoutes());
   $('showRail').addEventListener('change', () => {
     if (!railOn() && selectedRail) showInfo(null);
     needsDraw = true;
