@@ -2704,9 +2704,77 @@
     rail.total = rail.sections.reduce((a, x) => a + x.distance, 0);
     rail.syntheticAdded = 0;
     rail.splitCount = 0;
+    rail.bypassCount = 0;
   }
   // 鉄道JSONに無い駅(各駅停車だけが停まる駅など)が、長い区間(快速が通過する線路)の途中にあれば、その線路を駅で分ける。
   // 駅の座標が線路の近く(SPLIT_TOL ブロック以内)で、区間の途中にある駅だけが対象。分けた線路は元の線形をそのまま使う
+  // 近い経路が重なる区間は、停車駅の多い方の経路を1本の線にまとめる。
+  // 区間 A–B の代わりに、別の区間をたどって A から B へ行ける(途中駅あり・距離が1.35倍以内)とき、
+  // 2つの線の間の平均距離(両方向)が BYPASS_TOL ブロック以内なら、長い方の区間は描かない
+  const BYPASS_TOL = 20;
+  function dropBypassSections() {
+    const distToPoly = (poly, p) => {
+      let best = Infinity;
+      for (let i = 1; i < poly.length; i++) {
+        const a = poly[i - 1], b = poly[i];
+        const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
+        const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2)) : 0;
+        const d = Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dz);
+        if (d < best) best = d;
+      }
+      return best;
+    };
+    const meanDist = (from, to) => from.reduce((n, p) => n + distToPoly(to, p), 0) / from.length;
+    const removed = new Set();
+    const cands = rail.sections.filter((x) => !x.synthetic && !x.split && x.pts.length >= 2)
+      .sort((a, b) => b.distance - a.distance);
+    const altPath = (S) => {
+      const adj = new Map();
+      const add = (a, b, sec) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push({ to: b, sec }); };
+      for (const x of rail.sections) {
+        if (x === S || removed.has(x) || x.synthetic) continue;
+        add(x.fromId, x.toId, x); add(x.toId, x.fromId, x);
+      }
+      const limit = S.distance * 1.35;
+      const dist = new Map([[S.fromId, 0]]), prev = new Map();
+      const queue = [[0, S.fromId]];
+      while (queue.length) {
+        queue.sort((a, b) => a[0] - b[0]);
+        const [d, u] = queue.shift();
+        if (d > (dist.get(u) ?? Infinity) || d > limit) continue;
+        if (u === S.toId) break;
+        for (const e of adj.get(u) || []) {
+          const nd = d + e.sec.distance;
+          if (nd <= limit && nd < (dist.get(e.to) ?? Infinity)) { dist.set(e.to, nd); prev.set(e.to, { u, sec: e.sec }); queue.push([nd, e.to]); }
+        }
+      }
+      if (!prev.has(S.toId)) return null;
+      const path = [];
+      for (let v = S.toId; v !== S.fromId;) { const q = prev.get(v); path.push({ from: q.u, sec: q.sec }); v = q.u; }
+      return path.reverse();
+    };
+    for (const S of cands) {
+      const path = altPath(S);
+      if (!path || path.length < 2) continue;
+      const chain = [];
+      for (const { from, sec } of path) {
+        const pts = sec.fromId === from ? sec.pts : [...sec.pts].reverse();
+        chain.push(...(chain.length ? pts.slice(1) : pts));
+      }
+      if (Math.max(meanDist(S.pts, chain), meanDist(chain, S.pts)) <= BYPASS_TOL) removed.add(S);
+    }
+    if (!removed.size) { rail.bypassCount = 0; return; }
+    rail.splitLog = rail.splitLog || { removed: [] };
+    for (const S of removed) {
+      rail.sections = rail.sections.filter((x) => x !== S);
+      rail.splitLog.removed.push(S);
+      const A = rail.stations.get(S.fromId), B = rail.stations.get(S.toId);
+      if (A) A.neighbors = A.neighbors.filter((n) => !(n.id === S.toId && !n.synthetic));
+      if (B) B.neighbors = B.neighbors.filter((n) => !(n.id === S.fromId && !n.synthetic));
+    }
+    rail.total = rail.sections.reduce((a, x) => a + x.distance, 0);
+    rail.bypassCount = removed.size;
+  }
   const SPLIT_TOL = 16;
   function splitSectionsAtStations() {
     const rs = routeData.stations || {};
@@ -2791,8 +2859,9 @@
     rail.splitCount = count;
   }
   function railSummaryText() {
-    const n = rail.syntheticAdded || 0, sp = rail.splitCount || 0;
+    const n = rail.syntheticAdded || 0, sp = rail.splitCount || 0, bp = rail.bypassCount || 0;
     const notes = [];
+    if (bp) notes.push(`重なる ${bp} 本は停車駅の多い経路にまとめて非表示`);
     if (sp) notes.push(`${sp} 本は通過線を駅で分けたもの`);
     if (n) notes.push(`${n} 本は系統データの駅座標から補った直線`);
     return `駅 ${rail.stations.size} 駅・区間 ${rail.sections.length} 本${notes.length ? `(うち ${notes.join('・')})` : ''}・合計 ${Math.round(rail.total)} ブロック`;
@@ -2836,7 +2905,7 @@
       }
     }
     rail.syntheticAdded = added;
-    if (added || rail.splitCount) {
+    if (added || rail.splitCount || rail.bypassCount) {
       $('railSummary').textContent = railSummaryText();
       fillFareSelects();
     }
@@ -2848,6 +2917,7 @@
     const adj = new Map();
     dropSyntheticRail();                 // 前回の補い分を外してから、組み直す
     splitSectionsAtStations();
+    dropBypassSections();
     const alias = buildStationAlias(rail, routeData);
     const canon = (id) => resolveAlias(alias, id);
     rail.platforms = buildPlatforms(rail, routeData, canon);
