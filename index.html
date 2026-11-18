@@ -1943,7 +1943,13 @@
   let trainGroups = [];              // [{ line, rules: [{ from, to, key }] }] (trainnumber.txt の内容)
   const trainIconCache = new Map();  // キー -> { img, ok, failed, alt }
   const trainIconBlobUrls = new Map(); // フォルダから読んだ時の、キー -> 画像の URL
+  // 車番を「英字の接頭辞 + 数字」に分ける(3001 → ['', 3001]、E12 → ['E', 12])。読み取れなければ null
+  function parseTrainNo(raw) {
+    const m = String(raw || '').trim().match(/^([A-Za-z]*)\s*(\d+)/);
+    return m ? { prefix: m[1].toUpperCase(), num: Number(m[2]) } : null;
+  }
   // trainnumber.txt: 「(l)路線名」の下に、車番の始まり・終わり・アイコンのキーを1組ずつ並べる
+  // 車番は数字(3001)のほか、英字付き(E1〜E20)も書ける。英字付きは、同じ英字の車番にだけ当てはまる
   function applyTrainNumbers(text) {
     const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const groups = [];
@@ -1955,12 +1961,15 @@
         i++;
         continue;
       }
-      const from = Number(lines[i]), to = Number(lines[i + 1]);
+      const from = parseTrainNo(lines[i]), to = parseTrainNo(lines[i + 1]);
       const key = lines[i + 2];
-      if (cur && Number.isFinite(from) && Number.isFinite(to) && key && !/^\(l\)/.test(key)) {
-        cur.rules.push({ from, to, key });
+      // キーは車番の形(3001 や E1)ではない文字列。3行が組にならない時は、1行だけ進めて読み直す(書き漏れがあっても、次の組から復帰する)
+      if (cur && from && to && from.prefix === to.prefix && key && !/^\(l\)/.test(key) && !/^[A-Za-z]*\s*\d+$/.test(key)) {
+        cur.rules.push({ prefix: from.prefix, from: from.num, to: to.num, key });
+        i += 3;
+      } else {
+        i++;
       }
-      i += 3;
     }
     trainGroups = groups;
     trainIconCache.clear();
@@ -1981,13 +1990,13 @@
   }
   // 列車の走っている路線の「(l)路線名」の中から、車番(title)の範囲で、アイコンのキーを決める。見つからなければ null
   function trainIconKey(t) {
-    const num = Number(String(t.title || t.formation || '').replace(/[^0-9]/g, ''));
-    if (!Number.isFinite(num) || !trainGroups.length) return null;
+    const no = parseTrainNo(t.title || t.formation) || parseTrainNo(String(t.title || t.formation || '').replace(/[^0-9A-Za-z]/g, ''));
+    if (!no || !trainGroups.length) return null;
     const route = trainLineName(t);
     if (!route) return null;
     for (const g of trainGroups) {
       if (!g.line || !route.includes(g.line)) continue;
-      const r = g.rules.find((x) => num >= x.from && num <= x.to);
+      const r = g.rules.find((x) => x.prefix === no.prefix && no.num >= x.from && no.num <= x.to);
       if (r) return r.key;
     }
     return null;
