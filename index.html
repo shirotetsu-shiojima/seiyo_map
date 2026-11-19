@@ -557,7 +557,7 @@
           <h2 class="set-h">通過人員推定</h2>
           <label class="set-row"><span>鉄道のラインカラーを通過人員に応じた色にする<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
           <div id="passengerStatus" class="meta">会社別の駅利用者CSVを読み込んでいます…</div>
-          <div class="meta">CSVの保有社と、停車駅のナンバリングからlines.csvで判定した会社を照合し、同じ会社の区間だけで推定します。会社が一致しないデータは未開業扱いで除外します。乗降人員は乗車・降車に半分ずつ割り、会社ごとに往復対称OD配分(β=0.05)で積算します。経路は区間所要時間の最短経路、同社内乗換は3分です。</div>
+          <div class="meta">CSVの保有社と、停車駅のナンバリングからlines.csvで判定した会社を照合し、同じ会社の区間だけで推定します。会社が一致しないデータは未開業扱いで除外します。乗降人員は乗車・降車に半分ずつ割り、会社ごとに往復対称OD配分(β=0.05)で積算します。全社合計の利用者が多い駅同士は距離抵抗を弱め、離れた主要駅間も結びつきやすくします。経路は区間所要時間の最短経路、同社内乗換は3分です。</div>
           <div class="meta">色の境界: 1万人、5万人、10万人、50万人、100万人、150万人、200万人、250万人、300万人/日</div>
         </div>
         <div class="set-group">
@@ -4073,13 +4073,18 @@
       sectionCompanies.get(sec).add(company);
     }
     const beta = 0.05;
+    // 全社合計の駅利用者数を、会社をまたいだ駅間の結びつきやすさに使う。
+    const globalStationUsers = new Map();
+    for (const stations of passengerByCompany.values()) for (const [key, users] of stations) {
+      globalStationUsers.set(key, (globalStationUsers.get(key) || 0) + users);
+    }
     for (const [company, stationRows] of passengerByCompany) {
       const companyNames = companyNodesByName.get(company);
       if (!companyNames) continue; // 運行系統に現れない会社(未開業)は計算しない
       const groups = [];
       for (const [key, users] of stationRows) {
         const ids = companyNames.get(key);
-        if (users > 0 && ids && ids.size) groups.push({ key, users, terminals: [...ids] });
+        if (users > 0 && ids && ids.size) groups.push({ key, users, globalUsers: globalStationUsers.get(key) || users, terminals: [...ids] });
       }
       if (groups.length < 2) continue;
       const adjacency = nodes.map(() => []);
@@ -4123,7 +4128,12 @@
         for (let j = 0; j < n; j++) {
           let best = Infinity;
           for (const t of groups[j].terminals) if (dist[t] < best) { best = dist[t]; targetNodes[j] = t; }
-          if (j !== oi && Number.isFinite(best)) f[oi][j] = Math.exp(-beta * best);
+          if (j !== oi && Number.isFinite(best)) {
+            // 1万人同士を基準に、両駅の利用者が多いほど長距離の減衰を緩める(最大1.5倍)。
+            const mutualUse = Math.min(groups[oi].globalUsers, groups[j].globalUsers);
+            const affinity = 1 + 0.25 * Math.min(2, Math.max(0, Math.log10(Math.max(1, mutualUse) / 10000)));
+            f[oi][j] = Math.exp(-beta * best / affinity);
+          }
         }
         allPaths.push({ prevNode, prevSection, targetNodes });
       }
