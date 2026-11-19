@@ -557,7 +557,7 @@
           <h2 class="set-h">通過人員推定</h2>
           <label class="set-row"><span>鉄道のラインカラーを通過人員に応じた色にする<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
           <div id="passengerStatus" class="meta">会社別の駅利用者CSVを読み込んでいます…</div>
-          <div class="meta">CSVの保有社ごとに駅利用者を分け、同じ会社の運行系統だけで推定します。路線データに会社がない分は未開業扱いで除外します。乗降人員は乗車・降車に半分ずつ割り、会社ごとに往復対称OD配分(β=0.05)で積算します。経路は区間所要時間の最短経路、同社内乗換は3分です。</div>
+          <div class="meta">CSVの保有社と、停車駅のナンバリングからlines.csvで判定した会社を照合し、同じ会社の区間だけで推定します。会社が一致しないデータは未開業扱いで除外します。乗降人員は乗車・降車に半分ずつ割り、会社ごとに往復対称OD配分(β=0.05)で積算します。経路は区間所要時間の最短経路、同社内乗換は3分です。</div>
           <div class="meta">色の境界: 1万人、5万人、10万人、50万人、100万人、150万人、200万人、250万人、300万人/日</div>
         </div>
         <div class="set-group">
@@ -3840,7 +3840,6 @@
   let stationByName = new Map();
   const passengerSources = new Map();  // CSVファイル名 -> 会社・駅ごとのレコード
   let passengerByCompany = new Map();  // 会社 -> 駅名(正規化) -> 利用者数
-  let passengerCompanyByPrefix = new Map(); // 駅コードの路線接頭辞 -> CSV上の会社
   const nameKey = (t) => String(t || '').normalize('NFKC').replace(/\s+/g, '').trim();
   let interchangeGroups = [];        // 駅番号が複数ある駅(同じ駅で乗り換えられる駅番号の組)
   // CSV を読む(引用符・改行に対応)
@@ -3904,6 +3903,7 @@
       if (r['会社txt']) lineToCompany.set(code, r['会社txt']);
     }
     passengerFlowDirty = true;
+    updatePassengerStatus();
     needsDraw = true;   // 路線の色が変わるので、線路を描き直す(読み込みの順番に左右されないように)
     scheduleExplore();
   }
@@ -3911,6 +3911,7 @@
   function applyLinedata(text) {
     for (const [k, v] of parseLineData(text)) lineToCompany.set(normLine(k), v);
     passengerFlowDirty = true;
+    updatePassengerStatus();
     needsDraw = true;
   }
   // station.csv: 駅番号ごとの情報と、駅番号が複数ある駅(乗換駅)
@@ -3955,33 +3956,24 @@
     return null;
   };
   const passengerCompanyKey = (value) => nameKey(value);
-  const passengerCodePrefix = (code) => String(code || '').toUpperCase().replaceAll('[', '').replaceAll(']', '').replace(/-?[0-9]+$/, '').replace(/-$/, '');
   function passengerRouteCompany(route) {
-    if (!route) return '';
-    const known = new Set(passengerByCompany.keys());
-    const label = String(route.name || '').split('|')[0].trim();
-    const labelKey = nameKey(label);
-    // 路線名から lines.csv の会社を引く(例: 長急新都市線 → 長急電鉄)。
-    const infos = [...lineInfo.values()];
-    const exactLine = infos.find((li) => nameKey(li.name) === labelKey);
-    const prefixLine = exactLine || infos.find((li) => labelKey && nameKey(li.name) && labelKey.startsWith(nameKey(li.name)));
-    if (prefixLine) {
-      const company = passengerCompanyKey(prefixLine.company);
-      if (known.has(company)) return company;
-    }
-    // 系統名が会社名から始まる路線も認識する(例: 古莉亜鉄道-古莉亜ライン)。
-    const named = [...known].filter((company) => company && labelKey.startsWith(company)).sort((a, b) => b.length - a.length)[0];
-    if (named) return named;
-    // 駅コードの接頭辞とCSVの保有社から会社を推定する。
+    if (!route || !routeData || !routeData.stations) return '';
+    // 各停車駅のナンバリングを lines.csv で照合し、最も多く現れる会社を採用する。
+    // 路線名や系統名は会社判定に使わない。複数会社が同数なら誤判定を避けて除外する。
     const votes = new Map();
     for (const raw of route.stations || []) {
       const id = String(raw).split('_')[0];
-      const row = routeData && routeData.stations && routeData.stations[id];
+      const row = routeData.stations[id];
+      const companiesAtStop = new Set();
       for (const code of parseStationName(row && row.name).codes) {
-        const companies = passengerCompanyByPrefix.get(passengerCodePrefix(code));
-        if (!companies) continue;
-        for (const company of companies) votes.set(company, (votes.get(company) || 0) + 1 / companies.size);
+        const prefix = lineCodeOf(code);
+        const info = lineInfo.get(prefix);
+        const company = info && passengerCompanyKey(info.company);
+        if (company) companiesAtStop.add(company);
       }
+      if (!companiesAtStop.size) continue;
+      const share = 1 / companiesAtStop.size;
+      for (const company of companiesAtStop) votes.set(company, (votes.get(company) || 0) + share);
     }
     const ranked = [...votes].sort((a, b) => b[1] - a[1]);
     return ranked.length && (!ranked[1] || ranked[0][1] > ranked[1][1]) ? ranked[0][0] : '';
@@ -4011,7 +4003,6 @@
   }
   function applyPassengerData(text, fileName) {
     const source = [], seen = new Set();
-    const codePattern = /^([A-Z]{1,4}-?[0-9]{1,3})$/i;
     for (const row of tableOf(text)) {
       const name = String(row['駅名'] || '').trim();
       const companyName = String(row['保有社'] || '').trim();
@@ -4022,23 +4013,14 @@
       seen.add(pairKey);
       const raw = String(row['利用者数'] || '').replace(/[\s,人]/g, '');
       const parsed = Number(raw), users = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-      const codes = [...new Set(Object.values(row).map((v) => String(v || '').trim().replace(/^\[|\]$/g, ''))
-        .filter((v) => codePattern.test(v)))];
-      source.push({ name, key, company, companyName, users, codes });
+      source.push({ name, key, company, companyName, users });
     }
     passengerSources.set(fileName, source);
     passengerByCompany = new Map();
-    passengerCompanyByPrefix = new Map();
     for (const records of passengerSources.values()) for (const record of records) {
       if (!passengerByCompany.has(record.company)) passengerByCompany.set(record.company, new Map());
       const stations = passengerByCompany.get(record.company);
       stations.set(record.key, (stations.get(record.key) || 0) + record.users);
-      for (const code of record.codes) {
-        const prefix = passengerCodePrefix(code);
-        if (!prefix) continue;
-        if (!passengerCompanyByPrefix.has(prefix)) passengerCompanyByPrefix.set(prefix, new Set());
-        passengerCompanyByPrefix.get(prefix).add(record.company);
-      }
     }
     passengerFlowDirty = true;
     updatePassengerStatus();
