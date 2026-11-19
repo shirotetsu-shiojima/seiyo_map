@@ -562,7 +562,7 @@
           <label class="set-row"><span>距離抵抗 β<span class="sub">大きいほど、近い駅どうしの移動が増えます(1分あたり)</span></span><input type="number" class="num-in" id="passengerBeta" value="0.05" min="0.005" max="1" step="0.005"></label>
           <label class="set-row"><span>駅の性格による行き先の偏り<span class="sub">0=なし。住宅の駅からオフィス・商業の駅へ、のように属性と等級で行き先が偏ります(1が標準)</span></span><input type="number" class="num-in" id="passengerAttr" value="1" min="0" max="3" step="0.1"></label>
           <label class="set-row"><span>経路の分散(分)<span class="sub">0=最短経路だけ。所要時間がこの程度しか違わない経路には客が分かれます</span></span><input type="number" class="num-in" id="passengerSpread" value="2" min="0" max="30" step="0.5"></label>
-          <div class="meta">CSVに載っている駅(保有社)どうしを結ぶ区間を、その会社の線路網として推定します(SR○○支社はSR1社)。乗降人員は乗車・降車に半分ずつ割り、往復対称OD配分で積算します。行き先は「距離抵抗」「駅の性格(属性・等級)の相性」「大きな駅どうしの結びつき」で決まり、経路は区間所要時間の最短に近いものへ分散します。同じ名前の駅の乗換は3分です。</div>
+          <div class="meta">CSVに載っている駅(保有社)どうしを結ぶ区間を、その会社の線路網として推定します(SR○○支社はSR1社)。乗降人員は乗車・降車に半分ずつ割り、往復対称OD配分で積算します。行き先は「距離抵抗」「駅の性格(属性・等級)の相性」「大きな駅どうしの結びつき」で決まり、経路は区間所要時間の最短に近いものへ分散します。同じ駅で路線を乗り換える時は3分で、駅の利用者数には同じ会社内の乗換(降りて乗る=2回分)も含まれるものとして、乗換が多い駅は出発・到着の人数を減らし、乗換が利用者数に収まらない駅は乗換を不便にして調整します。</div>
           <div class="meta">色の境界: 0.5万、2.5万、5万、25万、50万、75万、100万、125万、150万人/日(線の太さも人数に応じて太くなります)</div>
         </div>
         <div class="set-group">
@@ -4114,7 +4114,8 @@
       const a = nodeIndex.get(sec.fromId), b = nodeIndex.get(sec.toId);
       if (a === undefined || b === undefined || a === b) continue;
       if (hasRoutes && !(sec.passengerRoutes && sec.passengerRoutes.length)) continue;
-      served.push({ sec, a, b });
+      const info = lineInfo.get(sectionLineOf(sec.fromId, sec.toId));
+      served.push({ sec, a, b, line: sectionLineOf(sec.fromId, sec.toId), lineCompany: info ? passengerCompanyKey(info.company) : '' });
     }
     const secsAt = nodes.map(() => []);
     for (const s of served) { secsAt[s.a].push(s); secsAt[s.b].push(s); }
@@ -4123,6 +4124,13 @@
     for (const [company, rows] of passengerByCompany) {
       const set = new Set();
       for (const key of rows.keys()) for (const i of nodesByName.get(key) || []) set.add(i);
+      // 駅番号の路線がこの会社のものなら、CSVに行が無い駅(他社の駅への乗入れ先など)もこの会社の線路網に入れる
+      nodes.forEach((st, i) => {
+        for (const code of st.codes || []) {
+          const info = lineInfo.get(lineCodeOf(code));
+          if (info && passengerCompanyKey(info.company) === company) { set.add(i); break; }
+        }
+      });
       ownedBy.set(company, set);
       for (const i of set) ownerCount.set(i, (ownerCount.get(i) || 0) + 1);
     }
@@ -4145,7 +4153,7 @@
       report.companies.push(entry);
       if (!own.size) continue;
       // ① この会社の区間: 両端がこの会社の駅。CSVに載っていない駅が間に挟まる区間は、両側でこの会社の駅につながる時だけ入れる
-      const included = new Set(served.filter((s) => own.has(s.a) && own.has(s.b)));
+      const included = new Set(served.filter((s) => (own.has(s.a) && own.has(s.b)) || s.lineCompany === company));
       const seenFree = new Set();
       for (const start of own) for (const first of secsAt[start]) {
         const other = first.a === start ? first.b : first.a;
@@ -4168,18 +4176,28 @@
       }
       entry.sections = included.size;
       if (!included.size) continue;
-      // ② 計算用のノード(この会社の区間につながる駅)
+      // ② 計算用のノード: 「駅 × 路線」。同じ駅で路線を乗り換える時は乗換辺(3分)を通るので、乗換人員を数えられる
       const local = new Map(), localNodes = [];
-      const lid = (n) => { if (!local.has(n)) { local.set(n, localNodes.length); localNodes.push(n); } return local.get(n); };
-      for (const s of included) { lid(s.a); lid(s.b); }
+      const lid = (n, line) => {
+        const k = n + '|' + line;
+        if (!local.has(k)) { local.set(k, localNodes.length); localNodes.push({ n, line }); }
+        return local.get(k);
+      };
+      for (const s of included) { lid(s.a, s.line); lid(s.b, s.line); }
       const V = localNodes.length;
+      const statesByName = new Map();
+      localNodes.forEach((ln, li) => {
+        const k = nameKey(nodes[ln.n].ja);
+        if (!statesByName.has(k)) statesByName.set(k, []);
+        statesByName.get(k).push(li);
+      });
       const groups = [];
       for (const [key, users] of rows) {
         if (!(users > 0)) continue;
-        const terminals = (nodesByName.get(key) || []).filter((n) => local.has(n)).map((n) => local.get(n));
-        if (!terminals.length) continue;
+        const terminals = statesByName.get(key);
+        if (!terminals || !terminals.length) continue;
         const m = meta.get(key) || { attrs: new Set(), grade: 0 };
-        const sr = stationRowOf(nodes[localNodes[terminals[0]]]);
+        const sr = stationRowOf(nodes[localNodes[terminals[0]].n]);
         const attrs = m.attrs.size ? [...m.attrs] : (sr ? sr.attributes : []);
         groups.push({ key, users, terminals, globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
       }
@@ -4187,18 +4205,22 @@
       if (groups.length < 2) continue;
       const G = groups.length, N = V + 2 * G;     // 後ろ2G個は、駅ごとの出発点・到着点
       const adj = Array.from({ length: N }, () => []);
-      const addEdge = (u, v, cost, section) => adj[u].push({ to: v, cost, section });
+      const xferEdges = new Map();   // 駅 -> 乗換辺(混雑した乗換駅は所要時間を足す)
+      const addEdge = (u, v, cost, section, xfer) => {
+        const e = { to: v, cost, section, xfer: xfer || null };
+        adj[u].push(e);
+        if (xfer) { if (!xferEdges.has(xfer)) xferEdges.set(xfer, []); xferEdges.get(xfer).push(e); }
+      };
       for (const s of included) {
         const ab = Number(edgeSec(s.sec.fromId, s.sec.toId, s.sec.distance)), ba = Number(edgeSec(s.sec.toId, s.sec.fromId, s.sec.distance));
         const seconds = (ab > 0 && ba > 0) ? (ab + ba) / 2 : (ab > 0 ? ab : ba > 0 ? ba : Math.max(1, s.sec.distance / 14));
         const minutes = Math.max(0.05, seconds / 60);
-        addEdge(local.get(s.a), local.get(s.b), minutes, s.sec); addEdge(local.get(s.b), local.get(s.a), minutes, s.sec);
+        const u = lid(s.a, s.line), v = lid(s.b, s.line);
+        addEdge(u, v, minutes, s.sec); addEdge(v, u, minutes, s.sec);
       }
-      // 同じ名前の駅(別の駅ID)は乗換駅: どれからどれへも3分
-      const sameName = new Map();
-      localNodes.forEach((n, li) => { const k = nameKey(nodes[n].ja); if (!sameName.has(k)) sameName.set(k, []); sameName.get(k).push(li); });
-      for (const ids of sameName.values()) for (let i = 1; i < ids.length; i++) {
-        addEdge(ids[0], ids[i], 1.5, null); addEdge(ids[i], ids[0], 1.5, null);
+      // 同じ名前の駅の別の路線(別の駅ID)どうしは乗換: 3分。この辺を通った人数が乗換人員
+      for (const [k, ids] of statesByName) for (let i = 0; i < ids.length; i++) for (let j = 0; j < ids.length; j++) {
+        if (i !== j) addEdge(ids[i], ids[j], 3, null, k);
       }
       groups.forEach((g, gi) => {
         for (const t of g.terminals) { addEdge(V + gi, t, 0.01, null); addEdge(t, V + G + gi, 0.01, null); }
@@ -4216,8 +4238,10 @@
         }
         return dist;
       };
-      const dists = groups.map((g, gi) => dijkstra(V + gi));
-      const f = Array.from({ length: G }, () => new Float64Array(G));
+      let dists, f, pre;
+      const build = () => {
+      dists = groups.map((g, gi) => dijkstra(V + gi));
+      f = Array.from({ length: G }, () => new Float64Array(G));
       for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
         if (i === j) continue;
         const t = dists[i][V + G + j];
@@ -4227,36 +4251,12 @@
         const compat = cfg.attr > 0 ? Math.pow(Math.max(0.02, passengerCompat(groups[i].profile, groups[j].profile)), cfg.attr) : 1;
         f[i][j] = Math.exp(-cfg.beta * t / affinity) * compat;
       }
-      // ④ 往復対称のOD: 各駅の乗車(=降車)が利用者数の半分になるように配分する
-      const board = groups.map((g) => g.users / 2), a = new Float64Array(G), b = new Float64Array(G).fill(1);
-      for (let iter = 0; iter < 300; iter++) {
-        for (let i = 0; i < G; i++) {
-          let sum = 0; for (let j = 0; j < G; j++) sum += b[j] * f[i][j];
-          a[i] = sum > 0 ? board[i] / sum : 0;
-        }
-        let maxError = 0;
-        for (let j = 0; j < G; j++) {
-          let sum = 0; for (let i = 0; i < G; i++) sum += a[i] * f[i][j];
-          const next = sum > 0 ? board[j] / sum : 0;
-          maxError = Math.max(maxError, Math.abs(next - b[j]) / (b[j] || 1)); b[j] = next;
-        }
-        if (maxError < 1e-6 && iter > 5) break;
-      }
-      // ⑤ 経路への割り当て(所要時間が近い経路には分散): 出発駅ごとに、全行き先ぶんをまとめて流す
-      let coTrips = 0, coMin = 0;
-      const add = (sec, v) => {
-        passengerFlowBySection.set(sec.key, (passengerFlowBySection.get(sec.key) || 0) + v);
-        let per = passengerFlowByCompany.get(sec.key);
-        if (!per) { per = new Map(); passengerFlowByCompany.set(sec.key, per); }
-        per.set(company, (per.get(company) || 0) + v);
-        sumKm += v * (sec.distance || 0) / 1000;
-      };
-      for (let i = 0; i < G; i++) {
+      // ④ 経路の候補(出発駅ごと): 出発点から遠ざかる向きの辺だけを使い、辺の重み = exp(-(最短からの遅れ)/分散)
+      pre = groups.map((g, i) => {
         const r = dists[i];
         const order = [];
         for (let u = 0; u < N; u++) if (Number.isFinite(r[u])) order.push(u);
         order.sort((x, y) => r[x] - r[y]);
-        // 出発点から見て遠ざかる向きの辺だけを使う。辺の重み = exp(-(最短からの遅れ)/spread)
         const incoming = new Map(), weight = new Float64Array(N);
         weight[V + i] = 1;
         for (const u of order) {
@@ -4270,31 +4270,96 @@
             const w = l * weight[u];
             weight[v] += w;
             if (!incoming.has(v)) incoming.set(v, []);
-            incoming.get(v).push({ u, w, sec: e.section });
+            incoming.get(v).push({ u, w, sec: e.section, xfer: e.xfer });
           }
         }
-        const load = new Float64Array(N);
-        for (let j = 0; j < G; j++) {
-          if (i === j || f[i][j] <= 0) continue;
-          const flow = a[i] * b[j] * f[i][j];
-          if (!(flow > 0)) continue;
-          load[V + G + j] += flow;
-          coTrips += flow; coMin += flow * r[V + G + j];
+        return { r, order, incoming };
+      });
+      };
+      // 往復対称のOD: 各駅の乗車(=降車)が board になるように配分する
+      const solveOD = (board) => {
+        const a = new Float64Array(G), b = new Float64Array(G).fill(1);
+        for (let iter = 0; iter < 300; iter++) {
+          for (let i = 0; i < G; i++) {
+            let sum = 0; for (let j = 0; j < G; j++) sum += b[j] * f[i][j];
+            a[i] = sum > 0 ? board[i] / sum : 0;
+          }
+          let maxError = 0;
+          for (let j = 0; j < G; j++) {
+            let sum = 0; for (let i = 0; i < G; i++) sum += a[i] * f[i][j];
+            const next = sum > 0 ? board[j] / sum : 0;
+            maxError = Math.max(maxError, Math.abs(next - b[j]) / (b[j] || 1)); b[j] = next;
+          }
+          if (maxError < 1e-6 && iter > 5) break;
         }
-        for (let k = order.length - 1; k >= 0; k--) {
-          const v = order[k];
-          if (!(load[v] > 0)) continue;
-          const list = incoming.get(v);
-          if (!list) continue;
-          let total = 0; for (const l of list) total += l.w;
-          if (!(total > 0)) continue;
-          for (const l of list) {
-            const share = load[v] * l.w / total;
-            load[l.u] += share;
-            if (l.sec) add(l.sec, share);
+        return { a, b };
+      };
+      // 経路への割り当て: 出発駅ごとに全行き先ぶんをまとめて流す。区間の人数と、駅ごとの乗換人員を返す
+      const assign = (a, b) => {
+        const secFlow = new Map(), xferFlow = new Map();
+        let trips = 0, minutes = 0;
+        for (let i = 0; i < G; i++) {
+          const { r, order, incoming } = pre[i];
+          const load = new Float64Array(N);
+          for (let j = 0; j < G; j++) {
+            if (i === j || f[i][j] <= 0) continue;
+            const flow = a[i] * b[j] * f[i][j];
+            if (!(flow > 0)) continue;
+            load[V + G + j] += flow;
+            trips += flow; minutes += flow * r[V + G + j];
+          }
+          for (let k = order.length - 1; k >= 0; k--) {
+            const v = order[k];
+            if (!(load[v] > 0)) continue;
+            const list = incoming.get(v);
+            if (!list) continue;
+            let total = 0; for (const l of list) total += l.w;
+            if (!(total > 0)) continue;
+            for (const l of list) {
+              const share = load[v] * l.w / total;
+              load[l.u] += share;
+              if (l.sec) secFlow.set(l.sec, (secFlow.get(l.sec) || 0) + share);
+              else if (l.xfer) xferFlow.set(l.xfer, (xferFlow.get(l.xfer) || 0) + share);
+            }
           }
         }
+        return { secFlow, xferFlow, trips, minutes };
+      };
+      // ⑤ 利用者数には同じ会社内の乗換(降りて乗る=2回分)も含まれる: 乗換人員を引いた残りを、その駅の出発・到着の人数にする。乗換は経路で決まるので数回繰り返す
+      const board0 = groups.map((g) => g.users / 2), board = board0.slice();
+      let res = null, xferTotal = 0;
+      const pen = new Map();   // 駅 -> 乗換に足す所要時間(分)。乗換が駅の利用者数に収まらない駅だけ増える
+      for (let it = 0; it < 12; it++) {
+        build();
+        const { a, b } = solveOD(board);
+        res = assign(a, b);
+        if (it === 11) break;
+        let change = 0;
+        for (let i = 0; i < G; i++) {
+          const x = res.xferFlow.get(groups[i].key) || 0;
+          const target = Math.max(board0[i] * 0.15, board0[i] - x);
+          const next = board[i] + 0.6 * (target - board[i]);
+          change = Math.max(change, Math.abs(next - board[i]) / (board0[i] || 1));
+          board[i] = next;
+          // 乗換だけで利用者数の85%を超える駅は、乗換を面倒にして(所要時間を足して)乗換を要する移動を減らす
+          const over = x / (board0[i] * 0.85) - 1;
+          const p = Math.min(60, Math.max(0, (pen.get(groups[i].key) || 0) + 8 * over));
+          change = Math.max(change, Math.abs(p - (pen.get(groups[i].key) || 0)) / 60);
+          pen.set(groups[i].key, p);
+          for (const e of xferEdges.get(groups[i].key) || []) e.cost = 3 + p;
+        }
+        if (change < 0.003) break;
       }
+      for (const v of res.xferFlow.values()) xferTotal += v;
+      const coTrips = res.trips, coMin = res.minutes;
+      for (const [sec, v] of res.secFlow) {
+        passengerFlowBySection.set(sec.key, (passengerFlowBySection.get(sec.key) || 0) + v);
+        let per = passengerFlowByCompany.get(sec.key);
+        if (!per) { per = new Map(); passengerFlowByCompany.set(sec.key, per); }
+        per.set(company, (per.get(company) || 0) + v);
+        sumKm += v * (sec.distance || 0) / 1000;
+      }
+      entry.transfers = xferTotal;
       entry.avgMin = coTrips > 0 ? coMin / coTrips : 0;
       report.usedUsers += groups.reduce((s, g) => s + g.users, 0);
       report.trips += coTrips; sumMin += coMin;
