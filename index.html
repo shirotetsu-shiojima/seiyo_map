@@ -268,6 +268,7 @@
   .set-h { margin: 28px 0 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
   .set-h:first-child { margin-top: 4px; }
   .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+  .set-row .num-in { width: 76px; flex: none; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; text-align: right; }
   .set-row .sub { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 1px; }
   .set-row input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 42px; height: 26px; border-radius: 999px; background: var(--line-strong); position: relative; flex: none; cursor: pointer; transition: background .15s; margin: 0; }
   .set-row input[type="checkbox"]::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--thumb); transition: transform .15s var(--ease); box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
@@ -557,8 +558,12 @@
           <h2 class="set-h">通過人員推定</h2>
           <label class="set-row"><span>鉄道のラインカラーを通過人員に応じた色にする<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
           <div id="passengerStatus" class="meta">会社別の駅利用者CSVを読み込んでいます…</div>
-          <div class="meta">CSVの保有社と、停車駅のナンバリングからlines.csvで判定した会社を照合し、同じ会社の区間だけで推定します。会社が一致しないデータは未開業扱いで除外します。乗降人員は乗車・降車に半分ずつ割り、会社ごとに往復対称OD配分(β=0.05)で積算します。全社合計の利用者が多い駅同士は距離抵抗を弱め、離れた主要駅間も結びつきやすくします。経路は区間所要時間の最短経路、同社内乗換は3分です。</div>
-          <div class="meta">色の境界: 1万人、5万人、10万人、50万人、100万人、150万人、200万人、250万人、300万人/日</div>
+          <details class="fold" id="passengerReportBox" hidden><summary>会社別の計算結果・路線データに無い駅</summary><div id="passengerReport" class="meta fold-body"></div></details>
+          <label class="set-row"><span>距離抵抗 β<span class="sub">大きいほど、近い駅どうしの移動が増えます(1分あたり)</span></span><input type="number" class="num-in" id="passengerBeta" value="0.05" min="0.005" max="1" step="0.005"></label>
+          <label class="set-row"><span>駅の性格による行き先の偏り<span class="sub">0=なし。住宅の駅からオフィス・商業の駅へ、のように属性と等級で行き先が偏ります(1が標準)</span></span><input type="number" class="num-in" id="passengerAttr" value="1" min="0" max="3" step="0.1"></label>
+          <label class="set-row"><span>経路の分散(分)<span class="sub">0=最短経路だけ。所要時間がこの程度しか違わない経路には客が分かれます</span></span><input type="number" class="num-in" id="passengerSpread" value="2" min="0" max="30" step="0.5"></label>
+          <div class="meta">CSVに載っている駅(保有社)どうしを結ぶ区間を、その会社の線路網として推定します(SR○○支社はSR1社)。乗降人員は乗車・降車に半分ずつ割り、往復対称OD配分で積算します。行き先は「距離抵抗」「駅の性格(属性・等級)の相性」「大きな駅どうしの結びつき」で決まり、経路は区間所要時間の最短に近いものへ分散します。同じ名前の駅の乗換は3分です。</div>
+          <div class="meta">色の境界: 0.5万、2.5万、5万、25万、50万、75万、100万、125万、150万人/日(線の太さも人数に応じて太くなります)</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">道路</h2>
@@ -3155,7 +3160,8 @@
       const value = passengerFlowBySection.get(sec.key) || 0;
       if (!(value > 0)) continue;
       const baseWidth = routeColorOn() ? sectionBandWidth(sec) : 2.5;
-      strokeLine(sec.pts, Math.max(4, baseWidth + 1.5), passengerFlowColor(value), 0.96);
+      const heavy = Math.min(1, Math.sqrt(value / 1500000));   // 多い区間ほど太く(最大 +5px)
+      strokeLine(sec.pts, Math.max(4, baseWidth + 1.5) + heavy * 5, passengerFlowColor(value), 0.96);
     }
   }
 
@@ -3669,7 +3675,13 @@
       addRow(dl, '距離', `${(sec.distance / 1000).toFixed(2)} km(${Math.round(sec.distance)} ブロック)`);
       addRow(dl, '計測', sec.measured ? '計測済み' : '未計測');
       ensurePassengerEstimate();
-      if (passengerFlowBySection.has(sec.key)) addRow(dl, '推定通過人員(上下合計)', `${Math.round(passengerFlowBySection.get(sec.key)).toLocaleString('ja-JP')} 人/日`);
+      if (passengerFlowBySection.has(sec.key)) {
+        addRow(dl, '推定通過人員(上下合計)', `${Math.round(passengerFlowBySection.get(sec.key)).toLocaleString('ja-JP')} 人/日`);
+        const per = passengerFlowByCompany.get(sec.key);
+        if (per && per.size > 1) {
+          addRow(dl, '会社別の内訳', [...per].sort((x, y) => y[1] - x[1]).map(([c, v]) => `${c} ${Math.round(v).toLocaleString('ja-JP')}`).join(' ・ '));
+        }
+      }
       const names = sec.names || [];
       addRow(dl, '通る系統', names.length ? names.join(' ・ ') : '推定なし');
     }
@@ -3840,6 +3852,7 @@
   let stationByName = new Map();
   const passengerSources = new Map();  // CSVファイル名 -> 会社・駅ごとのレコード
   let passengerByCompany = new Map();  // 会社 -> 駅名(正規化) -> 利用者数
+  let passengerMeta = new Map();       // 会社 -> 駅名(正規化) -> { name, attrs, grade }
   const nameKey = (t) => String(t || '').normalize('NFKC').replace(/\s+/g, '').trim();
   let interchangeGroups = [];        // 駅番号が複数ある駅(同じ駅で乗り換えられる駅番号の組)
   // CSV を読む(引用符・改行に対応)
@@ -3955,51 +3968,96 @@
     for (const c of st.codes || []) if (stationByCode.has(c)) return stationByCode.get(c);
     return null;
   };
-  const passengerCompanyKey = (value) => nameKey(value);
-  function passengerRouteCompany(route) {
-    if (!route || !routeData || !routeData.stations) return '';
-    // 各停車駅のナンバリングを lines.csv で照合し、最も多く現れる会社を採用する。
-    // 路線名や系統名は会社判定に使わない。複数会社が同数なら誤判定を避けて除外する。
-    const votes = new Map();
-    for (const raw of route.stations || []) {
-      const id = String(raw).split('_')[0];
-      const row = routeData.stations[id];
-      const companiesAtStop = new Set();
-      for (const code of parseStationName(row && row.name).codes) {
-        const prefix = lineCodeOf(code);
-        const info = lineInfo.get(prefix);
-        const company = info && passengerCompanyKey(info.company);
-        if (company) companiesAtStop.add(company);
-      }
-      if (!companiesAtStop.size) continue;
-      const share = 1 / companiesAtStop.size;
-      for (const company of companiesAtStop) votes.set(company, (votes.get(company) || 0) + share);
+  // ---- 通過人員の推定 ----
+  // 会社ごとに「駅の利用者数」を乗車・降車に半分ずつ割り、往復対称のOD(行き先の配分)を作って区間へ積み上げる。
+  //  ・会社の線路網: CSVに載っている駅(保有社)どうしを結ぶ区間。路線データの会社判定(直通で外れる)には頼らない
+  //  ・SR白木支社・SR古莉亜支社…のような支社は「SR」1社にまとめる(支社をまたぐ移動がある)
+  //  ・行き先の選ばれやすさ: 距離抵抗 × 駅の性格(住宅→オフィス・商業のような目的の相性) × 大きな駅どうしの結びつき
+  //  ・経路: 所要時間が近い経路には分散(確率的経路選択)。乗換は同名の駅で3分
+  const PASSENGER_KINDS = ['home', 'work', 'shop', 'play', 'school'];
+  const PASSENGER_AFFINITY = {   // 目的の相性(対称): 住宅と勤務先は強く、住宅どうし・勤務先どうしは弱い
+    home:   { home: 0.25, work: 1.00, shop: 0.70, play: 0.60, school: 0.80 },
+    work:   { home: 1.00, work: 0.40, shop: 0.50, play: 0.30, school: 0.15 },
+    shop:   { home: 0.70, work: 0.50, shop: 0.35, play: 0.50, school: 0.20 },
+    play:   { home: 0.60, work: 0.30, shop: 0.50, play: 0.30, school: 0.10 },
+    school: { home: 0.80, work: 0.15, shop: 0.20, play: 0.10, school: 0.10 },
+  };
+  const passengerFlowByCompany = new Map();   // 区間 key -> (会社 -> 人/日)
+  let passengerReport = null;                 // 計算結果の内訳(状況表示用)
+  // 保有社名 → 計算の単位。「SR白木支社」のようなアルファベット+支社は、アルファベット部分で1社にする
+  const passengerCompanyKey = (value) => {
+    const s = String(value || '').normalize('NFKC').replace(/\s+/g, '').trim();
+    const m = s.match(/^([A-Za-z]+)\S*支社$/);
+    return m ? m[1] : s;
+  };
+  function passengerProfile(attrs, grade) {
+    const p = { home: 0, work: 0, shop: 0, play: 0, school: 0 };
+    for (const a of attrs) {
+      if (a === '住宅') p.home += 1;
+      else if (a === 'タワマン') p.home += 1.3;
+      else if (a === 'オフィス') p.work += 1;
+      else if (a === '商業') { p.shop += 1; p.work += 0.3; }
+      else if (a === '娯楽' || a === 'レジャー') p.play += 1;
+      else if (a === '学校') p.school += 1;
+      else if (a === '何もない') p.home += 0.25;
     }
-    const ranked = [...votes].sort((a, b) => b[1] - a[1]);
-    return ranked.length && (!ranked[1] || ranked[0][1] > ranked[1][1]) ? ranked[0][0] : '';
+    let sum = PASSENGER_KINDS.reduce((s, k) => s + p[k], 0);
+    if (sum <= 0) { p.home = 0.6; p.work = 0.2; p.shop = 0.2; sum = 1; }   // 属性が無い駅は、住宅中心の標準的な駅
+    for (const k of PASSENGER_KINDS) p[k] /= sum;
+    // 等級が高い(大きな)駅ほど、勤務・買い物の行き先になりやすい
+    const g = grade > 0 ? grade : 5;
+    const hub = g <= 2 ? 0.5 : g <= 4 ? 0.2 : 0;
+    p.work += hub * 0.6; p.shop += hub * 0.4;
+    sum = PASSENGER_KINDS.reduce((s, k) => s + p[k], 0);
+    for (const k of PASSENGER_KINDS) p[k] /= sum;
+    return p;
   }
-  function passengerRouteMap() {
-    const map = new Map();
-    for (const route of (routeData && routeData.routes) || []) {
-      const company = passengerRouteCompany(route);
-      if (company) map.set(route, company);
-    }
-    return map;
+  function passengerCompat(a, b) {
+    let v = 0;
+    for (const k of PASSENGER_KINDS) for (const l of PASSENGER_KINDS) v += a[k] * b[l] * PASSENGER_AFFINITY[k][l];
+    return v;
+  }
+  function passengerSettings() {
+    const num = (id, def, lo, hi) => {
+      const el = $(id), v = el ? parseFloat(el.value) : NaN;
+      return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
+    };
+    return { beta: num('passengerBeta', 0.05, 0.005, 1), attr: num('passengerAttr', 1, 0, 3), spread: num('passengerSpread', 2, 0, 30) };
   }
   function updatePassengerStatus() {
     const box = $('passengerStatus');
     if (!box) return;
-    const activeCompanies = passengerRouteMap();
-    let sourcePairs = 0, includedPairs = 0;
-    const operatingCompanies = new Set(activeCompanies.values());
-    for (const [company, stations] of passengerByCompany) {
-      sourcePairs += stations.size;
-      if (operatingCompanies.has(company)) includedPairs += stations.size;
-    }
     const files = [...passengerSources.keys()];
-    box.textContent = files.length
-      ? `${files.join('・')}を読込済み: ${passengerByCompany.size}社・${sourcePairs}社駅データ。路線データに会社が見つかった${includedPairs}社駅分を対象候補にし、未開業・未登録会社は除外します。`
-      : 'sr.csv と shitetsu.csv をHTMLと同じフォルダに置くと自動で読み込みます。';
+    const detail = $('passengerReport'), detailBox = $('passengerReportBox');
+    if (!files.length) {
+      box.textContent = 'sr.csv と shitetsu.csv をHTMLと同じフォルダに置くと自動で読み込みます。';
+      if (detailBox) detailBox.hidden = true;
+      return;
+    }
+    let dataTotal = 0, dataStations = 0;
+    for (const stations of passengerByCompany.values()) for (const u of stations.values()) { dataTotal += u; if (u > 0) dataStations++; }
+    if (!passengerReport) {
+      box.textContent = `${files.join('・')}を読込済み: ${passengerByCompany.size}社・${dataStations}駅(利用者あり)。`;
+      if (detailBox) detailBox.hidden = true;
+      return;
+    }
+    const r = passengerReport;
+    const pct = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
+    box.textContent = `${files.join('・')}を読込済み: ${passengerByCompany.size}社・${dataStations}駅。`
+      + `線路上に駅が見つかり計算に使えた利用者は ${pct(r.usedUsers, dataTotal)}%(${Math.round(r.usedUsers).toLocaleString('ja-JP')} / ${Math.round(dataTotal).toLocaleString('ja-JP')} 人/日)。`
+      + (r.trips > 0 ? ` 推定した移動は 1日 ${Math.round(r.trips).toLocaleString('ja-JP')} 人、平均 乗車${r.avgMin.toFixed(1)}分・${r.avgKm.toFixed(1)}km。` : '');
+    if (!detail || !detailBox) return;
+    detail.replaceChildren();
+    const rows = r.companies.filter((c) => c.users > 0 || c.missing.length);
+    for (const c of rows) {
+      const line = document.createElement('div');
+      const miss = c.missing.filter((m) => m.users > 0).sort((a, b) => b.users - a.users);
+      line.textContent = `${c.name}: ${c.used}/${c.stations}駅を計算` + (c.sections ? `・${c.sections}区間` : '・区間なし')
+        + (c.avgMin > 0 ? `・平均${c.avgMin.toFixed(1)}分` : '')
+        + (miss.length ? ` / 路線データに無い駅: ${miss.slice(0, 8).map((m) => `${m.name}(${m.users.toLocaleString('ja-JP')})`).join('、')}${miss.length > 8 ? ` ほか${miss.length - 8}駅` : ''}` : '');
+      detail.append(line);
+    }
+    detailBox.hidden = !rows.length;
   }
   function applyPassengerData(text, fileName) {
     const source = [], seen = new Set();
@@ -4008,29 +4066,40 @@
       const companyName = String(row['保有社'] || '').trim();
       if (!name || name.startsWith('#') || !companyName) continue; // 会社不明は未開業扱いで対象外
       const key = nameKey(name), company = passengerCompanyKey(companyName);
-      const pairKey = `${company}\u0000${key}`;
+      const pairKey = `${companyName}\u0000${key}`;
       if (!key || seen.has(pairKey)) continue; // 同じCSVの同一会社・同一駅の重複は1件だけ
       seen.add(pairKey);
-      const raw = String(row['利用者数'] || '').replace(/[\s,人]/g, '');
+      const raw = String(row['利用者数'] || '').normalize('NFKC').replace(/[\s,人]/g, '');
       const parsed = Number(raw), users = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-      source.push({ name, key, company, companyName, users });
+      const attrs = String(row['属性'] || '').split(/[、,，]/).map((v) => v.trim()).filter(Boolean);
+      const grade = Number(String(row['等級'] || '').normalize('NFKC')) || 0;
+      source.push({ name, key, company, companyName, users, attrs, grade });
     }
     passengerSources.set(fileName, source);
     passengerByCompany = new Map();
+    passengerMeta = new Map();
     for (const records of passengerSources.values()) for (const record of records) {
-      if (!passengerByCompany.has(record.company)) passengerByCompany.set(record.company, new Map());
-      const stations = passengerByCompany.get(record.company);
+      if (!passengerByCompany.has(record.company)) { passengerByCompany.set(record.company, new Map()); passengerMeta.set(record.company, new Map()); }
+      const stations = passengerByCompany.get(record.company), meta = passengerMeta.get(record.company);
       stations.set(record.key, (stations.get(record.key) || 0) + record.users);
+      const m = meta.get(record.key) || { name: record.name, attrs: new Set(), grade: 0 };
+      for (const a of record.attrs) m.attrs.add(a);
+      if (record.grade > 0 && (!m.grade || record.grade < m.grade)) m.grade = record.grade;
+      meta.set(record.key, m);
     }
     passengerFlowDirty = true;
     updatePassengerStatus();
     needsDraw = true;
   }
+
   function ensurePassengerEstimate() {
     if (!passengerFlowDirty) return;
     passengerFlowDirty = false;
     passengerFlowBySection.clear();
-    if (!rail || !passengerByCompany.size || !routeData || !routeData.routes) { updatePassengerStatus(); return; }
+    passengerFlowByCompany.clear();
+    passengerReport = null;
+    if (!rail || !passengerByCompany.size) { updatePassengerStatus(); return; }
+    const cfg = passengerSettings();
     const nodes = [...rail.stations.values()];
     const nodeIndex = new Map(nodes.map((st, i) => [st.id, i]));
     const nodesByName = new Map();
@@ -4038,133 +4107,201 @@
       const key = nameKey(st.ja);
       if (key) { if (!nodesByName.has(key)) nodesByName.set(key, []); nodesByName.get(key).push(i); }
     });
-    const routeCompanies = passengerRouteMap();
-    const routeAlias = buildStationAlias(rail, routeData);
-    const companyNodesByName = new Map();
-    for (const [route, company] of routeCompanies) {
-      if (!companyNodesByName.has(company)) companyNodesByName.set(company, new Map());
-      const byName = companyNodesByName.get(company);
-      for (const raw of route.stations || []) {
-        const id = String(raw).split('_')[0];
-        const row = routeData.stations && routeData.stations[id];
-        const key = nameKey(parseStationName(row && row.name).ja);
-        const candidates = nodesByName.get(key) || [];
-        if (!key || !candidates.length) continue;
-        let selected = nodeIndex.has(id) ? nodeIndex.get(id) : -1;
-        const canonical = resolveAlias(routeAlias, id);
-        if (selected < 0 && nodeIndex.has(canonical)) selected = nodeIndex.get(canonical);
-        if (selected < 0 && candidates.length === 1) selected = candidates[0];
-        if (selected < 0 && Number.isFinite(Number(row && row.x)) && Number.isFinite(Number(row && row.z))) {
-          selected = candidates.reduce((best, i) => {
-            const d = Math.hypot(nodes[i].x - Number(row.x), nodes[i].z - Number(row.z));
-            return !best || d < best.d ? { i, d } : best;
-          }, null)?.i ?? -1;
+    // 列車が走っている区間だけを線路網に使う(系統データが無い時は全区間)
+    const hasRoutes = !!(routeData && routeData.routes && routeData.routes.length);
+    const served = [];
+    for (const sec of rail.sections) {
+      const a = nodeIndex.get(sec.fromId), b = nodeIndex.get(sec.toId);
+      if (a === undefined || b === undefined || a === b) continue;
+      if (hasRoutes && !(sec.passengerRoutes && sec.passengerRoutes.length)) continue;
+      served.push({ sec, a, b });
+    }
+    const secsAt = nodes.map(() => []);
+    for (const s of served) { secsAt[s.a].push(s); secsAt[s.b].push(s); }
+    // 会社が持つ駅(CSVに載っている駅)。どの会社のCSVにも載っていない駅は、間にある駅として線路をつなぐのに使う
+    const ownedBy = new Map(), ownerCount = new Map();
+    for (const [company, rows] of passengerByCompany) {
+      const set = new Set();
+      for (const key of rows.keys()) for (const i of nodesByName.get(key) || []) set.add(i);
+      ownedBy.set(company, set);
+      for (const i of set) ownerCount.set(i, (ownerCount.get(i) || 0) + 1);
+    }
+    const theta = cfg.spread > 0 ? 1 / cfg.spread : Infinity;
+    // 大きな駅どうしは距離の抵抗を弱める(全社合計の利用者数で判断)
+    const globalUsers = new Map();
+    for (const rows of passengerByCompany.values()) for (const [key, users] of rows) globalUsers.set(key, (globalUsers.get(key) || 0) + users);
+    const report = { companies: [], usedUsers: 0, trips: 0, avgMin: 0, avgKm: 0 };
+    let sumMin = 0, sumKm = 0;
+
+    for (const [company, rows] of passengerByCompany) {
+      const own = ownedBy.get(company);
+      const meta = passengerMeta.get(company);
+      const entry = { name: company, stations: 0, used: 0, users: 0, sections: 0, missing: [], avgMin: 0 };
+      for (const [key, users] of rows) {
+        entry.stations++;
+        entry.users += users;
+        if (!(nodesByName.get(key) || []).length) entry.missing.push({ name: (meta.get(key) || {}).name || key, users });
+      }
+      report.companies.push(entry);
+      if (!own.size) continue;
+      // ① この会社の区間: 両端がこの会社の駅。CSVに載っていない駅が間に挟まる区間は、両側でこの会社の駅につながる時だけ入れる
+      const included = new Set(served.filter((s) => own.has(s.a) && own.has(s.b)));
+      const seenFree = new Set();
+      for (const start of own) for (const first of secsAt[start]) {
+        const other = first.a === start ? first.b : first.a;
+        if (ownerCount.get(other) || seenFree.has(other)) continue;
+        const comp = [], stack = [other], touch = new Set();
+        seenFree.add(other);
+        while (stack.length) {
+          const u = stack.pop(); comp.push(u);
+          for (const s of secsAt[u]) {
+            const v = s.a === u ? s.b : s.a;
+            if (ownerCount.get(v)) { if (own.has(v)) touch.add(v); } else if (!seenFree.has(v)) { seenFree.add(v); stack.push(v); }
+          }
         }
-        if (selected < 0) continue;
-        if (!byName.has(key)) byName.set(key, new Set());
-        byName.get(key).add(selected);
+        if (touch.size < 2) continue;
+        const inComp = new Set(comp);
+        for (const u of comp) for (const s of secsAt[u]) {
+          const v = s.a === u ? s.b : s.a;
+          if (inComp.has(v) || own.has(v)) included.add(s);
+        }
       }
-    }
-    const sectionCompanies = new Map();
-    for (const sec of rail.sections) for (const route of sec.passengerRoutes || []) {
-      const company = routeCompanies.get(route);
-      if (!company) continue;
-      if (!sectionCompanies.has(sec)) sectionCompanies.set(sec, new Set());
-      sectionCompanies.get(sec).add(company);
-    }
-    const beta = 0.05;
-    // 全社合計の駅利用者数を、会社をまたいだ駅間の結びつきやすさに使う。
-    const globalStationUsers = new Map();
-    for (const stations of passengerByCompany.values()) for (const [key, users] of stations) {
-      globalStationUsers.set(key, (globalStationUsers.get(key) || 0) + users);
-    }
-    for (const [company, stationRows] of passengerByCompany) {
-      const companyNames = companyNodesByName.get(company);
-      if (!companyNames) continue; // 運行系統に現れない会社(未開業)は計算しない
+      entry.sections = included.size;
+      if (!included.size) continue;
+      // ② 計算用のノード(この会社の区間につながる駅)
+      const local = new Map(), localNodes = [];
+      const lid = (n) => { if (!local.has(n)) { local.set(n, localNodes.length); localNodes.push(n); } return local.get(n); };
+      for (const s of included) { lid(s.a); lid(s.b); }
+      const V = localNodes.length;
       const groups = [];
-      for (const [key, users] of stationRows) {
-        const ids = companyNames.get(key);
-        if (users > 0 && ids && ids.size) groups.push({ key, users, globalUsers: globalStationUsers.get(key) || users, terminals: [...ids] });
+      for (const [key, users] of rows) {
+        if (!(users > 0)) continue;
+        const terminals = (nodesByName.get(key) || []).filter((n) => local.has(n)).map((n) => local.get(n));
+        if (!terminals.length) continue;
+        const m = meta.get(key) || { attrs: new Set(), grade: 0 };
+        const sr = stationRowOf(nodes[localNodes[terminals[0]]]);
+        const attrs = m.attrs.size ? [...m.attrs] : (sr ? sr.attributes : []);
+        groups.push({ key, users, terminals, globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
       }
+      entry.used = groups.length;
       if (groups.length < 2) continue;
-      const adjacency = nodes.map(() => []);
-      const addEdge = (a, b, cost, section = null) => {
-        if (a === undefined || b === undefined || a === b || !(cost >= 0)) return;
-        adjacency[a].push({ to: b, cost, section });
-      };
-      for (const sec of rail.sections) {
-        if (!sectionCompanies.get(sec)?.has(company)) continue;
-        const a = nodeIndex.get(sec.fromId), b = nodeIndex.get(sec.toId);
-        if (a === undefined || b === undefined) continue;
-        const ab = Number(edgeSec(sec.fromId, sec.toId, sec.distance));
-        const ba = Number(edgeSec(sec.toId, sec.fromId, sec.distance));
-        const seconds = (Number.isFinite(ab) && ab > 0 && Number.isFinite(ba) && ba > 0)
-          ? (ab + ba) / 2 : (Number.isFinite(ab) && ab > 0 ? ab : Number.isFinite(ba) && ba > 0 ? ba : Math.max(1, sec.distance / 14));
-        const minutes = Math.max(0.01, seconds / 60);
-        addEdge(a, b, minutes, sec); addEdge(b, a, minutes, sec);
+      const G = groups.length, N = V + 2 * G;     // 後ろ2G個は、駅ごとの出発点・到着点
+      const adj = Array.from({ length: N }, () => []);
+      const addEdge = (u, v, cost, section) => adj[u].push({ to: v, cost, section });
+      for (const s of included) {
+        const ab = Number(edgeSec(s.sec.fromId, s.sec.toId, s.sec.distance)), ba = Number(edgeSec(s.sec.toId, s.sec.fromId, s.sec.distance));
+        const seconds = (ab > 0 && ba > 0) ? (ab + ba) / 2 : (ab > 0 ? ab : ba > 0 ? ba : Math.max(1, s.sec.distance / 14));
+        const minutes = Math.max(0.05, seconds / 60);
+        addEdge(local.get(s.a), local.get(s.b), minutes, s.sec); addEdge(local.get(s.b), local.get(s.a), minutes, s.sec);
       }
-      // 同じ会社の同名乗換駅のみ徒歩3分で結び、他社路線への乗入れ需要は混ぜない。
-      for (const ids of companyNames.values()) {
-        const terminals = [...ids];
-        if (terminals.length < 2) continue;
-        const hub = terminals[0];
-        for (let i = 1; i < terminals.length; i++) { addEdge(hub, terminals[i], 3); addEdge(terminals[i], hub, 3); }
+      // 同じ名前の駅(別の駅ID)は乗換駅: どれからどれへも3分
+      const sameName = new Map();
+      localNodes.forEach((n, li) => { const k = nameKey(nodes[n].ja); if (!sameName.has(k)) sameName.set(k, []); sameName.get(k).push(li); });
+      for (const ids of sameName.values()) for (let i = 1; i < ids.length; i++) {
+        addEdge(ids[0], ids[i], 1.5, null); addEdge(ids[i], ids[0], 1.5, null);
       }
-      const n = groups.length, f = Array.from({ length: n }, () => new Float64Array(n)), allPaths = [];
-      for (let oi = 0; oi < n; oi++) {
-        const src = groups[oi].terminals[0], dist = new Float64Array(nodes.length); dist.fill(Infinity); dist[src] = 0;
-        const prevNode = new Int32Array(nodes.length); prevNode.fill(-1);
-        const prevSection = new Array(nodes.length), done = new Uint8Array(nodes.length);
-        for (let k = 0; k < nodes.length; k++) {
+      groups.forEach((g, gi) => {
+        for (const t of g.terminals) { addEdge(V + gi, t, 0.01, null); addEdge(t, V + G + gi, 0.01, null); }
+      });
+      // ③ 駅ごとに最短時間を求める(出発点 → 全ノード)
+      const dijkstra = (src) => {
+        const dist = new Float64Array(N).fill(Infinity), done = new Uint8Array(N);
+        dist[src] = 0;
+        for (let k = 0; k < N; k++) {
           let u = -1, best = Infinity;
-          for (let j = 0; j < nodes.length; j++) if (!done[j] && dist[j] < best) { best = dist[j]; u = j; }
+          for (let j = 0; j < N; j++) if (!done[j] && dist[j] < best) { best = dist[j]; u = j; }
           if (u < 0) break;
           done[u] = 1;
-          for (const e of adjacency[u]) if (!done[e.to] && best + e.cost < dist[e.to]) {
-            dist[e.to] = best + e.cost; prevNode[e.to] = u; prevSection[e.to] = e.section;
-          }
+          for (const e of adj[u]) if (best + e.cost < dist[e.to]) dist[e.to] = best + e.cost;
         }
-        const targetNodes = new Int32Array(n); targetNodes.fill(-1);
-        for (let j = 0; j < n; j++) {
-          let best = Infinity;
-          for (const t of groups[j].terminals) if (dist[t] < best) { best = dist[t]; targetNodes[j] = t; }
-          if (j !== oi && Number.isFinite(best)) {
-            // 1万人同士を基準に、両駅の利用者が多いほど長距離の減衰を緩める(最大1.5倍)。
-            const mutualUse = Math.min(groups[oi].globalUsers, groups[j].globalUsers);
-            const affinity = 1 + 0.25 * Math.min(2, Math.max(0, Math.log10(Math.max(1, mutualUse) / 10000)));
-            f[oi][j] = Math.exp(-beta * best / affinity);
-          }
-        }
-        allPaths.push({ prevNode, prevSection, targetNodes });
+        return dist;
+      };
+      const dists = groups.map((g, gi) => dijkstra(V + gi));
+      const f = Array.from({ length: G }, () => new Float64Array(G));
+      for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
+        if (i === j) continue;
+        const t = dists[i][V + G + j];
+        if (!Number.isFinite(t)) continue;
+        const mutual = Math.min(groups[i].globalUsers, groups[j].globalUsers);
+        const affinity = 1 + 0.25 * Math.min(2, Math.max(0, Math.log10(Math.max(1, mutual) / 10000)));
+        const compat = cfg.attr > 0 ? Math.pow(Math.max(0.02, passengerCompat(groups[i].profile, groups[j].profile)), cfg.attr) : 1;
+        f[i][j] = Math.exp(-cfg.beta * t / affinity) * compat;
       }
-      // シミュレーターと同様、会社ごとの乗降人員を乗車・降車に半分ずつ割って往復対称に配分。
-      const board = groups.map((g) => g.users / 2), a = new Float64Array(n), b = new Float64Array(n).fill(1);
+      // ④ 往復対称のOD: 各駅の乗車(=降車)が利用者数の半分になるように配分する
+      const board = groups.map((g) => g.users / 2), a = new Float64Array(G), b = new Float64Array(G).fill(1);
       for (let iter = 0; iter < 300; iter++) {
-        for (let i = 0; i < n; i++) {
-          let sum = 0; for (let j = 0; j < n; j++) sum += b[j] * f[i][j];
+        for (let i = 0; i < G; i++) {
+          let sum = 0; for (let j = 0; j < G; j++) sum += b[j] * f[i][j];
           a[i] = sum > 0 ? board[i] / sum : 0;
         }
         let maxError = 0;
-        for (let j = 0; j < n; j++) {
-          let sum = 0; for (let i = 0; i < n; i++) sum += a[i] * f[i][j];
+        for (let j = 0; j < G; j++) {
+          let sum = 0; for (let i = 0; i < G; i++) sum += a[i] * f[i][j];
           const next = sum > 0 ? board[j] / sum : 0;
           maxError = Math.max(maxError, Math.abs(next - b[j]) / (b[j] || 1)); b[j] = next;
         }
         if (maxError < 1e-6 && iter > 5) break;
       }
-      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-        if (i === j || f[i][j] <= 0) continue;
-        const flow = a[i] * b[j] * f[i][j];
-        if (!(flow > 0)) continue;
-        const path = allPaths[i], target = path.targetNodes[j];
-        let cur = target, guard = 0;
-        while (cur !== groups[i].terminals[0] && cur >= 0 && guard++ < nodes.length) {
-          const sec = path.prevSection[cur], prev = path.prevNode[cur];
-          if (sec) passengerFlowBySection.set(sec.key, (passengerFlowBySection.get(sec.key) || 0) + flow);
-          cur = prev;
+      // ⑤ 経路への割り当て(所要時間が近い経路には分散): 出発駅ごとに、全行き先ぶんをまとめて流す
+      let coTrips = 0, coMin = 0;
+      const add = (sec, v) => {
+        passengerFlowBySection.set(sec.key, (passengerFlowBySection.get(sec.key) || 0) + v);
+        let per = passengerFlowByCompany.get(sec.key);
+        if (!per) { per = new Map(); passengerFlowByCompany.set(sec.key, per); }
+        per.set(company, (per.get(company) || 0) + v);
+        sumKm += v * (sec.distance || 0) / 1000;
+      };
+      for (let i = 0; i < G; i++) {
+        const r = dists[i];
+        const order = [];
+        for (let u = 0; u < N; u++) if (Number.isFinite(r[u])) order.push(u);
+        order.sort((x, y) => r[x] - r[y]);
+        // 出発点から見て遠ざかる向きの辺だけを使う。辺の重み = exp(-(最短からの遅れ)/spread)
+        const incoming = new Map(), weight = new Float64Array(N);
+        weight[V + i] = 1;
+        for (const u of order) {
+          if (!(weight[u] > 0)) continue;
+          for (const e of adj[u]) {
+            const v = e.to;
+            if (!Number.isFinite(r[v]) || !(r[v] > r[u] + 1e-9)) continue;
+            const late = Math.max(0, r[u] + e.cost - r[v]);
+            const l = theta === Infinity ? (late < 1e-6 ? 1 : 0) : Math.exp(-late * theta);
+            if (!(l > 0)) continue;
+            const w = l * weight[u];
+            weight[v] += w;
+            if (!incoming.has(v)) incoming.set(v, []);
+            incoming.get(v).push({ u, w, sec: e.section });
+          }
+        }
+        const load = new Float64Array(N);
+        for (let j = 0; j < G; j++) {
+          if (i === j || f[i][j] <= 0) continue;
+          const flow = a[i] * b[j] * f[i][j];
+          if (!(flow > 0)) continue;
+          load[V + G + j] += flow;
+          coTrips += flow; coMin += flow * r[V + G + j];
+        }
+        for (let k = order.length - 1; k >= 0; k--) {
+          const v = order[k];
+          if (!(load[v] > 0)) continue;
+          const list = incoming.get(v);
+          if (!list) continue;
+          let total = 0; for (const l of list) total += l.w;
+          if (!(total > 0)) continue;
+          for (const l of list) {
+            const share = load[v] * l.w / total;
+            load[l.u] += share;
+            if (l.sec) add(l.sec, share);
+          }
         }
       }
+      entry.avgMin = coTrips > 0 ? coMin / coTrips : 0;
+      report.usedUsers += groups.reduce((s, g) => s + g.users, 0);
+      report.trips += coTrips; sumMin += coMin;
     }
+    report.avgMin = report.trips > 0 ? sumMin / report.trips : 0;
+    report.avgKm = report.trips > 0 ? sumKm / report.trips : 0;
+    passengerReport = report;
     updatePassengerStatus();
   }
   const lineColorOn = () => $('showLineColor').checked && lineInfo.size > 0;
@@ -4289,6 +4426,9 @@
 
   $('showLineColor').addEventListener('change', () => { needsDraw = true; });
   $('showPassengerFlow').addEventListener('change', () => { if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
+  for (const id of ['passengerBeta', 'passengerAttr', 'passengerSpread']) {
+    $(id).addEventListener('change', () => { passengerFlowDirty = true; if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
+  }
   $('showPrefName').addEventListener('change', () => { needsDraw = true; });
 
   // ---- 停車する種別(train.json の系統 と color.txt の色) ----
