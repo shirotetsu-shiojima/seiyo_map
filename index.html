@@ -555,9 +555,10 @@
         </div>
         <div class="set-group">
           <h2 class="set-h">通過人員推定</h2>
-          <label class="set-row"><span>区間の通過人員を色で表示<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
+          <label class="set-row"><span>鉄道のラインカラーを通過人員に応じた色にする<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
           <div id="passengerStatus" class="meta">会社別の駅利用者CSVを読み込んでいます…</div>
           <div class="meta">乗降人員を乗車・降車に半分ずつ割り、シミュレーターと同じ往復対称のOD配分(β=0.05)で区間に積算します。経路は区間所要時間の最短経路、乗換は3分として推定します。</div>
+          <div class="meta">色の境界: 1万人、5万人、10万人、50万人、100万人、150万人、200万人、250万人、300万人/日</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">道路</h2>
@@ -604,7 +605,7 @@
           <h2 class="set-h">凡例</h2>
           <div id="legend" class="legend-grid">
             <div class="row"><span class="sw" style="height:12px;background:linear-gradient(90deg,#3184d8,#52b788,#f2cf4a,#ed7b35,#d94343)"></span>地価(3〜5,000万CP/チャンク・対数)</div>
-            <div class="row"><span class="sw" style="height:8px;background:linear-gradient(90deg,#78909c,#4285f4,#35a85b,#f3c342,#e34a42)"></span>通過人員・上下合計(〜500 / 2,000 / 10,000 / 50,000人/日〜)</div>
+            <div class="row"><span class="sw" style="height:8px;background:linear-gradient(90deg,#3c7fff,#3ddfff,#3dffcb,#3dff8a,#b5ff3d,#fff53d,#ffb43d,#ff6a3d,#ff3d3d,#c32f2f)"></span>通過人員による鉄道色(人/日・上下合計)</div>
             <div class="row"><span class="sw" style="height:8px;background:#62d682;box-shadow:inset 0 0 0 2px #3a9d57"></span>高速道路</div>
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
@@ -3130,11 +3131,16 @@
   }
 
   function passengerFlowColor(value) {
-    if (value < 500) return '#78909c';
-    if (value < 2000) return '#4285f4';
-    if (value < 10000) return '#35a85b';
-    if (value < 50000) return '#f3c342';
-    return '#e34a42';
+    if (value < 10000) return '#3c7fff';
+    if (value < 50000) return '#3ddfff';
+    if (value < 100000) return '#3dffcb';
+    if (value < 500000) return '#3dff8a';
+    if (value < 1000000) return '#b5ff3d';
+    if (value < 1500000) return '#fff53d';
+    if (value < 2000000) return '#ffb43d';
+    if (value < 2500000) return '#ff6a3d';
+    if (value < 3000000) return '#ff3d3d';
+    return '#c32f2f';
   }
   function drawPassengerFlow(list) {
     if (!$('showPassengerFlow').checked) return;
