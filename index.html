@@ -3137,15 +3137,15 @@
   }
 
   function passengerFlowColor(value) {
-    if (value < 10000) return '#3c7fff';
-    if (value < 50000) return '#3ddfff';
-    if (value < 100000) return '#3dffcb';
-    if (value < 500000) return '#3dff8a';
-    if (value < 1000000) return '#b5ff3d';
-    if (value < 1500000) return '#fff53d';
-    if (value < 2000000) return '#ffb43d';
-    if (value < 2500000) return '#ff6a3d';
-    if (value < 3000000) return '#ff3d3d';
+    if (value < 5000) return '#3c7fff';
+    if (value < 25000) return '#3ddfff';
+    if (value < 50000) return '#3dffcb';
+    if (value < 250000) return '#3dff8a';
+    if (value < 500000) return '#b5ff3d';
+    if (value < 750000) return '#fff53d';
+    if (value < 1000000) return '#ffb43d';
+    if (value < 1250000) return '#ff6a3d';
+    if (value < 1500000) return '#ff3d3d';
     return '#c32f2f';
   }
   function drawPassengerFlow(list) {
