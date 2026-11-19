@@ -562,6 +562,7 @@
           <label class="set-row"><span>距離抵抗 β<span class="sub">大きいほど、近い駅どうしの移動が増えます(1分あたり)</span></span><input type="number" class="num-in" id="passengerBeta" value="0.05" min="0.005" max="1" step="0.005"></label>
           <label class="set-row"><span>駅の性格による行き先の偏り<span class="sub">0=なし。住宅の駅からオフィス・商業の駅へ、のように属性と等級で行き先が偏ります(1が標準)</span></span><input type="number" class="num-in" id="passengerAttr" value="1" min="0" max="3" step="0.1"></label>
           <label class="set-row"><span>経路の分散(分)<span class="sub">0=最短経路だけ。所要時間がこの程度しか違わない経路には客が分かれます</span></span><input type="number" class="num-in" id="passengerSpread" value="2" min="0" max="30" step="0.5"></label>
+          <label class="set-row"><span>巨大駅の需要の補正<span class="sub">0=なし。等級1・2・3の駅の出発・到着人数を、1なら等級1で2倍・等級2で1.6倍・等級3で1.25倍にします。郊外から巨大駅への流れが太くなります</span></span><input type="number" class="num-in" id="passengerHub" value="1" min="0" max="4" step="0.1"></label>
           <div class="meta">CSVに載っている駅(保有社)どうしを結ぶ区間を、その会社の線路網として推定します(SR○○支社はSR1社)。乗降人員は乗車・降車に半分ずつ割り、往復対称OD配分で積算します。行き先は「距離抵抗」「駅の性格(属性・等級)の相性」「大きな駅どうしの結びつき」で決まり、経路は区間所要時間の最短に近いものへ分散します。同じ駅で路線を乗り換える時は3分で、駅の利用者数には同じ会社内の乗換(降りて乗る=2回分)も含まれるものとして、乗換が多い駅は出発・到着の人数を減らし、乗換が利用者数に収まらない駅は乗換を不便にして調整します。</div>
           <div class="meta">色の境界: 0.5万、2.5万、5万、25万、50万、75万、100万、125万、150万人/日(線の太さも人数に応じて太くなります)</div>
         </div>
@@ -4022,7 +4023,7 @@
       const el = $(id), v = el ? parseFloat(el.value) : NaN;
       return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
     };
-    return { beta: num('passengerBeta', 0.05, 0.005, 1), attr: num('passengerAttr', 1, 0, 3), spread: num('passengerSpread', 2, 0, 30) };
+    return { beta: num('passengerBeta', 0.05, 0.005, 1), attr: num('passengerAttr', 1, 0, 3), spread: num('passengerSpread', 2, 0, 30), hub: num('passengerHub', 1, 0, 4) };
   }
   function updatePassengerStatus() {
     const box = $('passengerStatus');
@@ -4199,7 +4200,8 @@
         const m = meta.get(key) || { attrs: new Set(), grade: 0 };
         const sr = stationRowOf(nodes[localNodes[terminals[0]].n]);
         const attrs = m.attrs.size ? [...m.attrs] : (sr ? sr.attributes : []);
-        groups.push({ key, users, terminals, globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
+        const grade = m.grade || (sr && sr.grade) || 0;
+        groups.push({ key, users, terminals, grade, boost: 1 + cfg.hub * ({ 1: 1, 2: 0.6, 3: 0.25 }[grade] || 0), globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
       }
       entry.used = groups.length;
       if (groups.length < 2) continue;
@@ -4278,6 +4280,7 @@
       };
       // 往復対称のOD: 各駅の乗車(=降車)が board になるように配分する
       const solveOD = (board) => {
+        const att = board;
         const a = new Float64Array(G), b = new Float64Array(G).fill(1);
         for (let iter = 0; iter < 300; iter++) {
           for (let i = 0; i < G; i++) {
@@ -4287,7 +4290,7 @@
           let maxError = 0;
           for (let j = 0; j < G; j++) {
             let sum = 0; for (let i = 0; i < G; i++) sum += a[i] * f[i][j];
-            const next = sum > 0 ? board[j] / sum : 0;
+            const next = sum > 0 ? att[j] / sum : 0;
             maxError = Math.max(maxError, Math.abs(next - b[j]) / (b[j] || 1)); b[j] = next;
           }
           if (maxError < 1e-6 && iter > 5) break;
@@ -4303,7 +4306,8 @@
           const load = new Float64Array(N);
           for (let j = 0; j < G; j++) {
             if (i === j || f[i][j] <= 0) continue;
-            const flow = a[i] * b[j] * f[i][j];
+            // 行きと帰りは同じ人数(往復): 大きな駅へ向かう分と戻る分を平均する
+            const flow = 0.5 * (a[i] * b[j] * f[i][j] + a[j] * b[i] * f[j][i]);
             if (!(flow > 0)) continue;
             load[V + G + j] += flow;
             trips += flow; minutes += flow * r[V + G + j];
@@ -4326,7 +4330,8 @@
         return { secFlow, xferFlow, trips, minutes };
       };
       // ⑤ 利用者数には同じ会社内の乗換(降りて乗る=2回分)も含まれる: 乗換人員を引いた残りを、その駅の出発・到着の人数にする。乗換は経路で決まるので数回繰り返す
-      const board0 = groups.map((g) => g.users / 2), board = board0.slice();
+      // 等級の高い巨大駅は、CSVの利用者数だけでは周辺からの需要を受け止めきれないので、乗車・降車とも boost 倍にして郊外からの流れを太くする
+      const board0 = groups.map((g) => g.users / 2 * g.boost), board = board0.slice();
       let res = null, xferTotal = 0;
       const pen = new Map();   // 駅 -> 乗換に足す所要時間(分)。乗換が駅の利用者数に収まらない駅だけ増える
       for (let it = 0; it < 12; it++) {
@@ -4491,7 +4496,7 @@
 
   $('showLineColor').addEventListener('change', () => { needsDraw = true; });
   $('showPassengerFlow').addEventListener('change', () => { if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
-  for (const id of ['passengerBeta', 'passengerAttr', 'passengerSpread']) {
+  for (const id of ['passengerBeta', 'passengerAttr', 'passengerSpread', 'passengerHub']) {
     $(id).addEventListener('change', () => { passengerFlowDirty = true; if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
   }
   $('showPrefName').addEventListener('change', () => { needsDraw = true; });
