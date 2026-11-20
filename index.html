@@ -563,6 +563,8 @@
           <label class="set-row"><span>駅の性格による行き先の偏り<span class="sub">0=なし。住宅の駅からオフィス・商業の駅へ、のように属性と等級で行き先が偏ります(1が標準)</span></span><input type="number" class="num-in" id="passengerAttr" value="1" min="0" max="3" step="0.1"></label>
           <label class="set-row"><span>経路の分散(分)<span class="sub">0=最短経路だけ。所要時間がこの程度しか違わない経路には客が分かれます</span></span><input type="number" class="num-in" id="passengerSpread" value="2" min="0" max="30" step="0.5"></label>
           <label class="set-row"><span>巨大駅の需要の補正<span class="sub">0=なし。等級1・2・3の駅の出発・到着人数を、1なら等級1で2倍・等級2で1.6倍・等級3で1.25倍にします。郊外から巨大駅への流れが太くなります</span></span><input type="number" class="num-in" id="passengerHub" value="1" min="0" max="4" step="0.1"></label>
+          <label class="set-row"><span>都心ターミナル駅<span class="sub">駅名を「、」区切りで。その会社の路線に含まれる場合、郊外の駅の乗車の一定割合がここへ向かいます</span></span><input type="text" class="num-in" style="width:150px;text-align:left" id="passengerCbd" value="舞が丘、新白木、白木、湊浜"></label>
+          <label class="set-row"><span>都心への集中率<span class="sub">0=なし。0.5なら郊外の駅の乗車の半分が都心ターミナルへ向かい、ターミナル付近が最混雑区間になります</span></span><input type="number" class="num-in" id="passengerCbdRate" value="0.5" min="0" max="0.95" step="0.05"></label>
           <div class="meta">CSVに載っている駅(保有社)どうしを結ぶ区間を、その会社の線路網として推定します(SR○○支社はSR1社)。乗降人員は乗車・降車に半分ずつ割り、往復対称OD配分で積算します。行き先は「距離抵抗」「駅の性格(属性・等級)の相性」「大きな駅どうしの結びつき」で決まり、経路は区間所要時間の最短に近いものへ分散します。同じ駅で路線を乗り換える時は3分で、駅の利用者数には同じ会社内の乗換(降りて乗る=2回分)も含まれるものとして、乗換が多い駅は出発・到着の人数を減らし、乗換が利用者数に収まらない駅は乗換を不便にして調整します。</div>
           <div class="meta">色の境界: 0.5万、2.5万、5万、25万、50万、75万、100万、125万、150万人/日(線の太さも人数に応じて太くなります)</div>
         </div>
@@ -4023,7 +4025,9 @@
       const el = $(id), v = el ? parseFloat(el.value) : NaN;
       return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
     };
-    return { beta: num('passengerBeta', 0.05, 0.005, 1), attr: num('passengerAttr', 1, 0, 3), spread: num('passengerSpread', 2, 0, 30), hub: num('passengerHub', 1, 0, 4) };
+    return { beta: num('passengerBeta', 0.05, 0.005, 1), attr: num('passengerAttr', 1, 0, 3), spread: num('passengerSpread', 2, 0, 30), hub: num('passengerHub', 1, 0, 4),
+      cbdRate: num('passengerCbdRate', 0.5, 0, 0.95),
+      cbd: new Set((($('passengerCbd') || {}).value || '').split(/[、,，\s]+/).map((v) => nameKey(v)).filter(Boolean)) };
   }
   function updatePassengerStatus() {
     const box = $('passengerStatus');
@@ -4201,7 +4205,7 @@
         const sr = stationRowOf(nodes[localNodes[terminals[0]].n]);
         const attrs = m.attrs.size ? [...m.attrs] : (sr ? sr.attributes : []);
         const grade = m.grade || (sr && sr.grade) || 0;
-        groups.push({ key, users, terminals, grade, boost: 1 + cfg.hub * ({ 1: 1, 2: 0.6, 3: 0.25 }[grade] || 0), globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
+        groups.push({ key, users, terminals, grade, cbd: cfg.cbd.has(key), boost: 1 + cfg.hub * ({ 1: 1, 2: 0.6, 3: 0.25 }[grade] || 0), globalUsers: globalUsers.get(key) || users, profile: passengerProfile(attrs, m.grade || (sr && sr.grade) || 0) });
       }
       entry.used = groups.length;
       if (groups.length < 2) continue;
@@ -4280,12 +4284,32 @@
       };
       // 往復対称のOD: 各駅の乗車(=降車)が board になるように配分する
       const solveOD = (board) => {
-        const att = board;
+        // 都心ターミナル: 都心以外の駅の乗車のうち cbdRate の割合は、同じ会社の都心ターミナルへ向かう(行きと帰りで往復)
+        const cbdFlow = Array.from({ length: G }, () => new Float64Array(G));
+        const rest = Array.from(board);
+        if (cfg.cbdRate > 0 && groups.some((g) => g.cbd)) {
+          for (let i = 0; i < G; i++) {
+            if (groups[i].cbd) continue;
+            let sum = 0;
+            const w = new Float64Array(G);
+            for (let j = 0; j < G; j++) {
+              if (!groups[j].cbd) continue;
+              const t = dists[i][V + G + j];
+              if (Number.isFinite(t)) { w[j] = board[j] * Math.exp(-cfg.beta * t); sum += w[j]; }
+            }
+            if (!(sum > 0)) continue;
+            const share = cfg.cbdRate * board[i];
+            rest[i] -= share;
+            for (let j = 0; j < G; j++) if (w[j] > 0) { cbdFlow[i][j] = share * w[j] / sum; cbdFlow[j][i] = cbdFlow[i][j]; rest[j] -= cbdFlow[i][j]; }
+          }
+          for (let i = 0; i < G; i++) rest[i] = Math.max(0, rest[i]);
+        }
+        const att = rest;
         const a = new Float64Array(G), b = new Float64Array(G).fill(1);
         for (let iter = 0; iter < 300; iter++) {
           for (let i = 0; i < G; i++) {
             let sum = 0; for (let j = 0; j < G; j++) sum += b[j] * f[i][j];
-            a[i] = sum > 0 ? board[i] / sum : 0;
+            a[i] = sum > 0 ? rest[i] / sum : 0;
           }
           let maxError = 0;
           for (let j = 0; j < G; j++) {
@@ -4295,19 +4319,19 @@
           }
           if (maxError < 1e-6 && iter > 5) break;
         }
-        return { a, b };
+        return { a, b, cbdFlow };
       };
       // 経路への割り当て: 出発駅ごとに全行き先ぶんをまとめて流す。区間の人数と、駅ごとの乗換人員を返す
-      const assign = (a, b) => {
+      const assign = (a, b, cbdFlow) => {
         const secFlow = new Map(), xferFlow = new Map();
         let trips = 0, minutes = 0;
         for (let i = 0; i < G; i++) {
           const { r, order, incoming } = pre[i];
           const load = new Float64Array(N);
           for (let j = 0; j < G; j++) {
-            if (i === j || f[i][j] <= 0) continue;
+            if (i === j || (f[i][j] <= 0 && cbdFlow[i][j] <= 0)) continue;
             // 行きと帰りは同じ人数(往復): 大きな駅へ向かう分と戻る分を平均する
-            const flow = 0.5 * (a[i] * b[j] * f[i][j] + a[j] * b[i] * f[j][i]);
+            const flow = 0.5 * (a[i] * b[j] * f[i][j] + a[j] * b[i] * f[j][i]) + cbdFlow[i][j];
             if (!(flow > 0)) continue;
             load[V + G + j] += flow;
             trips += flow; minutes += flow * r[V + G + j];
@@ -4336,8 +4360,8 @@
       const pen = new Map();   // 駅 -> 乗換に足す所要時間(分)。乗換が駅の利用者数に収まらない駅だけ増える
       for (let it = 0; it < 12; it++) {
         build();
-        const { a, b } = solveOD(board);
-        res = assign(a, b);
+        const { a, b, cbdFlow } = solveOD(board);
+        res = assign(a, b, cbdFlow);
         if (it === 11) break;
         let change = 0;
         for (let i = 0; i < G; i++) {
@@ -4496,7 +4520,7 @@
 
   $('showLineColor').addEventListener('change', () => { needsDraw = true; });
   $('showPassengerFlow').addEventListener('change', () => { if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
-  for (const id of ['passengerBeta', 'passengerAttr', 'passengerSpread', 'passengerHub']) {
+  for (const id of ['passengerBeta', 'passengerAttr', 'passengerSpread', 'passengerHub', 'passengerCbd', 'passengerCbdRate']) {
     $(id).addEventListener('change', () => { passengerFlowDirty = true; if ($('showPassengerFlow').checked) ensurePassengerEstimate(); needsDraw = true; });
   }
   $('showPrefName').addEventListener('change', () => { needsDraw = true; });
