@@ -1,7 +1,7 @@
-<!DOCTYPE html>
-<!-- saved from url=(0114)file:///Users/r2009/Documents/Codex/2026-11-13/new-chat/outputs/seiyo_map-numbering-update/index.html#v=0,0,4.0000 -->
-<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>星陽マップ</title>
 <meta name="theme-color" content="#172a52">
@@ -9,9 +9,9 @@
   /* 保存した明るさを、画面が出る前に反映する(ちらつき防止) */
   try { var t = localStorage.getItem('seiyo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com/">
-<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-<link href="./index_files/css2" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
      星陽マップ — デザイントークン
@@ -421,73 +421,75 @@
 </style>
 </head>
 <body>
-<canvas id="map" aria-label="星陽の地図" width="2880" height="1556" class="dragging"></canvas>
+<canvas id="map" aria-label="星陽の地図"></canvas>
 <div id="drop">JSONまたは地図画像をドロップして読み込む</div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- 地図の上: 表示する情報をすぐ切り替える -->
 <div id="mapbar" class="mapbar" role="toolbar" aria-label="地図に表示する情報">
   <button type="button" class="lchip" data-layer="rail" aria-pressed="true">
-    <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"></rect><path d="M5 11h14M9 21l2-4M15 21l-2-4"></path><circle cx="9" cy="14" r=".6"></circle><circle cx="15" cy="14" r=".6"></circle></svg>鉄道</button>
+    <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".6"/><circle cx="15" cy="14" r=".6"/></svg>鉄道</button>
   <button type="button" class="lchip" data-layer="road" aria-pressed="true">
-    <svg class="i" viewBox="0 0 24 24"><path d="M8 3 4 21M16 3l4 18M12 4v3M12 11v3M12 18v3"></path></svg>道路</button>
+    <svg class="i" viewBox="0 0 24 24"><path d="M8 3 4 21M16 3l4 18M12 4v3M12 11v3M12 18v3"/></svg>道路</button>
   <button type="button" class="lchip" data-layer="bg" aria-pressed="true">
-    <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><path d="m3 16 5-5 4 4 3-3 6 6"></path><circle cx="8.5" cy="8.5" r="1.3"></circle></svg>背景地図</button>
+    <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.3"/></svg>背景地図</button>
   <button type="button" class="lchip" data-layer="train" aria-pressed="false">
-    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"></path></svg>列車の位置<span class="live"></span></button>
-  <button type="button" class="lchip focus-chip" id="focusChip" hidden="" aria-label="路線の強調を解除"></button>
+    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/></svg>列車の位置<span class="live"></span></button>
+  <button type="button" class="lchip focus-chip" id="focusChip" hidden aria-label="路線の強調を解除"></button>
 </div>
 
 <button type="button" class="sb-open" id="openTop" aria-label="サイドバーを開く">
-  <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"></path></svg></span>星陽マップ
+  <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"/></svg></span>星陽マップ
 </button>
 
 <aside id="top" class="sidebar" data-sheet="half" aria-label="検索とメニュー">
   <button type="button" class="sheet-handle" id="sheetHandle" aria-label="パネルの高さを切り替え"><span></span></button>
   <header class="sb-head">
     <div class="brand">
-      <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"></path></svg></span>
+      <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.4 9.6 21.5 12l-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4Z"/></svg></span>
       <span>星陽マップ</span>
     </div>
     <div class="sb-actions">
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="明るさを切り替え" title="ライト / ダークを切り替え"><svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"></path></svg></button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="明るさを切り替え" title="ライト / ダークを切り替え">
+        <svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+      </button>
       <button class="icon-btn" id="toggleTop" type="button" aria-label="サイドバーを閉じる" title="サイドバーを閉じる">
-        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16M15.5 10l-2 2 2 2"></path></svg>
+        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15.5 10l-2 2 2 2"/></svg>
       </button>
     </div>
   </header>
 
   <div class="omni">
     <div class="omni-field">
-      <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
+      <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
       <input id="omniInput" type="search" role="combobox" aria-expanded="false" aria-controls="omniList" aria-label="駅・路線・座標を検索" autocomplete="off" spellcheck="false" placeholder="駅・路線・座標を検索">
-      <button class="omni-clear" id="omniClear" type="button" aria-label="入力を消す" hidden=""><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      <button class="omni-clear" id="omniClear" type="button" aria-label="入力を消す" hidden><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <div class="suggest" id="omniList" role="listbox" hidden=""></div>
+    <div class="suggest" id="omniList" role="listbox" hidden></div>
   </div>
 
   <div class="body" id="sbBody">
     <nav class="tabs" role="tablist" aria-label="メニュー">
       <button class="tab" id="tab-explore" type="button" role="tab" aria-selected="true" aria-controls="pane-explore">
-        <svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>探す</button>
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>探す</button>
       <button class="tab" id="tab-route" type="button" role="tab" aria-selected="false" aria-controls="pane-route">
-        <svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>経路</button>
+        <svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>経路</button>
       <button class="tab" id="tab-map" type="button" role="tab" aria-selected="false" aria-controls="pane-map">
-        <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"></path><path d="m3 13 9 5 9-5"></path></svg>地図</button>
+        <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>地図</button>
     </nav>
 
     <div class="panes" id="panes">
       <!-- 探す: 路線と駅の一覧 -->
       <section class="pane" id="pane-explore" role="tabpanel" aria-labelledby="tab-explore">
-        <div id="dataNotice" class="notice danger">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.01"></path></svg>
+        <div id="dataNotice" class="notice danger" hidden>
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
           <div>データを自動で読めませんでした。このHTMLを直接開いている場合は、「地図」タブの「データの読み込み」で、HTMLと同じフォルダを選んでください。</div>
         </div>
-        <div id="exploreEmpty" class="hint" hidden="">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v.01M12 11v5"></path></svg>
+        <div id="exploreEmpty" class="hint">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M12 11v5"/></svg>
           <div>鉄道データを読み込んでいます…</div>
         </div>
-        <div id="exploreBody" hidden="">
+        <div id="exploreBody" hidden>
           <h2 class="sec-h">路線<span class="count" id="lineCount"></span></h2>
           <div id="lineList"></div>
           <h2 class="sec-h">利用者の多い駅</h2>
@@ -496,12 +498,12 @@
       </section>
 
       <!-- 経路: 電車(乗換案内・運賃)と車 -->
-      <section class="pane" id="pane-route" role="tabpanel" aria-labelledby="tab-route" hidden="">
+      <section class="pane" id="pane-route" role="tabpanel" aria-labelledby="tab-route" hidden>
         <div class="seg" role="tablist" aria-label="移動手段">
           <button type="button" id="seg-rail" role="tab" aria-selected="true">
-            <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"></rect><path d="M5 11h14M9 21l2-4M15 21l-2-4"></path></svg>電車</button>
+            <svg class="i" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/></svg>電車</button>
           <button type="button" id="seg-car" role="tab" aria-selected="false">
-            <svg class="i" viewBox="0 0 24 24"><path d="M4 16v-5l2-5h12l2 5v5M3 16h18M7 16v2.5M17 16v2.5"></path><circle cx="7.5" cy="13" r=".8"></circle><circle cx="16.5" cy="13" r=".8"></circle></svg>車</button>
+            <svg class="i" viewBox="0 0 24 24"><path d="M4 16v-5l2-5h12l2 5v5M3 16h18M7 16v2.5M17 16v2.5"/><circle cx="7.5" cy="13" r=".8"/><circle cx="16.5" cy="13" r=".8"/></svg>車</button>
         </div>
 
         <div id="sub-rail">
@@ -509,28 +511,28 @@
             <div class="route-dots" aria-hidden="true"><span class="end-dot start"></span><span class="route-line"></span><span class="end-dot goal"></span></div>
             <div class="combo" id="comboFrom">
               <input class="field" id="fareFromText" type="text" role="combobox" aria-expanded="false" aria-label="出発駅" placeholder="出発駅" autocomplete="off" spellcheck="false">
-              <div class="suggest" role="listbox" hidden=""></div>
+              <div class="suggest" role="listbox" hidden></div>
             </div>
             <button class="route-swap" id="fareSwap" type="button" aria-label="出発と到着を入れ替え" title="入れ替え">
-              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"></path></svg>
+              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"/></svg>
             </button>
             <div class="combo" id="comboTo">
               <input class="field" id="fareToText" type="text" role="combobox" aria-expanded="false" aria-label="到着駅" placeholder="到着駅" autocomplete="off" spellcheck="false">
-              <div class="suggest" role="listbox" hidden=""></div>
+              <div class="suggest" role="listbox" hidden></div>
             </div>
           </div>
-          <select id="fareFrom" hidden="" aria-hidden="true" tabindex="-1"><option value="">鉄道JSONを読み込んでください</option></select>
-          <select id="fareTo" hidden="" aria-hidden="true" tabindex="-1"><option value="">鉄道JSONを読み込んでください</option></select>
+          <select id="fareFrom" hidden aria-hidden="true" tabindex="-1"></select>
+          <select id="fareTo" hidden aria-hidden="true" tabindex="-1"></select>
           <div id="fareResult" class="result"></div>
-          <div id="fareStatus" class="notice" style="margin-top:18px">linedata.txt が読めていません。運賃は計算できません。</div>
+          <div id="fareStatus" class="meta" style="margin-top:18px"></div>
         </div>
 
-        <div id="sub-car" hidden="">
+        <div id="sub-car" hidden>
           <div class="route-form">
             <div class="route-dots" aria-hidden="true"><span class="end-dot start"></span><span class="route-line"></span><span class="end-dot goal"></span></div>
             <button class="pin-btn" id="pinStart" type="button"><span class="pin-label" id="pinStartLabel">出発地点を地図で選ぶ</span><span class="pin-act" id="pinStartAct">指定</span></button>
             <button class="route-swap" id="pinSwap" type="button" aria-label="出発と到着を入れ替え" title="入れ替え">
-              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"></path></svg>
+              <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M3.5 8 7 4.5 10.5 8M17 20V4M13.5 16l3.5 3.5 3.5-3.5"/></svg>
             </button>
             <button class="pin-btn" id="pinGoal" type="button"><span class="pin-label" id="pinGoalLabel">到着地点を地図で選ぶ</span><span class="pin-act" id="pinGoalAct">指定</span></button>
           </div>
@@ -544,20 +546,20 @@
       </section>
 
       <!-- 地図: 表示の設定・凡例・データ -->
-      <section class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map" hidden="">
+      <section class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map" hidden>
         <div class="set-group">
           <h2 class="set-h">鉄道</h2>
-          <label class="set-row"><span>鉄道を表示</span><input type="checkbox" id="showRail" checked=""></label>
-          <label class="set-row"><span>路線カラーで塗る<span class="sub">路線ごとの色(lines.csv)</span></span><input type="checkbox" id="showLineColor" checked=""></label>
-          <label class="set-row"><span>系統の色で塗る<span class="sub">通る系統ごとに色の帯を並べる</span></span><input type="checkbox" id="showRouteColor" checked=""></label>
-          <label class="set-row"><span>似た系統を1本にまとめる<span class="sub">同じ色で経路が近い系統は、停車駅が最も多い1本だけ</span></span><input type="checkbox" id="hideDup" checked=""></label>
-          <label class="set-row"><span>並行する系統を1本の線にする<span class="sub">色や路線名が違っても、経路が重なる系統は、停車駅が最も多い系統の色で1本に描く(オフにすると横に並べて描く)</span></span><input type="checkbox" id="oneLane" checked=""></label>
+          <label class="set-row"><span>鉄道を表示</span><input type="checkbox" id="showRail" checked></label>
+          <label class="set-row"><span>路線カラーで塗る<span class="sub">路線ごとの色(lines.csv)</span></span><input type="checkbox" id="showLineColor" checked></label>
+          <label class="set-row"><span>系統の色で塗る<span class="sub">通る系統ごとに色の帯を並べる</span></span><input type="checkbox" id="showRouteColor" checked></label>
+          <label class="set-row"><span>似た系統を1本にまとめる<span class="sub">同じ色で経路が近い系統は、停車駅が最も多い1本だけ</span></span><input type="checkbox" id="hideDup" checked></label>
+          <label class="set-row"><span>並行する系統を1本の線にする<span class="sub">色や路線名が違っても、経路が重なる系統は、停車駅が最も多い系統の色で1本に描く(オフにすると横に並べて描く)</span></span><input type="checkbox" id="oneLane" checked></label>
         </div>
         <div class="set-group">
           <h2 class="set-h">通過人員推定</h2>
           <label class="set-row"><span>鉄道のラインカラーを通過人員に応じた色にする<span class="sub">推定・人/日(上下合計)。sr.csv と shitetsu.csv を利用</span></span><input type="checkbox" id="showPassengerFlow"></label>
           <div id="passengerStatus" class="meta">会社別の駅利用者CSVを読み込んでいます…</div>
-          <details class="fold" id="passengerReportBox" hidden=""><summary>会社別の計算結果・路線データに無い駅</summary><div id="passengerReport" class="meta fold-body"></div></details>
+          <details class="fold" id="passengerReportBox" hidden><summary>会社別の計算結果・路線データに無い駅</summary><div id="passengerReport" class="meta fold-body"></div></details>
           <label class="set-row"><span>距離抵抗 β<span class="sub">大きいほど、近い駅どうしの移動が増えます(1分あたり)</span></span><input type="number" class="num-in" id="passengerBeta" value="0.05" min="0.005" max="1" step="0.005"></label>
           <label class="set-row"><span>駅の性格による行き先の偏り<span class="sub">0=なし。住宅の駅からオフィス・商業の駅へ、のように属性と等級で行き先が偏ります(1が標準)</span></span><input type="number" class="num-in" id="passengerAttr" value="1" min="0" max="3" step="0.1"></label>
           <label class="set-row"><span>経路の分散(分)<span class="sub">0=最短経路だけ。所要時間がこの程度しか違わない経路には客が分かれます</span></span><input type="number" class="num-in" id="passengerSpread" value="2" min="0" max="30" step="0.5"></label>
@@ -569,25 +571,25 @@
         </div>
         <div class="set-group">
           <h2 class="set-h">道路</h2>
-          <label class="set-row"><span>高速道路</span><input type="checkbox" id="showHighway" checked=""></label>
-          <label class="set-row"><span>国道・県道・一般道路・生活道路</span><input type="checkbox" id="showOther" checked=""></label>
-          <label class="set-row"><span>未建設の道路も表示</span><input type="checkbox" id="showUnbuilt" checked=""></label>
-          <label class="set-row"><span>縮尺に応じて細い道路を隠す</span><input type="checkbox" id="zoomFilter" checked=""></label>
+          <label class="set-row"><span>高速道路</span><input type="checkbox" id="showHighway" checked></label>
+          <label class="set-row"><span>国道・県道・一般道路・生活道路</span><input type="checkbox" id="showOther" checked></label>
+          <label class="set-row"><span>未建設の道路も表示</span><input type="checkbox" id="showUnbuilt" checked></label>
+          <label class="set-row"><span>縮尺に応じて細い道路を隠す</span><input type="checkbox" id="zoomFilter" checked></label>
         </div>
         <div class="set-group">
           <h2 class="set-h">地価</h2>
-          <label class="set-row"><span>都道府県名を表示<span class="sub">都道府県地図の位置に表示(拡大すると薄くなります)</span></span><input type="checkbox" id="showPrefName" checked=""></label>
+          <label class="set-row"><span>都道府県名を表示<span class="sub">都道府県地図の位置に表示(拡大すると薄くなります)</span></span><input type="checkbox" id="showPrefName" checked></label>
           <label class="set-row"><span>チャンクごとの地価を表示<span class="sub">駅の等級・利用者数・属性と距離から算出</span></span><input type="checkbox" id="showLandPrice"></label>
           <div class="meta">駅前の価格は利用者数(対数)から決め、等級・属性で±数割補正します。駅前で急に下がり、徒歩圏でなだらかに下がって、影響半径(1万人:100、10万人:500、100万人:2,000ブロック)の端で0になります。駅が重なる所は大きい方を主として少し上乗せします。利用者数が未登録の駅は等級から見積もります。最低地価は3万CP/チャンクで、色は対数(3→青、5,000→赤)です。</div>
         </div>
         <div class="set-group">
           <h2 class="set-h">背景</h2>
-          <label class="set-row"><span>背景の地図</span><input type="checkbox" id="bgShow" checked=""></label>
+          <label class="set-row"><span>背景の地図</span><input type="checkbox" id="bgShow" checked></label>
           <div class="range-row"><span>濃さ</span><input id="bgAlpha" type="range" min="10" max="100" value="60" aria-label="背景の地図の濃さ"></div>
           <div class="set-row" style="flex-wrap:wrap;gap:6px"><span>位置合わせ<span class="sub">背景の地図を、鉄道・地価・都道府県名に重ねて調整</span></span>
             <span style="display:flex;gap:6px;align-items:center;font-size:12px">X <input id="bgCalX" type="number" step="100" style="width:84px"> Z <input id="bgCalZ" type="number" step="100" style="width:84px"> 倍率 <input id="bgCalS" type="number" step="0.001" min="0.5" max="2" style="width:70px"></span></div>
-          <div class="meta" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="bgCalOut" style="font-family:monospace;word-break:break-all">BG_CAL = { dx: 0, dz: 0, s: 1.0000 }</span><button type="button" id="bgCalReset" style="font-size:12px">リセット</button></div>
-          <label class="set-row"><span>方眼<span class="sub">縮尺に合わせた目安の線</span></span><input type="checkbox" id="showGrid" checked=""></label>
+          <div class="meta" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="bgCalOut" style="font-family:monospace;word-break:break-all"></span><button type="button" id="bgCalReset" style="font-size:12px">リセット</button></div>
+          <label class="set-row"><span>方眼<span class="sub">縮尺に合わせた目安の線</span></span><input type="checkbox" id="showGrid" checked></label>
         </div>
         <div class="set-group">
           <h2 class="set-h">明るさ</h2>
@@ -600,7 +602,7 @@
         <div class="set-group">
           <h2 class="set-h">列車</h2>
           <label class="set-row"><span>列車の位置を表示<span class="sub">ローカルAPIを起動している時だけ使えます</span></span><input type="checkbox" id="showTrains"></label>
-          <label class="set-row"><span>時刻表で乗換時刻を出す<span class="sub">時刻表API(2時間先まで)から、乗換案内に今からの発車・到着時刻を出します</span></span><input type="checkbox" id="useTimetable" checked=""></label>
+          <label class="set-row"><span>時刻表で乗換時刻を出す<span class="sub">時刻表API(2時間先まで)から、乗換案内に今からの発車・到着時刻を出します</span></span><input type="checkbox" id="useTimetable" checked></label>
           <div class="set-sub">
             <input id="trainUrl" class="text-input" type="text" placeholder="APIのURL(空欄なら自動で探す)" aria-label="列車APIのURL">
             <div id="trainStatus" class="meta"></div>
@@ -617,11 +619,11 @@
             <div class="row"><span class="sw" style="height:8px;background:#ff7966;box-shadow:inset 0 0 0 2px #c4493a"></span>国道</div>
             <div class="row"><span class="sw" style="height:8px;background:#ffd866;box-shadow:inset 0 0 0 2px #c9a02a"></span>県道(都道府県道)</div>
             <div class="row"><span class="sw" style="height:8px;background:#fff;box-shadow:inset 0 0 0 2px #aab3bd"></span>市町村道・私道・一般道路・生活道路</div>
-            <div class="row"><span class="sw" id="tunnelSwatch" style="height: 8px; box-shadow: rgb(170, 179, 189) 0px 0px 0px 2px inset; background: rgb(202, 206, 210);"></span>トンネル(縁は破線)</div>
+            <div class="row"><span class="sw" id="tunnelSwatch" style="height:8px;box-shadow:inset 0 0 0 2px #aab3bd"></span>トンネル(縁は破線)</div>
             <div class="row"><span class="sw" style="height:4px;background:#4a5563;box-shadow:0 0 0 2px #fff"></span>鉄道(路線カラー。白丸は駅)</div>
           </div>
           <details class="fold"><summary>道路の太さ(車線数と幅)</summary>
-            <div class="fold-body"><div id="lanesLegend"><div class="lanes-row"><span class="lbl">1 車線</span><span style="height: 5px; width: 70px; display: inline-block; border-radius: 4px; background: rgb(255, 255, 255); box-shadow: rgb(170, 179, 189) 0px 0px 0px 1.5px inset;"></span><span class="meta">幅 5 ブロック</span></div><div class="lanes-row"><span class="lbl">2 車線</span><span style="height: 9px; width: 70px; display: inline-block; border-radius: 4px; background: rgb(255, 255, 255); box-shadow: rgb(170, 179, 189) 0px 0px 0px 1.5px inset;"></span><span class="meta">幅 9 ブロック</span></div><div class="lanes-row"><span class="lbl">4 車線</span><span style="height: 17px; width: 70px; display: inline-block; border-radius: 4px; background: rgb(255, 255, 255); box-shadow: rgb(170, 179, 189) 0px 0px 0px 1.5px inset;"></span><span class="meta">幅 17 ブロック</span></div><div class="lanes-row"><span class="lbl">6 車線</span><span style="height: 25px; width: 70px; display: inline-block; border-radius: 4px; background: rgb(255, 255, 255); box-shadow: rgb(170, 179, 189) 0px 0px 0px 1.5px inset;"></span><span class="meta">幅 25 ブロック</span></div><div class="lanes-row"><span class="lbl">8 車線</span><span style="height: 33px; width: 70px; display: inline-block; border-radius: 4px; background: rgb(255, 255, 255); box-shadow: rgb(170, 179, 189) 0px 0px 0px 1.5px inset;"></span><span class="meta">幅 33 ブロック</span></div></div>
+            <div class="fold-body"><div id="lanesLegend"></div>
               <div class="meta">太さは実際の幅(ブロック)× 拡大率で決まるので、ズームすると太さも変わります。凡例は拡大率1のときの幅(1ブロック=1px)です。未建設の道路は半透明で描きます。北は上です。</div></div></details>
           <details class="fold"><summary>経路案内の速さ</summary>
             <div class="fold-body meta">高速道路 100km/h・2車線以上の一般道路・生活道路 60km/h・1車線 30km/h(1ブロック = 1m とみなします)</div></details>
@@ -630,9 +632,9 @@
           <h2 class="set-h">データの読み込み</h2>
           <details class="fold" id="dataFold"><summary>ファイルを手動で読み込む</summary>
             <div class="fold-body data-tools">
-              <div id="autoStatus" class="meta" style="color: var(--danger);"><div>rail.json: 自動では読めません</div><div>train.json: 自動では読めません</div><div>road.json: 自動では読めません</div><div>times.json: 自動では読めません</div><div>sr.csv: 自動では読めません</div><div>shitetsu.csv: 自動では読めません</div><div>このHTMLを直接開いているため、自動では読めません。「データフォルダから読む」で、HTMLと同じフォルダを選んでください。</div></div>
+              <div id="autoStatus" class="meta">rail.json・train.json・road.json を読み込んでいます…</div>
               <div class="row"><label class="btn small" for="dataDir">データフォルダから読む</label></div>
-              <input id="dataDir" type="file" webkitdirectory="" multiple="">
+              <input id="dataDir" type="file" webkitdirectory multiple>
               <div class="row"><label class="btn small" for="file">道路JSON</label><span id="fileName" class="fname"></span></div>
               <input id="file" type="file" accept=".json,application/json">
               <div id="summary" class="meta"></div>
@@ -647,9 +649,9 @@
                 <label class="btn small" for="bgFiles">画像を選ぶ</label>
                 <button class="btn small" id="bgClear" type="button">背景を消す</button>
               </div>
-              <input id="bgDir" type="file" webkitdirectory="" multiple="">
-              <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple="">
-              <div id="bgStatus" class="meta">images フォルダに地図画像(map_small1.jpg など)が見つかりません。「地図フォルダ」から選ぶこともできます。</div>
+              <input id="bgDir" type="file" webkitdirectory multiple>
+              <input id="bgFiles" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+              <div id="bgStatus" class="meta">背景の地図を読み込んでいます…</div>
               <div id="error" class="error"></div>
             </div>
           </details>
@@ -658,28 +660,28 @@
     </div>
 
     <!-- 詳細(駅・道路・鉄道区間): 選ぶとサイドバーの上に重なる -->
-    <section id="info" class="detail" aria-label="詳細" style="display: none;">
+    <section id="info" class="detail" aria-label="詳細">
       <div class="detail-bar">
         <button type="button" class="back-btn" id="closeInfo" aria-label="詳細を閉じる">
-          <svg class="i" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"></path></svg>戻る</button>
+          <svg class="i" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>戻る</button>
         <button type="button" class="icon-btn" id="shareBtn" aria-label="この場所のリンクをコピー" title="この場所のリンクをコピー">
-          <svg class="i" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+          <svg class="i" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
         </button>
       </div>
       <div class="detail-scroll" id="infoScroll">
         <div id="infoSign"></div>
-        <div id="infoActions" class="act-row" hidden="">
-          <button type="button" class="btn" id="actFrom"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="12" cy="12" r="5.5"></circle></svg>ここから</button>
-          <button type="button" class="btn" id="actTo"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="6.5" y="6.5" width="11" height="11" rx="2"></rect></svg>ここまで</button>
+        <div id="infoActions" class="act-row" hidden>
+          <button type="button" class="btn" id="actFrom"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="12" cy="12" r="5.5"/></svg>ここから</button>
+          <button type="button" class="btn" id="actTo"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>ここまで</button>
         </div>
-        <div id="infoTypes" class="lines-at" hidden=""></div>
+        <div id="infoTypes" class="lines-at" hidden></div>
         <dl id="infoBody" class="facts"></dl>
       </div>
     </section>
   </div>
 </aside>
 
-<div id="trainCard" class="train-card" hidden="">
+<div id="trainCard" class="train-card" hidden>
   <div class="train-card-bar" id="trainCardBar"></div>
   <div class="train-card-body">
     <button class="close" id="closeTrainCard" aria-label="閉じる">×</button>
@@ -691,16 +693,16 @@
 <div id="controls" class="controls">
   <div class="north" aria-label="北は上">N</div>
   <div class="ctl-group">
-    <button class="ctl" id="zoomIn" type="button" aria-label="拡大" title="拡大"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
-    <button class="ctl" id="zoomOut" type="button" aria-label="縮小" title="縮小"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></button>
-    <button class="ctl" id="fitBtn" type="button" aria-label="全体を表示" title="全体を表示"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></button>
-    <button class="ctl" id="originBtn" type="button" aria-label="原点(0, 0)へ" title="原点(0, 0)へ"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v4M12 17v4M3 12h4M17 12h4"></path></svg></button>
+    <button class="ctl" id="zoomIn" type="button" aria-label="拡大" title="拡大"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="ctl" id="zoomOut" type="button" aria-label="縮小" title="縮小"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="ctl" id="fitBtn" type="button" aria-label="全体を表示" title="全体を表示"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ctl" id="originBtn" type="button" aria-label="原点(0, 0)へ" title="原点(0, 0)へ"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></button>
   </div>
 </div>
 
 <div class="statusbar" id="statusbar">
-  <div id="scaleBar"><div id="scaleLine" style="width: 200px;"></div><span id="scaleText">50 ブロック</span></div>
-  <div id="coord" aria-live="off">X 12   Z 25</div>
+  <div id="scaleBar"><div id="scaleLine"></div><span id="scaleText"></span></div>
+  <div id="coord" aria-live="off"></div>
 </div>
 
 <script>
@@ -6711,6 +6713,5 @@
   };
 })();
 </script>
-
-
-</body></html>
+</body>
+</html>
