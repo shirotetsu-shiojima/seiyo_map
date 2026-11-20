@@ -3158,15 +3158,15 @@
   }
 
   function passengerFlowColor(value) {
-    if (value < 5000) return '#3c7fff';
-    if (value < 25000) return '#3ddfff';
-    if (value < 50000) return '#3dffcb';
-    if (value < 250000) return '#3dff8a';
-    if (value < 500000) return '#b5ff3d';
-    if (value < 750000) return '#fff53d';
-    if (value < 1000000) return '#ffb43d';
-    if (value < 1250000) return '#ff6a3d';
-    if (value < 1500000) return '#ff3d3d';
+    if (value < 10000) return '#3c7fff';
+    if (value < 50000) return '#3ddfff';
+    if (value < 100000) return '#3dffcb';
+    if (value < 500000) return '#3dff8a';
+    if (value < 1000000) return '#b5ff3d';
+    if (value < 1500000) return '#fff53d';
+    if (value < 2000000) return '#ffb43d';
+    if (value < 2500000) return '#ff6a3d';
+    if (value < 3000000) return '#ff3d3d';
     return '#c32f2f';
   }
   function drawPassengerFlow(list) {
@@ -3999,7 +3999,7 @@
     play:   { home: 0.60, work: 0.30, shop: 0.50, play: 0.30, school: 0.10 },
     school: { home: 0.80, work: 0.15, shop: 0.20, play: 0.10, school: 0.10 },
   };
-  const passengerBigScale = (users) => Math.min(3, Math.max(1, Math.pow(users / 1000000, 0.6)));   // 全社合計100万人で1倍、200万人で1.5倍、300万人で1.9倍
+  const passengerBigScale = (users) => Math.min(1.5, Math.max(1, Math.pow(users / 1000000, 0.6)));   // 全社合計100万人で1倍、200万人以上で1.5倍(上限)
   const PASSENGER_CBD_MAX_MIN = 30;   // 都心ターミナルとして選ぶ最大の所要時間(分)
   const passengerFlowByCompany = new Map();   // 区間 key -> (会社 -> 人/日)
   let passengerReport = null;                 // 計算結果の内訳(状況表示用)
@@ -4145,6 +4145,52 @@
     }
     const secsAt = nodes.map(() => []);
     for (const s of served) { secsAt[s.a].push(s); secsAt[s.b].push(s); }
+    // 並行する線路: 駅を飛ばす線路(急行線など)は、駅が描かれている側の線路(同じ駅間をたどる2区間以上)に人数をまとめる
+    const bypassChain = new Map();
+    const plPts = (sec) => (sec.pts || []).map((p) => (Array.isArray(p) ? p : [p.x, p.z]));
+    const distToLine = (p, line) => {
+      let best = Infinity;
+      for (let i = 1; i < line.length; i++) {
+        const dx = line[i][0] - line[i - 1][0], dz = line[i][1] - line[i - 1][1], len = dx * dx + dz * dz;
+        const t = len ? Math.max(0, Math.min(1, ((p[0] - line[i - 1][0]) * dx + (p[1] - line[i - 1][1]) * dz) / len)) : 0;
+        best = Math.min(best, Math.hypot(p[0] - (line[i - 1][0] + t * dx), p[1] - (line[i - 1][1] + t * dz)));
+      }
+      return best;
+    };
+    for (const e of served) {
+      const dist = new Map([[e.a, 0]]), prev = new Map(), open = [[0, e.a]];
+      while (open.length) {
+        open.sort((x, y) => x[0] - y[0]);
+        const [d, u] = open.shift();
+        if (d > dist.get(u)) continue;
+        if (u === e.b) break;
+        for (const t of secsAt[u]) {
+          if (t === e) continue;
+          const v = t.a === u ? t.b : t.a, nd = d + (t.sec.distance || 1);
+          if (nd > 1.3 * (e.sec.distance || 1) + 200) continue;
+          if (nd < (dist.has(v) ? dist.get(v) : Infinity)) { dist.set(v, nd); prev.set(v, { u, t }); open.push([nd, v]); }
+        }
+      }
+      if (!prev.has(e.b)) continue;
+      const chain = [];
+      for (let c = e.b; c !== e.a;) { const p = prev.get(c); chain.unshift(p.t); c = p.u; }
+      if (chain.length < 2) continue;
+      const line = chain.flatMap((t) => plPts(t.sec)), mine = plPts(e.sec);
+      if (!line.length || !mine.length) continue;
+      const avg = mine.reduce((sum, p) => sum + distToLine(p, line), 0) / mine.length;
+      if (avg <= 60) bypassChain.set(e.sec.key, chain.map((t) => t.sec));
+    }
+    // 並行線路の置き換えが入れ子になっている所(急行線の中にさらに急行線)は、一番細かい側まで展開する
+    const secOfKey = new Map(served.map((t) => [t.sec.key, t.sec]));
+    const expandChain = (sec, seen) => {
+      const chain = bypassChain.get(sec.key);
+      if (!chain || seen.has(sec.key)) return [sec];
+      seen.add(sec.key);
+      const out = chain.flatMap((t) => expandChain(t, seen));
+      seen.delete(sec.key);
+      return out;
+    };
+    for (const key of [...bypassChain.keys()]) bypassChain.set(key, expandChain(secOfKey.get(key), new Set()));
     // 会社が持つ駅(CSVに載っている駅)。どの会社のCSVにも載っていない駅は、間にある駅として線路をつなぐのに使う
     const ownedBy = new Map(), ownerCount = new Map();
     for (const [company, rows] of passengerByCompany) {
@@ -4407,7 +4453,10 @@
             for (const l of list) {
               const share = load[v] * l.w / total;
               load[l.u] += share;
-              if (l.sec) secFlow.set(l.sec, (secFlow.get(l.sec) || 0) + share);
+              if (l.sec) {
+                const chain = bypassChain.get(l.sec.key);
+                for (const target of chain || [l.sec]) secFlow.set(target, (secFlow.get(target) || 0) + share);
+              }
               else if (l.xfer) xferFlow.set(l.xfer, (xferFlow.get(l.xfer) || 0) + share);
             }
           }
